@@ -9,7 +9,7 @@
  */
 import { createApiClient } from '@contracts/client';
 
-import { answerOf, answerOfRaw, expectBrandOf, expectNoInternals, expectNoTenantId, expectNothingOfOtherSalons, expectProblem, type Answer } from '@qa/answers';
+import { answerOf, answerOfRaw, expectBrandOf, expectNoInternals, expectOnlyPublishedIds, PUBLIC_SALON_FIELDS, expectNoTenantId, expectNothingOfOtherSalons, expectProblem, type Answer } from '@qa/answers';
 import { SALON_PATH, type Problem, type SalonBrand } from '@qa/api-client';
 import { apiUrl } from '@qa/env';
 import { expect, test } from '@qa/fixtures';
@@ -60,14 +60,15 @@ async function expectOwnerSeesBrand(salon: Salon): Promise<void> {
 // --------------------------------------------------------------------------------------------
 // AC-1
 
-test('TC-F01-S02-001 each salon\'s hostname returns that salon\'s slug, name and brand colour, and no other field', async ({ api }) => {
+// Since F01-S02 the public salon gained timeZone (F01-S04), profile (F04-S01) and tagline, logo and cover (F04-S02).
+test('TC-F01-S02-001 each salon\'s hostname returns that salon\'s slug, name, brand colour and the public fields added since, and no other field', async ({ api }) => {
   const validate = schemaValidator('Salon');
   expect(salons, 'three salons to ask for').toHaveLength(3);
   for (const salon of salons) {
     const answer = await answerOf(await api.salon(salon));
     const brand = expectBrandOf(answer, salon, salon.hostname);
     expect(validate(brand), `${salon.hostname}: matches the Salon schema: ${JSON.stringify(validate.errors)}`).toBe(true);
-    expect(Object.keys(brand).sort(), `${salon.hostname}: nothing else identifies the salon`).toEqual(['brandColour', 'name', 'slug', 'timeZone']);
+    expect(Object.keys(brand).sort(), `${salon.hostname}: nothing else identifies the salon`).toEqual(PUBLIC_SALON_FIELDS);
     expect(answer.headers['set-cookie'], `${salon.hostname}: no cookie is set`).toBeUndefined();
   }
 });
@@ -498,7 +499,8 @@ test('TC-F01-S02-013 no answer of the salon endpoint shows how the product is bu
   for (const [name, answer] of answers) {
     seen.add(answer.status);
     expectNoInternals(answer, name);
-    expectNoTenantId(answer, name);
+    // A 200 may carry the ids the contract publishes (a branch, a logo, a cover: F04); never a tenant id.
+    expectOnlyPublishedIds(answer, name);
     expect(answer.headers['set-cookie'], `${name}: no cookie`).toBeUndefined();
     // Nothing signs in yet, so no origin has been given leave to read a salon's answers from a browser.
     expect(answer.headers['access-control-allow-origin'], `${name}: no origin is allowed`).toBeUndefined();
@@ -524,8 +526,9 @@ test('TC-F01-S02-014 the contract describes GET /api/v1/salon with its 200 and 4
   expect(responses['404']?.content?.['application/problem+json']?.schema?.$ref, 'the 404 is problem details').toBe('#/components/schemas/Problem');
 
   const described = contract.components.schemas.Salon;
-  expect(Object.keys(described.properties ?? {}).sort(), 'the Salon schema has the three public fields and no id').toEqual(['brandColour', 'name', 'slug', 'timeZone']);
-  expect([...(described.required ?? [])].sort(), 'all three are required').toEqual(['brandColour', 'name', 'slug', 'timeZone']);
+  // F01-S04 added timeZone, F04-S01 the published profile, F04-S02 the published tagline, logo and cover.
+  expect(Object.keys(described.properties ?? {}).sort(), 'the Salon schema has the public fields and no id').toEqual(PUBLIC_SALON_FIELDS);
+  expect([...(described.required ?? [])].sort(), 'all of them are required (nullable where nothing is published)').toEqual(PUBLIC_SALON_FIELDS);
 
   const validSalon = schemaValidator('Salon');
   for (const salon of salons) {

@@ -2,7 +2,12 @@ import 'server-only';
 import { createHmac } from 'node:crypto';
 import { createApiClient, type components } from '@salon/api-contracts/identity';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
+import {
+  createServerApiClient,
+  requestSignal,
+  restartRequestBudget,
+  UPLOAD_API_TIMEOUT_MS,
+} from '@/lib/api-core/client';
 import { apiTime } from '@/lib/api-core/meta';
 import { currentRequest } from '@/lib/observability/request-context';
 import { hasSlugForm, platformDomainOf, slugOf } from '@/lib/tenancy/hostname';
@@ -406,13 +411,15 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     const access = request.cookies.get(cookieName(kind, 'access'))?.value;
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
-    const signal = requestSignal();
-    // A brand image, a service photo and a team photo are the multipart actions; their forms are read after the
-    // session check.
+    // A brand image, a service photo and a team photo are the multipart actions; their forms are read only after the
+    // session and permission checks, so no caller who is refused has a form parsed.
+    const uploadField = UPLOAD_FIELDS.get(action);
     const read =
-      request.method === 'GET' || action === 'brand-image' || action === CATALOGUE_PHOTO || action === TEAM_PHOTO
+      request.method === 'GET' || uploadField
         ? { ok: true as const, value: {} }
         : await readBoundedJson(request, 16384);
+    // The request's budget, which the request log starts again once the body has arrived (BUG-F04-001).
+    const signal = requestSignal();
     if (!read.ok) return problem('bad_request', 400);
     const body: Record<string, unknown> = read.value;
     // Input values are forwarded only through each generated contract's explicit fields.
@@ -663,24 +670,26 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
                 : await settings.discardBrandDraft(options, body.version);
         return r.data ? output(r.data) : failure(r);
       }
-      case 'brand-image': {
-        const upload = await uploadForm(request, 'kind');
-        if ('refused' in upload) return problem(upload.refused, upload.status, { errors: upload.errors });
-        const r = await settings.uploadBrandImage(options, upload.text, upload.file);
-        return r.data ? output(r.data, 201) : failure(r);
-      }
-      case CATALOGUE_PHOTO: {
-        // A service photo (F05-S01): the service named in the form, the file passed on as it came.
-        const upload = await uploadForm(request, 'serviceId');
-        if ('refused' in upload) return problem(upload.refused, upload.status, { errors: upload.errors });
-        const r = await catalogue.uploadPhoto(options, upload.text, upload.file);
-        return r.data ? output(r.data) : failure(r);
-      }
+      case 'brand-image':
+      case CATALOGUE_PHOTO:
       case TEAM_PHOTO: {
-        // A team member's photo (F06-S01): the member named in the form, the file passed on as it came.
-        const upload = await uploadForm(request, 'memberId');
+        if (!uploadField) return problem('not_found', 404);
+        const upload = await uploadForm(request, uploadField);
         if ('refused' in upload) return problem(upload.refused, upload.status, { errors: upload.errors });
-        const r = await team.uploadPhoto(options, upload.text, upload.file);
+        // The upload's own stated limit, from the end of reading its form (docs/engineering/web.md, "Structure";
+        // BUG-F04-001).
+        restartRequestBudget(UPLOAD_API_TIMEOUT_MS);
+        const call = { headers, signal: requestSignal() };
+        if (action === 'brand-image') {
+          const r = await settings.uploadBrandImage(call, upload.text, upload.file);
+          return r.data ? output(r.data, 201) : failure(r);
+        }
+        // A service photo (F05-S01) or a team member's (F06-S01): the service or member named in the form, the file
+        // passed on as it came.
+        const r =
+          action === CATALOGUE_PHOTO
+            ? await catalogue.uploadPhoto(call, upload.text, upload.file)
+            : await team.uploadPhoto(call, upload.text, upload.file);
         return r.data ? output(r.data) : failure(r);
       }
       case 'booking-rules-save': {
@@ -725,6 +734,13 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     return response;
   }
 }
+/** The multipart actions, each with the one text field its form carries beside the file. */
+const UPLOAD_FIELDS = new Map<string, 'kind' | 'serviceId' | 'memberId'>([
+  ['brand-image', 'kind'],
+  [CATALOGUE_PHOTO, 'serviceId'],
+  [TEAM_PHOTO, 'memberId'],
+]);
+
 /** The browser's request over its declared size is refused before its form is read (the API's 10 MB limit). */
 const UPLOAD_LIMIT = UPLOAD_LIMIT_BYTES;
 

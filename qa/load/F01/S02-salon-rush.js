@@ -91,6 +91,10 @@ function waitForRelease(data) {
  */
 const turn = () => salons[exec.scenario.iterationInTest % salons.length];
 
+// The public salon's fields, no more: F01-S02's slug, name and colour, F01-S04's time zone, F04-S01's published
+// profile and F04-S02's published tagline, logo and cover (as PUBLIC_SALON_FIELDS in shared/answers.ts).
+const PUBLIC_SALON_FIELDS = ['brandColour', 'cover', 'logo', 'name', 'profile', 'slug', 'tagline', 'timeZone'].join(',');
+
 function judge(response, salon) {
   let brand = null;
   try {
@@ -98,7 +102,7 @@ function judge(response, salon) {
   } catch (_) {
     brand = null;
   }
-  const own = response.status === 200 && brand !== null && brand.slug === salon.slug && brand.name === salon.name && brand.brandColour === salon.brandColour && brand.timeZone === salon.timeZone && Object.keys(brand).length === 4;
+  const own = response.status === 200 && brand !== null && brand.slug === salon.slug && brand.name === salon.name && brand.brandColour === salon.brandColour && brand.timeZone === salon.timeZone && Object.keys(brand).sort().join(',') === PUBLIC_SALON_FIELDS;
   const body = String(response.body || '');
   const another = salons.some((other) => other !== salon && (body.includes(other.name) || body.includes(other.id) || body.includes(other.brandColour) || body.includes(`"${other.slug}"`)));
   served.add(own ? 1 : 0, { salon: salon.slug });

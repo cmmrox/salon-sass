@@ -20,6 +20,7 @@ import type { Actor } from '../../shared/identity';
 import { Operator, ownerSession, supportJson, type SupportStart } from '../../shared/operator';
 import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
 import { Brands, DEFAULT_COLOUR, SWATCHES, brandSnapshot, contrast, fixture, hexOf, textOn } from '../../shared/salon-brand';
+import { slowUpload } from '../../shared/slow-upload';
 import { message } from '../../shared/strings';
 import { alpha, salonUrl, type Salon } from '../../shared/tenants';
 
@@ -471,5 +472,39 @@ test('TC-F04-S02-034 AC-12: the Branding tab has no serious accessibility violat
     });
   } finally {
     await brands.discard(alpha, manager.tokens, (await brands.draft(alpha, manager.tokens)).version);
+  }
+});
+
+test('TC-F04-S02-035 AC-4: a logo chosen over a slow connection, whose file takes longer to send than the three seconds a call to the API may take, is uploaded and chosen; an upload sent with no session, or with forged session cookies, is answered 401 and stores nothing', async ({ accounts, operator }) => {
+  // BUG-F04-001, BRD-01; docs/engineering/web.md "Structure": an upload's limit starts once its body has arrived.
+  const { salon, owner } = await newSalon(operator, accounts);
+  const { page } = await openBranding(accounts, owner, salon);
+  const answer = await slowUpload(page, 'brand-image', () =>
+    id(page, 'brand-logo-file').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: fixture('logo-700x600-banded.png').buffer }));
+  expect(answer.status, `the slow upload is answered (${answer.body})`).toBe(201);
+  await expect(id(page, 'brand-logo-chosen'), 'the logo is chosen').toBeVisible();
+  await expect(id(page, 'brand-logo-error'), 'and no error is shown').toHaveCount(0);
+  await expect(id(page, 'brand-preview-logo').locator('img')).toHaveAttribute('src', /brand-images\//);
+
+  const before = brandSnapshot(salon.id);
+  const origin = new URL(salonUrl(salon, webUrl)).origin;
+  // With no session cookie, and with forged, non-empty access and refresh cookies (refs BUG-F04-001's review, 1910c272:
+  // the session is checked before the form is read): 401 invalid_session either way, and nothing stored.
+  const forged = [
+    { name: 'salon_staff_access', value: `eyJhbGciOiJFUzI1NiJ9.${Buffer.from('{"sub":"forged"}').toString('base64url')}.forged`, url: origin },
+    { name: 'salon_staff_refresh', value: 'forged-refresh-credential-0000000000000000000000', url: origin },
+  ];
+  for (const [label, cookies] of [['no session cookie', []], ['forged session cookies', forged]] as const) {
+    const stranger = await page.context().browser()!.newContext();
+    try {
+      if (cookies.length) await stranger.addCookies([...cookies]);
+      const r = await stranger.request.post(`${origin}/identity-web/staff/brand-image`, {
+        headers: { Origin: origin }, multipart: { kind: 'logo', file: { name: 'logo.png', mimeType: 'image/png', buffer: fixture('logo-700x600-banded.png').buffer } } });
+      expect(r.status(), `${label}: 401`).toBe(401);
+      expect((await r.json()).code, label).toBe('invalid_session');
+    } finally {
+      await stranger.close();
+    }
+    expect(brandSnapshot(salon.id), `nothing stored for the upload with ${label}`).toBe(before);
   }
 });

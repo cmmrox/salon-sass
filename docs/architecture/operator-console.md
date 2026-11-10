@@ -222,8 +222,12 @@ repeated when the job runs late, twice or concurrently.
 **Payment.** A subscription's payment method is `card` (a recurring charge through the platform
 billing provider) or `bank_transfer`. The billing provider is an interface with a local fake whose
 outcome a loopback hook can set; no real provider is chosen while D-06 is open, and nothing charges
-a real card. A charge is attempted when an invoice is issued, and retried on each reminder day
-while unpaid; each attempt carries a stable idempotency key, so a repeated or late provider result
+a real card. A charge is attempted when an invoice is issued, and retried with each reminder day's
+reminder while unpaid, once the previous attempt has failed: one charge is in flight for an invoice
+at a time, a reminder day whose retry could not be made because an attempt was still unsettled is
+not made up, and no pass that sends no reminder requests a charge, so a card is charged only on a
+day the salon was written to (BUG-F03-010, BUG-F03-011; the lead's ruling of 2026-11-10 on F03-S02
+AC-4); each attempt carries a stable idempotency key, so a repeated or late provider result
 pays an invoice at most once. Provider results arrive as signed events with unique ids; a repeated
 event id is acknowledged without effect, and an event for an unknown or already-paid invoice is
 recorded without changing it. An Admin records a bank transfer against one open invoice with its
@@ -271,7 +275,7 @@ a salon without an Owner contact has its reminders recorded with recipient `none
 the salon's outbox in the same transaction as the invoice, so while a salon is suspended they wait
 with its other messages; invoices are still issued and bank transfers still recorded. Boundaries
 are exact 24-hour-day offsets from the due instant; a late job pass issues every missed period
-and sends each passed reminder once. Staff seats count as "Entitlements" above says, including the
+and sends each passed reminder once, with at most one charge retry among them, under the latest. Staff seats count as "Entitlements" above says, including the
 Owner, and a plan move checks staff seats only, since no other usage exists yet. Provider events carry
 `X-Salon-Billing-Signature`, a lowercase hex HMAC-SHA256 of the body; a bad or missing signature is
 401 `invalid_credentials`, and a late success after a manual payment is recorded `already_paid`.
@@ -310,7 +314,11 @@ tables added by later features are part of those features' definition of done.
 **Retention.** Tenant data is deleted 30 days after closure by an idempotent platform job: every
 tenant row of the salon through each owning module's registered eraser, its brand, outbox messages,
 jobs, audit entries and the export archive. The tenant registry row remains as a `deleted`
-tombstone with its retired slug and timestamps; platform audit, invoices and payments remain.
+tombstone: its id, retired slug, status, lifecycle instants, plan, country, currency, time zone,
+default language and access state. The registry's guard clears the salon's name, contact email,
+contact phone, address and the Owner's email as the row becomes `deleted`, and a check constraint
+holds every tombstone to that (V34, BUG-F03-009), so the console shows no name for a deleted salon.
+Platform audit, invoices and payments remain.
 Deletion that fails part-way resumes on the next run and never deletes another salon's rows.
 
 | Permission | `OPERATOR_ADMIN` | `OPERATOR_SUPPORT` |

@@ -254,3 +254,18 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
   2. Close a salon by keyboard; Escape a sheet
 - **Expected:** No serious or critical violations; labelled fields; focus contained in the sheet and returned to its opener.
 - **Automation:** `qa/web/F03/S03-lifecycle-screens.spec.ts`
+
+### TC-F03-S03-018 After deletion the tombstone keeps no name, contact or Owner email, the slug stays retired, and the invoices and the platform audit stay readable without them
+
+- **Type:** data-integrity
+- **Priority:** critical
+- **Covers:** AC-8 (and PLT-06, NFR-09)
+- **Added for:** BUG-F03-009, re-verified after the merge of 2026-11-10
+- **Performed as:** Operator Admin; run-job hooks; the test clock
+- **Preconditions:** A salon made by the test (never alpha, beta or gamma) with a paid invoice, closed
+- **Steps:**
+  1. Read its console detail (the profile is shown)
+  2. Move the clock to the deletion instant and run the deletion job
+  3. Read the detail, the list by slug and by old name, the registry row, the invoices and the platform audit; create a salon with the same slug
+- **Expected:** The detail and the list show status `deleted` with name, contact email, contact phone, address and Owner email null, and none of their values anywhere; the old name finds nothing; the registry row holds none of them; the slug is refused 409 `slug_taken`; the invoices and the platform audit (with one `salon.deleted`) are readable and hold none of the values.
+- **Automation:** `qa/api/F03/S03-export-retention.spec.ts`

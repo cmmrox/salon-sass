@@ -23,6 +23,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -43,31 +46,53 @@ class StaffSignInServiceImpl implements StaffSignInService {
     private final SessionAccess sessions;
     private final StaffAuthority authority;
     private final IdentityCrypto crypto;
+    private final PasswordChecks passwords;
     private final Clock clock;
     private final AuditTrail audit;
 
+    /** The account a password is checked against, as it was read before the check. */
+    private record Checked(UUID id, String passwordHash) {}
+
+    /**
+     * In three short identity transactions, with the password check (PBKDF2, deliberately slow) between them and
+     * inside none, as the operator sign-in does (decision 120, BUG-F02-016): the attempt is counted and committed
+     * first, so every attempt counts even if what follows fails; then the account is read; then the outcome is
+     * recorded against the account as it is then. Checking inside the transaction held a pooled connection and the
+     * salon's identity lock for the whole check, so a few sign-ins in flight stalled every salon on the instance.
+     */
     @Override
     public SignIn signIn(String identifier, String password, String deviceLabel, String address) {
-        return work.run(() -> {
-            String key = normalized(identifier);
+        String key = normalized(identifier);
+        work.run(() -> {
             boolean identifierAllowed = attempt("staff-identifier", key, ATTEMPTS_PER_IDENTIFIER);
             boolean addressAllowed = attempt("staff-address", address, ATTEMPTS_PER_ADDRESS);
             if (!identifierAllowed || !addressAllowed) {
                 record(Actor.system("sign-in"), "sign_in_limited", crypto.hash("audit", key));
                 throw new ApplicationProblemException(429, ErrorCode.RATE_LIMITED);
             }
-            StaffAccount account =
-                    accounts.findByIdentifier(key).stream().findFirst().orElse(null);
-            boolean correct = crypto.matchesPassword(password, account == null ? null : account.getPasswordHash());
-            if (account == null || !account.isActive() || !correct) {
+            return null;
+        });
+        Optional<Checked> checked = work.run(() -> accounts.findByIdentifier(key).stream()
+                .findFirst()
+                .map(found -> new Checked(found.getId(), found.getPasswordHash())));
+        boolean correct =
+                passwords.matches(password, checked.map(Checked::passwordHash).orElse(null));
+        return work.run(() -> {
+            // The account as it is now: one removed, or whose password changed, while its password was being
+            // checked is refused like any other wrong credential.
+            Optional<StaffAccount> now = checked.flatMap(found -> accounts.findById(found.id()));
+            if (now.isEmpty()
+                    || !now.get().isActive()
+                    || !Objects.equals(
+                            now.get().getPasswordHash(), checked.get().passwordHash())
+                    || !correct) {
                 record(
                         Actor.system("sign-in"),
                         "sign_in_failed",
-                        account == null
-                                ? crypto.hash("audit", key)
-                                : account.getId().toString());
+                        now.map(found -> found.getId().toString()).orElseGet(() -> crypto.hash("audit", key)));
                 throw IdentityProblems.invalidCredentials();
             }
+            StaffAccount account = now.get();
             StaffValidation.requireDeviceLabel(deviceLabel);
             if (account.hasMfa() || account.getRole() == StaffRole.OWNER) {
                 return mfaChallenges.issue(
@@ -86,17 +111,32 @@ class StaffSignInServiceImpl implements StaffSignInService {
         });
     }
 
+    /**
+     * The old password is checked, and the new one hashed, between two identity transactions and inside neither
+     * (decision 120). The second refuses the change, as a wrong password, when the password changed meanwhile.
+     */
     @Override
     public Tokens changePassword(String oldPassword, String newPassword) {
+        Checked checked = work.run(() -> {
+            StaffAccount account = authority.permitted("password.change").account();
+            return new Checked(account.getId(), account.getPasswordHash());
+        });
+        String replacement = null;
+        if (passwords.matches(oldPassword, checked.passwordHash())) {
+            StaffValidation.requireAcceptablePassword(newPassword, "newPassword");
+            replacement = passwords.encode(newPassword);
+        }
+        String newHash = replacement;
         return work.run(() -> {
             StaffAuthority.SignedIn current = authority.permitted("password.change");
             StaffAccount account = current.account();
-            if (!crypto.matchesPassword(oldPassword, account.getPasswordHash())) {
+            if (newHash == null
+                    || !account.getId().equals(checked.id())
+                    || !Objects.equals(account.getPasswordHash(), checked.passwordHash())) {
                 record(staff(account), "password_failed", account.getId().toString());
                 throw IdentityProblems.invalidCredentials();
             }
-            StaffValidation.requireAcceptablePassword(newPassword, "newPassword");
-            account.changePassword(crypto.encodePassword(newPassword), clock.instant());
+            account.changePassword(newHash, clock.instant());
             sessions.revokeOwner(
                     SessionKind.STAFF, account.getId(), current.session().getId());
             record(staff(account), "password_changed", account.getId().toString());

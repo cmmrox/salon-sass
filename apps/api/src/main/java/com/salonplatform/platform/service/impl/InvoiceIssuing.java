@@ -94,7 +94,8 @@ class InvoiceIssuing {
 
     /**
      * Records a charge attempt for an invoice and occasion, once, with the outbox message that makes
-     * the provider call afterwards. Nothing when that occasion already has an attempt.
+     * the provider call afterwards. Nothing when that occasion already has an attempt, or while an earlier
+     * attempt for the invoice is unsettled (BUG-F03-010): a reminder retries only after a failure.
      */
     public boolean requestCharge(Salon salon, Invoice invoice, String occasion, Instant now, BillingChanges changes) {
         UUID id = UUID.randomUUID();
@@ -122,19 +123,24 @@ class InvoiceIssuing {
     }
 
     /**
-     * Sends the reminders whose boundary has come for every unpaid invoice (once per invoice and
-     * kind), with a retry of the charge on each reminder day for a card subscription.
+     * Sends the reminders whose boundary has come for every unpaid invoice (once per invoice and kind; a late pass
+     * sends each one it missed, decision 051). A card subscription's charge is retried only with a reminder this pass
+     * sends, and at most once per invoice, under the latest of them (F03-S02 AC-4, BUG-F03-011): never by a pass that
+     * sends no reminder, and never while an earlier attempt is unsettled (BUG-F03-010). A reminder day whose retry
+     * could not be made is not made up later.
      */
     public void remind(Subscription subscription, Instant now, BillingChanges changes) {
         Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();
         for (Invoice invoice : invoices.openInvoices(subscription.id())) {
+            Reminder latestSent = null;
             for (Reminder reminder : BillingCalendar.remindersDue(now, invoice.dueAt())) {
                 if (notices.notice(salon, invoice, reminder.kind(), null, now)) {
                     changes.reminders().add(BillingTerms.invoiceNumber(invoice.number()) + ":" + reminder.kind());
+                    latestSent = reminder;
                 }
-                if (BillingTerms.CARD.equals(subscription.paymentMethod())) {
-                    requestCharge(salon, invoice, reminder.kind(), now, changes);
-                }
+            }
+            if (latestSent != null && BillingTerms.CARD.equals(subscription.paymentMethod())) {
+                requestCharge(salon, invoice, latestSent.kind(), now, changes);
             }
         }
     }

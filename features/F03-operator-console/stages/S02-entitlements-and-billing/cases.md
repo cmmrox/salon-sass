@@ -400,3 +400,18 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
   3. Run the job again
 - **Expected:** The failed run leaves no invoice, attempt or email (all committed together or not at all); the next run issues one invoice with one attempt and at most one payment.
 - **Automation:** `qa/api/F03/S02-billing-cycle.spec.ts`
+
+### TC-F03-S02-029 One card charge is in flight for an invoice at a time, across the due date and the reminder days, and a failed attempt is retried once on the next reminder day
+
+- **Type:** payment-integrity
+- **Priority:** critical
+- **Covers:** AC-4, AC-7 (and NFR-11)
+- **Added for:** BUG-F03-010, re-verified after the merge of 2026-11-10
+- **Performed as:** Run-job hook, provider fake outcome hook, suspension (so the charge request waits in the outbox)
+- **Preconditions:** A card salon made by the test, suspended before its trial ends
+- **Steps:**
+  1. Cross trial end, the due instant and the three-day reminder
+  2. Set the provider fake to fail and reactivate the salon
+  3. Run a pass on a day with no reminder, then set the fake to succeed and cross the ten-day reminder
+- **Expected:** One attempt (`issue`, requested) and one charge request through the first reminder day; the provider receives that one charge and fails it; no retry on the day with no reminder; exactly one retry on the ten-day reminder, which pays the invoice; two charge requests in all, delivered one after the other.
+- **Automation:** `qa/api/F03/S02-billing-cycle.spec.ts`

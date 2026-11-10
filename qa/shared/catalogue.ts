@@ -276,10 +276,16 @@ export function catalogueTables(): string[] {
   return tables;
 }
 
-/** A digest of every catalogue row of a salon, to prove a refused call changed nothing. */
+/**
+ * A digest of every catalogue row of a salon, to prove a refused call changed nothing: one digest per
+ * catalogue table, joined in table order. One database call per snapshot (each call is a `docker exec`,
+ * so one per table made TC-F05-S01-011's 92 snapshots about 920 calls and two minutes); the digests are
+ * the same as one query per table would give.
+ */
 export function catalogueSnapshot(salonId: string): string {
-  return catalogueTables().map(t => identitySql(
-    `SELECT coalesce(md5(string_agg(row_to_json(x)::text, '|' ORDER BY row_to_json(x)::text)), 'none') FROM ${t} x WHERE tenant_id = ${sqlLiteral(salonId)}`)).join(',');
+  const digests = catalogueTables().map(t =>
+    `(SELECT coalesce(md5(string_agg(row_to_json(x)::text, '|' ORDER BY row_to_json(x)::text)), 'none') FROM ${t} x WHERE tenant_id = ${sqlLiteral(salonId)})`);
+  return identitySql(`SELECT concat_ws(',', ${digests.join(', ')})`);
 }
 
 /** How many rows of a salon each catalogue table holds. */

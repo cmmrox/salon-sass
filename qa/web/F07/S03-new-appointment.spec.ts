@@ -312,3 +312,59 @@ test('TC-F07-S03-020 AC-6: a hold whose answer lands after the sheet was closed,
     await soft(id(sheet, N.hold), 'no "Holding this time" for a form that changed after the time was chosen').toHaveCount(0);
   });
 });
+
+test('TC-F07-S03-022 AC-6: when the answer to holding a time is lost on the way back, choosing the same time again sends the same key, gets the hold already placed and reaches Confirm with one hold and no orphan; after a definite refusal (slot_taken) the next try is a new attempt with a new key', async ({ accounts, identity, operator, clock }) => {
+  // BUG-F07-006; F07-S01 AC-1 (the same key returns the same booking), F07-S03 AC-6, BKG-04.
+  const s = await bookingSalon(identity, operator, clock, { people: 1 });
+  const [m] = s.members;
+  const date = plusDays(s.today, 2);
+  const { page } = await openAs(accounts, s.owner, BOOKINGS_ROUTE);
+  const keys: string[] = [];
+  let lose = true;
+  await page.route(url => url.pathname.endsWith('/booking-place'), async route => {
+    if (route.request().method() === 'GET') return route.fallback();
+    keys.push((route.request().postDataJSON() as { idempotencyKey: string }).idempotencyKey);
+    if (!lose) return route.fallback();
+    lose = false;
+    await route.fetch(); // the request reaches the API, which places the hold
+    await route.abort('connectionreset'); // and its answer never reaches the browser
+  });
+  const sheet = await openSheet(page);
+  const chips = await search(page, sheet, s, date, customer(), m.id);
+
+  await test.step('the answer is lost: the hold exists, the desk does not know it', async () => {
+    await chips.first().click();
+    await expect.poll(() => holdsOf(s).length, { message: 'the API placed the hold' }).toBe(1);
+    await expect(id(sheet, N.hold), 'no "Holding this time" without an answer').toHaveCount(0);
+  });
+
+  await test.step('the same time again: the same key, the same hold, Confirm', async () => {
+    const placed = holdsOf(s)[0].id;
+    await chips.first().click();
+    await expect.poll(() => keys.length, { message: 'the second try was sent' }).toBe(2);
+    expect(keys, 'the second try sent the first try\'s key').toEqual([keys[0], keys[0]]);
+    await expect(id(sheet, N.hold), 'Holding this time').toBeVisible();
+    expect(holdsOf(s).map(h => h.id), 'one hold, the one already placed').toEqual([placed]);
+    await button(sheet, T.confirm).click();
+    await expect(id(page, N.sheet), 'the sheet closes on Confirm').toHaveCount(0);
+    expect((await s.bookings.get(s.salon, s.owner.tokens, placed)).booking.state, 'the hold is the booking, confirmed').toBe('confirmed');
+    expect(holdsOf(s), 'no orphan hold is left').toEqual([]);
+  });
+
+  await test.step('a definite refusal (slot_taken) is the end of that attempt: the next try has a new key', async () => {
+    const next = await openSheet(page);
+    const times = await search(page, next, s, date, customer(), m.id);
+    const taken = (await times.first().innerText()).split(' · ')[0];
+    const theirs = await s.bookings.place(s.salon, s.owner.tokens, holdInput(m.id, s.service.id, date, taken));
+    const before = keys.length;
+    await times.first().click();
+    await expect(id(next, N.refusal)).toHaveText(T.taken);
+    await s.bookings.release(s.salon, s.owner.tokens, theirs.id);
+    await button(next, T.find).click();
+    await expect(times.first()).toHaveText(new RegExp(`^${taken}`));
+    await times.first().click();
+    await expect(id(next, N.hold), 'held on a new attempt').toBeVisible();
+    expect(keys.length - before, 'two tries of that time').toBe(2);
+    expect(keys[before + 1], 'the try after the refusal has a key of its own').not.toBe(keys[before]);
+  });
+});

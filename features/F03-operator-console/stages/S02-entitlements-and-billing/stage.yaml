@@ -324,6 +324,13 @@ cases:
   priority: critical
   covers:
   - AC-16
+- id: TC-F03-S02-029
+  title: One card charge is in flight for an invoice at a time, across the due date and the reminder days, and a failed attempt is retried once on the next reminder day
+  type: payment-integrity
+  priority: critical
+  covers:
+  - AC-4
+  - AC-7
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -361,6 +368,7 @@ verification:
     - TC-F03-S02-016
     - TC-F03-S02-019
     - TC-F03-S02-028
+    - TC-F03-S02-029
     suites: [regression]
   - id: entitlements
     tool: playwright

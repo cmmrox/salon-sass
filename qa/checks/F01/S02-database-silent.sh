@@ -66,9 +66,13 @@ mark() {
   MARKS+=(--argjson "$1" "$2")
   printf '{"name":"%s","time":%s}\n' "$1" "$2" >>"$REPORT_DIR/database-silent-marks.jsonl"
 }
-stream_query() { jq -s -r "${MARKS[@]}" --argjson expected "$EXPECTED" --argjson limit "$LIMIT_MS" "$1" "$STREAM"; }
+# The public salon's fields, no more: slug, name and colour (F01-S02), timeZone (F01-S04), profile (F04-S01) and
+# tagline, logo and cover (F04-S02); jq's keys are sorted. Those after the first four are the salon's own published
+# values, which other features' tests change, so their shape is the contract's concern (TC-F01-S02-001).
+PUBLIC_FIELDS='["brandColour","cover","logo","name","profile","slug","tagline","timeZone"]'
+stream_query() { jq -s -r "${MARKS[@]}" --argjson expected "$EXPECTED" --argjson fields "$PUBLIC_FIELDS" --argjson limit "$LIMIT_MS" "$1" "$STREAM"; }
 # A request "is this salon's brand" when its body is exactly the three fields its address expects.
-JQ_DEFS='def own: .status == 200 and ((.body | try fromjson catch null) == $expected[.url]);
+JQ_DEFS='def own: .status == 200 and ((.body | try fromjson catch null) as $b | ($b | type) == "object" and ($b | keys) == $fields and ($b | {slug, name, brandColour, timeZone}) == $expected[.url]);
 def refused: .status == 503 and ((.body | try fromjson catch null | .code?) == "service_unavailable");
 def quick: .ms < $limit;'
 

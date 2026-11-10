@@ -112,8 +112,12 @@ begin_case TC-F01-S02-072 "Started with a profile other than local against an em
 MIGRATIONS_LOCAL="$(printf "select version || ' ' || description || ' ' || checksum from flyway_schema_history where success order by installed_rank;\n" | owner_psql)"
 TABLES_LOCAL="$(printf "select string_agg(table_name, ', ' order by table_name) from information_schema.tables where table_schema = 'public';\n" | owner_psql)"
 for table in audit_entry flyway_schema_history outbox_message salon_brand scheduled_job tenant; do expect_contains "current committed schema contains $table" "$table" "$TABLES_LOCAL"; done
-for version in {1..10}; do expect_matches "required delivered migration V$version exists in the comparison schema" "^$version " "$MIGRATIONS_LOCAL"; done
-expect_equal "newest delivered migration in the comparison schema" 10 "$(printf '%s\n' "$MIGRATIONS_LOCAL" | tail -n 1 | cut -d ' ' -f 1)"
+# The committed migrations are the schema's definition: every one of them, and no other, is applied (F01-S02 had V1 to V10;
+# each later stage appends its own).
+NEWEST_COMMITTED="$(find "$REPO_ROOT/apps/api/src/main/resources/db/migration" -name 'V*__*.sql' | sed -E 's#.*/V([0-9]+)__.*#\1#' | sort -n | tail -n 1)"
+[ -n "$NEWEST_COMMITTED" ] || environment_fault "no committed migration found under apps/api/src/main/resources/db/migration"
+for version in $(seq 1 "$NEWEST_COMMITTED"); do expect_matches "committed migration V$version exists in the comparison schema" "^$version " "$MIGRATIONS_LOCAL"; done
+expect_equal "newest migration in the comparison schema is the newest committed one" "$NEWEST_COMMITTED" "$(printf '%s\n' "$MIGRATIONS_LOCAL" | tail -n 1 | cut -d ' ' -f 1)"
 JDBC_EMPTY="jdbc:postgresql://localhost:${POSTGRES_PORT}/${EMPTY_DB}"
 API_RESTORE_NEEDED=1
 for profile in staging production; do
@@ -121,13 +125,14 @@ for profile in staging production; do
   wait_for_port_closed "$API_PORT" 40 || environment_fault "the API did not stop"
   printf 'drop database if exists %s;\ncreate database %s;\n' "$EMPTY_DB" "$EMPTY_DB" | owner_psql_in postgres >"$WORK/create-db.log" 2>&1
   expect_equal "$profile: tables in the new database before the API starts" 0 "$(printf "select count(*) from information_schema.tables where table_schema = 'public';\n" | owner_psql_in "$EMPTY_DB")"
-  # S05 staging instances do not migrate; its explicit migrate profile runs first.
+  # S05 staging instances do not migrate; its explicit migrate profile runs first. A nonlocal start needs every key the
+  # documents name as required (.env.example, infra/stack/compose.yaml), which F03 extended; with_nonlocal_keys supplies them.
   if [ "$profile" = staging ]; then
-    with_identity_keys env SALON_TRUSTED_PROXIES=127.0.0.1 SALON_OTLP_ENDPOINT=http://127.0.0.1:43180 SALON_DB_URL="$JDBC_EMPTY" SPRING_PROFILES_ACTIVE=staging,migrate \
+    with_nonlocal_keys env SALON_TRUSTED_PROXIES=127.0.0.1 SALON_OTLP_ENDPOINT=http://127.0.0.1:43180 SALON_DB_URL="$JDBC_EMPTY" SPRING_PROFILES_ACTIVE=staging,migrate \
       bash -c '. infra/scripts/lib/common.sh; load_settings; resolve_java_home || exit 1; exec "$RESOLVED_JAVA_HOME/bin/java" -jar "$ROOT/apps/api/target/salon-api.jar"' \
       >"$REPORT_DIR/staging-empty-database-migrate.log" 2>&1 || environment_fault "explicit staging migration failed; see staging-empty-database-migrate.log"
   fi
-  if with_identity_keys env SALON_TRUSTED_PROXIES=127.0.0.1 SALON_OTLP_ENDPOINT=http://127.0.0.1:43180 SPRING_PROFILES_ACTIVE="$profile" SALON_DB_URL="$JDBC_EMPTY" "$SCRIPTS/local-service.sh" start api >"$WORK/start-$profile.log" 2>&1; then
+  if with_nonlocal_keys env SALON_TRUSTED_PROXIES=127.0.0.1 SALON_OTLP_ENDPOINT=http://127.0.0.1:43180 SPRING_PROFILES_ACTIVE="$profile" SALON_DB_URL="$JDBC_EMPTY" "$SCRIPTS/local-service.sh" start api >"$WORK/start-$profile.log" 2>&1; then
     right "$profile: the API started against the empty database"
   else
     wrong "$profile: the API did not start against the empty database: $(tail -n 4 "$WORK/start-$profile.log" | tr '\n' ' ')"
@@ -141,7 +146,8 @@ for profile in staging production; do
   expect_equal "$profile: migrations applied to the empty database" "$MIGRATIONS_LOCAL" "$(printf "select version || ' ' || description || ' ' || checksum from flyway_schema_history where success order by installed_rank;\n" | owner_psql_in "$EMPTY_DB")"
   expect_equal "$profile: the tables match all current committed migrations" "$TABLES_LOCAL" "$(printf "select string_agg(table_name, ', ' order by table_name) from information_schema.tables where table_schema = 'public';\n" | owner_psql_in "$EMPTY_DB")"
   expect_equal "$profile: salon_brand's row-level security (enabled|forced|policies)" "true|true|tenant_isolation" "$(printf "select c.relrowsecurity || '|' || c.relforcerowsecurity || '|' || coalesce((select string_agg(polname, ',') from pg_policy where polrelid = c.oid), '') from pg_class c where c.oid = 'public.salon_brand'::regclass;\n" | owner_psql_in "$EMPTY_DB")"
-  expect_equal "$profile: what the application's role may do there (salon_brand select|salon_brand write|tenant anything)" "true|false|false" "$(printf "select has_table_privilege('%s', 'public.salon_brand', 'select') || '|' || has_table_privilege('%s', 'public.salon_brand', 'insert, update, delete, truncate') || '|' || has_table_privilege('%s', 'public.tenant', 'select, insert, update, delete, truncate, references, trigger');\n" "$DB_APP_USER" "$DB_APP_USER" "$DB_APP_USER" | owner_psql_in "$EMPTY_DB")"
+  # salon_brand was read-only to the application until F04-S02, which grants it UPDATE to publish a brand, and nothing more.
+  expect_equal "$profile: what the application's role may do there (salon_brand select|salon_brand update|salon_brand insert, delete or truncate|tenant anything)" "true|true|false|false" "$(printf "select has_table_privilege('%s', 'public.salon_brand', 'select') || '|' || has_table_privilege('%s', 'public.salon_brand', 'update') || '|' || has_table_privilege('%s', 'public.salon_brand', 'insert, delete, truncate') || '|' || has_table_privilege('%s', 'public.tenant', 'select, insert, update, delete, truncate, references, trigger');\n" "$DB_APP_USER" "$DB_APP_USER" "$DB_APP_USER" "$DB_APP_USER" | owner_psql_in "$EMPTY_DB")"
   # And no salon exists.
   expect_equal "$profile: tenants" 0 "$(printf 'select count(*) from tenant;\n' | owner_psql_in "$EMPTY_DB")"
   expect_equal "$profile: brand rows" 0 "$(printf 'select count(*) from salon_brand;\n' | owner_psql_in "$EMPTY_DB")"
@@ -153,7 +159,7 @@ for profile in staging production; do
   # Starting it a second time there still seeds nothing.
   "$SCRIPTS/local-service.sh" stop api >"$WORK/stop-api.log" 2>&1
   wait_for_port_closed "$API_PORT" 40 || environment_fault "the API did not stop"
-  with_identity_keys env SALON_TRUSTED_PROXIES=127.0.0.1 SALON_OTLP_ENDPOINT=http://127.0.0.1:43180 SPRING_PROFILES_ACTIVE="$profile" SALON_DB_URL="$JDBC_EMPTY" "$SCRIPTS/local-service.sh" start api >"$WORK/start-$profile-again.log" 2>&1
+  with_nonlocal_keys env SALON_TRUSTED_PROXIES=127.0.0.1 SALON_OTLP_ENDPOINT=http://127.0.0.1:43180 SPRING_PROFILES_ACTIVE="$profile" SALON_DB_URL="$JDBC_EMPTY" "$SCRIPTS/local-service.sh" start api >"$WORK/start-$profile-again.log" 2>&1
   expect_equal "$profile: tenants after a second start" 0 "$(printf 'select count(*) from tenant;\n' | owner_psql_in "$EMPTY_DB")"
 done
 

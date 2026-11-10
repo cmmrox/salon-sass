@@ -84,18 +84,57 @@ export function expectNoTenantId(answer: Answer, label: string): void {
 }
 
 /**
- * Asserts the answer is exactly one salon's public brand: 200, JSON, its slug, name and colour,
- * no other field, no tenant id, and nothing of any other salon.
+ * The public salon's fields: F01-S02's slug, name and colour, F01-S04's time zone, F04-S01's
+ * published profile and F04-S02's published tagline, logo and cover. Nothing else.
+ */
+export const PUBLIC_SALON_FIELDS = ['brandColour', 'cover', 'logo', 'name', 'profile', 'slug', 'tagline', 'timeZone'];
+
+/**
+ * The ids the public salon is allowed to carry: its published logo's and cover's (F04-S02) and its
+ * published branches' (F04-S01). Any other UUID in the answer is one it has no reason to carry.
+ */
+function publishedIds(brand: SalonBrand): string[] {
+  const ids = [brand.logo?.id, brand.cover?.id, ...(brand.profile?.branches ?? []).map(branch => branch.id)];
+  return ids.filter((id): id is string => typeof id === 'string').map(id => id.toLowerCase());
+}
+
+/**
+ * Asserts the answer is exactly one salon's public brand: 200, JSON, its slug, name, colour and
+ * time zone, the fields the contract adds since (tagline, logo, cover, profile) in the contract's
+ * shape and no other field, no tenant id, no id the contract does not publish, and nothing of any
+ * other salon.
  */
 export function expectBrandOf(answer: Answer, of: Salon, label: string): SalonBrand {
   expect(answer.status, `${label}: status (body ${answer.body.slice(0, 200)})`).toBe(200);
   expect(answer.contentType, `${label}: content type`).toBe('application/json');
   const brand = JSON.parse(answer.body) as SalonBrand;
-  // toEqual on the whole object: a field the contract does not promise is a failure here.
-  expect(brand, label).toEqual({ slug: of.slug, name: of.name, brandColour: of.brandColour, timeZone: of.timeZone });
-  expectNoTenantId(answer, label);
+  // The whole field list: a field the contract does not promise is a failure here.
+  expect(Object.keys(brand).sort(), `${label}: the public fields and no other`).toEqual(PUBLIC_SALON_FIELDS);
+  expect({ slug: brand.slug, name: brand.name, brandColour: brand.brandColour, timeZone: brand.timeZone }, label)
+    .toEqual({ slug: of.slug, name: of.name, brandColour: of.brandColour, timeZone: of.timeZone });
+  const validate = schemaValidator('Salon');
+  expect(validate(brand), `${label}: matches the Salon schema: ${JSON.stringify(validate.errors)}`).toBe(true);
+  expectOnlyPublishedIds(answer, label);
   expectNothingOfOtherSalons(answer, of, label);
   return brand;
+}
+
+/**
+ * For a 200 of the public salon: no salon's tenant id, and no UUID but the published logo's,
+ * cover's and branches' ids. For any other answer this is `expectNoTenantId`: no UUID at all.
+ */
+export function expectOnlyPublishedIds(answer: Answer, label: string): void {
+  if (answer.status !== 200 || answer.contentType !== 'application/json') {
+    expectNoTenantId(answer, label);
+    return;
+  }
+  const everything = `${headerText(answer)}\n${answer.body}`;
+  for (const salon of salons) {
+    expect(everything.toLowerCase(), `${label}: the tenant id of ${salon.slug}`).not.toContain(salon.id.toLowerCase());
+  }
+  const allowed = publishedIds(JSON.parse(answer.body) as SalonBrand);
+  const uuids = [...everything.matchAll(new RegExp(ANY_UUID.source, 'gi'))].map(match => match[0].toLowerCase());
+  expect(uuids.filter(uuid => !allowed.includes(uuid)), `${label}: a UUID the contract does not publish`).toEqual([]);
 }
 
 /** Asserts nothing in the answer belongs to a salon other than the one named (or to any, with none named). */

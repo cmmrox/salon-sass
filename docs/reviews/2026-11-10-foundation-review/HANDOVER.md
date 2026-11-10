@@ -21,6 +21,21 @@ For the lead, developer and QA sessions that follow the review (Claude Opus at h
 - The skill changes (CR-029) were not tried in a fresh session. Run scenarios 39 to 42 of
   `docs/operations/skill-evaluation.md` at the start of the next feature.
 
+## Status on 2026-11-10
+
+- **Package 3** is merged (PR #28): parallel CI, the tooling fixes and decision 124.
+- **Packages 1 and 2** are one pull request from `charithm/bugfix/foundation-review`: the seven fixes below, BUG-F02-017
+  (found by package 2) and BUG-F03-011 (found while verifying BUG-F03-010; decision 125), each verified by QA with a
+  regression case that fails without its fix; the stale regression cases repaired; smoke 11 of 11; regression 107 of
+  108, the one failure an environment fault that passed when rerun.
+- **Still open from these packages:** BUG-F01-009 is `fixed` and unverified (it needs the rolling-deploy check under
+  load, about 35 minutes, which runs only when the owner asks); the repaired k6 entries `rush` and `web-rush` are unrun
+  for the same reason; regression takes 53 minutes against its 20-minute budget (sharding is in `features/BACKLOG.md`).
+- **Moved to package 4** by rulings during package 1: the platform-wide sign-in limit per address, password hashing
+  still inside a transaction in two admin paths, `Retry-After` on the staff 429, and not counting a 503 toward the
+  attempt limits. Package 5 also takes the holiday import's and the export download's time budgets.
+- **Next:** packages 4 and 5 (in parallel), then package 6.
+
 ## How to work the packages
 
 - A **bug** is fixed with `bug-fix`: reproduce, a test that fails for the bug's reason, the fix, then QA verifies. A bug

@@ -15,7 +15,7 @@ import { Customers } from '../../shared/customer-identity';
 import { Profiles } from '../../shared/customer-profile';
 import { ROLES, json, syntheticAccount, type Identity, type Role, type Tokens } from '../../shared/identity';
 import {
-  test, expect, alpha, SECOND, fieldsOf, onSalonHost, operatorProblem, ownerSession, plusMs, tenantMutationRoutes,
+  test, expect, alpha, SECOND, concreteRoute, fieldsOf, onSalonHost, operatorProblem, ownerSession, plusMs, tenantMutationRoutes,
   type Entitlements, type Operator, type TestClock,
 } from '../../shared/operator';
 import type { Salon } from '../../shared/tenants';
@@ -74,7 +74,7 @@ test(`${id(14)} A read-only salon keeps reads and exempt identity actions and re
     const refused = tenantMutationRoutes().filter(m => !EXEMPT.has(`${m.method} ${m.path}`));
     expect(refused.length, 'the contract has mutating tenant routes to refuse').toBeGreaterThan(0);
     for (const m of refused) {
-      const route = m.path.replace('{id}', target.id);
+      const route = concreteRoute(m.path, target.id);
       for (const tokens of [ownerNow.tokens, undefined]) {
         await operatorProblem(await onSalonHost(identity, salon, m.method, route, tokens, bodies[`${m.method} ${m.path}`]), 403, 'salon_read_only');
       }

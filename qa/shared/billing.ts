@@ -7,7 +7,7 @@
 import { identitySql } from './identity-storage';
 import {
   expect, DAY, plusMs, schedulerSettled, sqlLiteral, platformAuditWhere,
-  type Operator, type OperatorActor, type InvoiceSummary, type TestClock,
+  type BillingPass, type Operator, type OperatorActor, type InvoiceSummary, type TestClock,
 } from './operator';
 
 /** Days of 24 hours from an invoice's due instant (decision 049, operator-console.md "As built"). */
@@ -33,6 +33,29 @@ export const chargeAttemptsOfSalon = (salonId: string) => Number(identitySql(
 export const auditsNaming = (action: string, subjectId: string) => platformAuditWhere(
   `action = ${sqlLiteral(action)} AND (subject_id = ${sqlLiteral(subjectId)} OR details::text LIKE ${sqlLiteral(`%${subjectId}%`)})`);
 
+/** What one billing pass did for one salon: nothing when the salon is not among its changes. */
+export function passFor(pass: BillingPass, salonId: string): BillingPass['changed'][number] {
+  return pass.changed.find(c => c.salonId === salonId) ?? { salonId, issued: [], reminders: [], charges: [], states: [] };
+}
+
+/**
+ * How many of a salon's invoices the application issued before an instant, by its own clock at issue
+ * (`created_at` is the pass's instant; `issued_at` is the period's anchor). The test clock runs on
+ * from where it is set (docs/qa/test-plan.md), so a count read seconds after a pass at "one second
+ * before" may legitimately include an invoice issued after the anchor; this count may not.
+ */
+export const invoicesIssuedBefore = (salonId: string, instant: string) => Number(identitySql(
+  `SELECT count(*) FROM invoice WHERE salon_id = ${sqlLiteral(salonId)} AND created_at < ${sqlLiteral(instant)}::timestamptz`));
+
+/**
+ * The pass run one second before an instant: asserts it ran before the instant (two calls apart, so
+ * well inside the second) and issued nothing to the salon.
+ */
+export function expectNothingIssuedBy(pass: BillingPass, salonId: string, instant: string, label: string) {
+  expect(Date.parse(pass.at), `${label}: the pass ran before ${instant} (it ran at ${pass.at})`).toBeLessThan(Date.parse(instant));
+  expect(passFor(pass, salonId).issued, `${label}: the pass issued nothing`).toEqual([]);
+}
+
 /** Sets the clock and runs one billing pass at that instant. */
 export async function billAt(operator: Operator, clock: TestClock, instant: string) {
   await clock.set(instant);
@@ -54,9 +77,10 @@ export async function firstInvoice(operator: Operator, clock: TestClock, admin: 
 
 /** Moves an unpaid invoice past a boundary and runs the job there. */
 export async function crossBoundary(operator: Operator, clock: TestClock, admin: OperatorActor, invoice: { dueAt: string },
-  boundary: keyof typeof BOUNDARY, extraMs = 0) {
-  await billAt(operator, clock, plusMs(invoice.dueAt, BOUNDARY[boundary] + extraMs));
+  boundary: keyof typeof BOUNDARY, extraMs = 0): Promise<BillingPass> {
+  const pass = await billAt(operator, clock, plusMs(invoice.dueAt, BOUNDARY[boundary] + extraMs));
   await operator.renew(admin);
+  return pass;
 }
 
 /** A salon with an unpaid first invoice driven to `read_only`. */

@@ -13,7 +13,7 @@
 import { refused } from '../../shared/booking-rules';
 import { bookingSalon, holdInput, performs } from '../../shared/booking';
 import { id, openAs, test, expect } from '../../shared/booking-browser';
-import { serviceInput } from '../../shared/catalogue';
+import { saveOf, serviceInput } from '../../shared/catalogue';
 import { plusDays } from '../../shared/salon-hours';
 import { teamSnapshot, updateOf } from '../../shared/team';
 import { TEAM_ROUTE, card } from '../../shared/team-browser';
@@ -71,4 +71,86 @@ test('TC-F06-S01-012 AC-8: a save that stops a person doing services they have u
   await expect(page.getByText(new RegExp(`^${words.split('{services}')[0]}.*${words.split('{services}')[1].replace('.', '\\.')}$`))).toBeVisible();
   for (const name of [s.service.name, colour.name]) await expect(page.getByText(new RegExp(words.split('{services}')[0])), `names ${name}`).toContainText(name);
   expect(teamSnapshot(s.created.id), 'nothing changed by the sheet').toBe(before);
+});
+
+/** F05-S01's Services test ids (qa/web/F05/S01-services-screens.spec.ts). */
+const S = { card: 'service-card', cardEdit: 'service-card-edit', sheet: 'service-sheet', name: 'service-sheet-name', more: 'service-sheet-more',
+  buffer: 'service-sheet-buffer', category: 'service-sheet-category', save: 'service-sheet-save', rule: 'services-rule' } as const;
+/** The refusal's words (BUG-F06-002, as the lead ruled them), for one person or several. */
+const moveRefusal = (members: string[], category: string) => (members.length === 1
+  ? `${members[0]} has upcoming bookings for this service and does not perform ${category}.`
+  : `${members.join(', ')} have upcoming bookings for this service and do not perform ${category}.`) + ` Add ${category} to their services on the Team page first.`;
+
+test('TC-F06-S01-058 AC-8: moving a service to a category that people booked for it do not perform is refused 409 in_use naming each of them (409 conflict first when the edit is stale), the Services sheet stays open with what was chosen and says who and what to do, and the move is saved once they perform the new category; who holds the service on its own keeps it', async ({ accounts, identity, operator, clock }) => {
+  // BUG-F06-002, STF-01: a service moved out of a category a person performs whole stops them performing it.
+  const s = await bookingSalon(identity, operator, clock, { people: 3 });
+  const [nimal, kasun, single] = s.members;
+  const treatments = await s.catalogue.addCategory(s.salon, s.owner.tokens, 'Treatments');
+  // Nimal and Kasun perform the whole category the service is in; the third holds the service on its own.
+  for (const person of [nimal, kasun]) await s.team.save(s.salon, s.owner.tokens, await s.team.get(s.salon, s.owner.tokens, person.id), { services: { categoryIds: [s.category.id], serviceIds: [] } });
+  for (const [n, person] of [nimal, kasun, single].entries()) {
+    await s.bookings.confirm(s.salon, s.owner.tokens, (await s.bookings.place(s.salon, s.owner.tokens, holdInput(person.id, s.service.id, plusDays(s.today, 2), ['10:00', '12:00', '14:00'][n]))).id);
+  }
+  const before = teamSnapshot(s.created.id);
+
+  await test.step('a stale edit is a conflict before anything else; the current version is the in_use refusal', async () => {
+    // refs BUG-F06-002's review (9d3503c1): an out-of-date version answers 409 conflict, whatever the move would do.
+    const current = await s.catalogue.serviceS02(s.salon, s.owner.tokens, s.service.id);
+    const renamed = await s.catalogue.saveS02(s.salon, s.owner.tokens, current, { description: 'Renamed meanwhile on another device.' });
+    expect(renamed.version, 'the edit elsewhere moved the version on').not.toBe(current.version);
+    const stale = await s.catalogue.updateRaw(s.salon, s.owner.tokens, s.service.id, saveOf(current, { categoryId: treatments.id }));
+    expect(stale.status(), 'the out-of-date version').toBe(409);
+    expect((await stale.json()).code, 'is a conflict').toBe('conflict');
+    const fresh = await s.catalogue.updateRaw(s.salon, s.owner.tokens, s.service.id, saveOf(renamed, { categoryId: treatments.id }));
+    expect(fresh.status(), 'the current version').toBe(409);
+    expect((await fresh.json()).code, 'is the in_use refusal').toBe('in_use');
+    expect((await s.catalogue.service(s.salon, s.owner.tokens, s.service.id)).categoryId, 'not moved by either').toBe(s.category.id);
+    expect(teamSnapshot(s.created.id), 'nobody\'s services changed').toBe(before);
+  });
+
+  const { page } = await openAs(accounts, s.owner, '/workspace/services');
+  const sheet = page.getByTestId(S.sheet).filter({ visible: true });
+  await page.locator(`[data-testid="${S.card}"][data-id="${s.service.id}"]`).getByTestId(S.cardEdit).click();
+  await expect(sheet).toBeVisible();
+  if (!(await id(page, S.buffer).filter({ visible: true }).count())) await id(page, S.more).filter({ visible: true }).click();
+  await id(page, S.category).filter({ visible: true }).click();
+  await id(page, `${S.category}-option-${treatments.id}`).click();
+  const save = async () => {
+    const answered = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/catalogue-service-save'));
+    await id(page, S.save).filter({ visible: true }).click();
+    const response = await answered;
+    return { status: response.status(), body: await response.json().catch(() => ({})) };
+  };
+
+  await test.step('two people would stop performing it: refused, naming both, the sheet kept', async () => {
+    const r = await save();
+    expect(r.status, 'refused').toBe(409);
+    expect(r.body.code).toBe('in_use');
+    const errors = errorsOf(r.body);
+    expect(errors.map(e => e.field), 'one item per person').toEqual(['categoryId', 'categoryId']);
+    expect(errors.map(e => e.detail).sort(), 'naming Nimal and Kasun, not the one who holds it on their own').toEqual([nimal.name, kasun.name].sort());
+    await expect(sheet, 'the sheet stays open').toBeVisible();
+    await expect(id(page, S.category).filter({ visible: true }), 'with the category chosen').toContainText('Treatments');
+    await expect(id(page, S.rule).filter({ visible: true })).toHaveText(moveRefusal(errors.map(e => e.detail!), 'Treatments'));
+    expect((await s.catalogue.service(s.salon, s.owner.tokens, s.service.id)).categoryId, 'not moved').toBe(s.category.id);
+    expect(teamSnapshot(s.created.id), 'nobody\'s services changed').toBe(before);
+  });
+
+  await test.step('once Kasun performs Treatments: refused for Nimal alone, in the singular', async () => {
+    await s.team.save(s.salon, s.owner.tokens, await s.team.get(s.salon, s.owner.tokens, kasun.id), { services: { categoryIds: [s.category.id, treatments.id], serviceIds: [] } });
+    const r = await save();
+    expect(r.status).toBe(409);
+    expect(errorsOf(r.body)).toEqual([{ field: 'categoryId', detail: nimal.name }]);
+    await expect(id(page, S.rule).filter({ visible: true })).toHaveText(moveRefusal([nimal.name], 'Treatments'));
+    await expect(sheet).toBeVisible();
+  });
+
+  await test.step('once Nimal performs Treatments too: moved, and everyone booked still performs it', async () => {
+    await s.team.save(s.salon, s.owner.tokens, await s.team.get(s.salon, s.owner.tokens, nimal.id), { services: { categoryIds: [s.category.id, treatments.id], serviceIds: [] } });
+    const r = await save();
+    expect(r.status, `saved (${JSON.stringify(r.body).slice(0, 200)})`).toBe(200);
+    await expect(sheet, 'the sheet closes').toHaveCount(0);
+    expect((await s.catalogue.service(s.salon, s.owner.tokens, s.service.id)).categoryId, 'moved').toBe(treatments.id);
+    expect((await s.team.get(s.salon, s.owner.tokens, single.id)).services.serviceIds, 'who holds it on their own keeps it').toContain(s.service.id);
+  });
 });

@@ -121,9 +121,14 @@ test(`${id(17)} each role receives exactly its permitted identity actions`,async
   const actor=await identity.staff(alpha,role);
   // F03 added entitlement.read for every staff role and invoice.read and support.manage for the Owner
   // (F03-S02 decision 051, identity-and-access.md; F03-S04 handoff, decision 053).
-  const common=['session.manage','password.change','mfa.enroll','entitlement.read'];
-  const admin=['staff.list','audit.list','payment.refund','catalogue.price.change','policy.change','customer.export','calendar.read','customer.read','financial.read'];
-  const expected=role==='OWNER'?[...common,...admin,'staff.manage','invoice.read','support.manage']:role==='MANAGER'?[...common,...admin]:role==='RECEPTIONIST'||role==='PROFESSIONAL'?[...common,'calendar.read','customer.read']:[...common,'financial.read'];
+  // Later features added: settings.read and settings.manage for Owner and Manager (F04, decision 085); catalogue.read for every
+  // role (F05, decision 093); team.read for all but the Accountant, team.manage for Owner and Manager, team.block for Owner, Manager
+  // and Receptionist (F06, decisions 099, 100); booking.manage for Owner, Manager and Receptionist and booking.attend for those
+  // three and the Professional (F07, decision 108 (b)). The table is docs/architecture/identity-and-access.md, "Role permissions".
+  const common=['session.manage','password.change','mfa.enroll','entitlement.read','catalogue.read'];
+  const front=['calendar.read','customer.read','team.read','team.block','booking.manage','booking.attend'];
+  const admin=['staff.list','audit.list','payment.refund','catalogue.price.change','policy.change','customer.export','financial.read','settings.read','settings.manage','team.manage',...front];
+  const expected=role==='OWNER'?[...common,...admin,'staff.manage','invoice.read','support.manage']:role==='MANAGER'?[...common,...admin]:role==='RECEPTIONIST'?[...common,...front]:role==='PROFESSIONAL'?[...common,'calendar.read','customer.read','team.read','booking.attend']:[...common,'financial.read'];
   expect([...actor.principal.permissions].sort()).toEqual(expected.sort());
   const victim=await identity.staff(alpha,'PROFESSIONAL');const target=await identity.staff(alpha);const payload=syntheticAccount();
   for(const path of ['/me','/sessions'])expect((await identity.call(alpha,'GET',path,undefined,actor.tokens)).status()).toBe(200);

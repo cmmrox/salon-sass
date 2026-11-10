@@ -1656,6 +1656,7 @@
       "refused": "You can’t change services. Ask the salon owner.",
       "inUseService": "This service has upcoming bookings. Hide it from online booking instead.",
       "inUseCategory": "Move its {count, plural, one {# service} other {# services}} to another category first.",
+      "inUseMove": "{count, plural, one {{members} has upcoming bookings for this service and does not perform {category}.} other {{members} have upcoming bookings for this service and do not perform {category}.}} Add {category} to their services on the Team page first.",
       "lastCategory": "Keep at least one category.",
       "categoryLimit": "Your salon has 50 categories, the most it can have.",
       "serviceLimit": "Your salon has 300 services, the most it can have.",

@@ -28,7 +28,8 @@ function get(url, family) {
   });
 }
 
-const oneLine = (text) => text.replace(/\s+/g, ' ').slice(0, 300);
+// Long enough for the whole public salon (F04 added its published profile), so the caller can read it as JSON.
+const oneLine = (text) => text.replace(/\s+/g, ' ').slice(0, 4000);
 
 for (const [index, url] of urls.entries()) {
   for (const [name, family] of [['4', 4], ['6', 6], ['any', 0]]) {

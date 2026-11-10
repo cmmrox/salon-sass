@@ -158,8 +158,14 @@ The same standard as the API (`docs/engineering/backend.md`, "Clean code"), with
   served with its loading skeleton and the result is streamed in.
 - The web app waits three seconds for the API, in the proxy and in a page, and then shows the
   unavailable state. A page never hangs on the API.
-  Account BFF calls share that original three-second API cancellation budget across proxy,
-  metadata and mutation work. The response-finish log also includes framework/error serialization
+  Account BFF calls share one three-second API cancellation budget across proxy,
+  metadata and mutation work. It starts when the request arrives and starts again once the
+  request's body has been received, so the time a slow connection takes to send a body is not
+  taken from the API (BUG-F04-001). An upload's call to the API has its own limit of ten seconds
+  (`UPLOAD_API_TIMEOUT_MS`), counted from when its form has been read; the form is read only after the
+  session and permission check, so a caller who is not signed in is refused with its upload unread.
+  (The framework hands a route handler the body only once it has all arrived, so that check has its
+  full budget after a slow upload.) The response-finish log also includes framework/error serialization
   after cancellation; measure it separately from upstream wait. The existing F01-S03 AC-8
   end-to-end unavailable-response deadline is five seconds. Do not equate a three-second upstream
   timer with an exact 3000 ms HTTP-completion assertion or add a fresh timer for each chained call.

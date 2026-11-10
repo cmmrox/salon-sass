@@ -25,27 +25,27 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F01-S03 | complete | - | BRD-03, NFR-01, NFR-17, NFR-21 | 15 | 19 | 17 | 2 | 0 |
 | F01-S04 | complete | - | BKG-15, NFR-01, NFR-10, NFR-15, NFR-16 | 16 | 18 | 18 | 0 | 0 |
 | F01-S05 | complete | - | BRD-03, NFR-01, NFR-07, NFR-16, NFR-18 | 12 | 12 | 12 | 0 | 0 |
-| F02-S01 | complete | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 30 | 30 | 0 | 0 |
+| F02-S01 | complete | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 32 | 32 | 0 | 0 |
 | F02-S02 | complete | - | IAM-01, IAM-03, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 18 | 18 | 0 | 0 |
 | F02-S03 | complete | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 14 | 14 | 0 | 0 |
 | F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 14 | 31 | 28 | 3 | 0 |
 | F03-S01 | complete | - | PLT-01, PLT-04 | 20 | 42 | 41 | 1 | 0 |
-| F03-S02 | complete | - | PLT-04, PLT-05 | 16 | 28 | 28 | 0 | 0 |
-| F03-S03 | complete | - | PLT-06 | 12 | 17 | 17 | 0 | 0 |
+| F03-S02 | complete | - | PLT-04, PLT-05 | 16 | 29 | 29 | 0 | 0 |
+| F03-S03 | complete | - | PLT-06 | 12 | 18 | 18 | 0 | 0 |
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
 | F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 28 | 28 | 0 | 0 |
-| F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 34 | 34 | 0 | 0 |
+| F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 35 | 35 | 0 | 0 |
 | F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 32 | 0 | 0 |
 | F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
-| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 20 | 50 | 50 | 0 | 0 |
+| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 20 | 51 | 51 | 0 | 0 |
 | F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 21 | 0 | 0 |
 | F05-S03 | complete | - | CAT-05, INV-01 | 15 | 27 | 27 | 0 | 0 |
-| F06-S01 | complete | - | STF-01 | 17 | 56 | 56 | 0 | 0 |
+| F06-S01 | complete | - | STF-01 | 17 | 58 | 58 | 0 | 0 |
 | F06-S02 | complete | - | STF-02 | 17 | 47 | 47 | 0 | 0 |
 | F06-S03 | complete | - | STF-03, STF-05 | 16 | 46 | 46 | 0 | 0 |
 | F07-S01 | complete | - | BKG-04, BKG-05, BKG-06, BKG-14, BKG-16, BKG-24, BKG-26, NFR-05 | 15 | 39 | 37 | 0 | 2 |
 | F07-S02 | complete | - | BKG-01, BKG-03, BKG-24, NFR-03 | 12 | 16 | 15 | 0 | 1 |
-| F07-S03 | complete | - | BKG-04, BKG-11, BKG-24, BKG-26, NFR-12 | 12 | 21 | 21 | 0 | 0 |
+| F07-S03 | complete | - | BKG-04, BKG-11, BKG-24, BKG-26, NFR-12 | 12 | 22 | 22 | 0 | 0 |
 
 ## Deferred cases
 

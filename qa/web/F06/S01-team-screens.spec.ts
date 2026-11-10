@@ -27,6 +27,7 @@ import type { Actor, Role, SignedStaff } from '../../shared/identity';
 import { Operator, supportJson, type SupportStart } from '../../shared/operator';
 import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
 import { fixture } from '../../shared/salon-brand';
+import { slowUpload } from '../../shared/slow-upload';
 import { PENDING_F06_S01, Team, memberInput, teamSalon, type TeamMember } from '../../shared/team';
 import { salonUrl, type Salon } from '../../shared/tenants';
 
@@ -800,4 +801,17 @@ test('TC-F06-S01-056 AC-17: + Add team member opens with no field error, Name no
     await expect(id(page, T.save)).toHaveText('Save changes');
   });
   expect((await team.list(salon, owner.tokens)).map(m => m.name), 'nobody added, nothing saved').toEqual(['Sanduni']);
+});
+
+test('TC-F06-S01-057 AC-9: a team member\'s photo chosen over a slow connection, whose file takes longer to send than the three seconds a call to the API may take, is uploaded and shown', async ({ accounts, operator, team }) => {
+  // BUG-F04-001 (STF-01's member photo uses the same path); docs/engineering/web.md "Structure".
+  const { salon, owner } = await teamSalon(operator, accounts.identity);
+  const person = await team.add(salon, owner.tokens, memberInput({ name: 'Amal' }));
+  const { page } = await open(accounts, owner);
+  await card(page, person.id).getByTestId(T.cardEdit).click();
+  const answer = await slowUpload(page, 'team-photo', () => page.getByTestId(T.photo).setInputFiles(fixture('logo-700x600-banded.png')));
+  expect(answer.status, `the slow upload is answered (${answer.body})`).toBe(200);
+  await expect(id(page, T.sheet).getByTestId(T.photoPreview), 'the photo is shown').toBeVisible();
+  await expect(id(page, T.photoError), 'and no error').toHaveCount(0);
+  expect((await team.get(salon, owner.tokens, person.id)).photoId, 'the photo is saved').not.toBeNull();
 });

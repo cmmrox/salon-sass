@@ -101,13 +101,21 @@ TS
 compile "$WORK/uses-the-endpoint.ts"
 expect_equal "exit code compiling code that calls GET $SALON_PATH and reads slug, name and brandColour (${COMPILE_OUTPUT:0:300})" 0 "$COMPILE_EXIT"
 
-cat >"$WORK/asks-for-another-path.ts" <<TS
+# The same call with the path one letter off. Which complaint TypeScript gives for a path the client does not
+# know depends on the other paths the contract holds (with F03 to F07's paths it reports the argument count,
+# TS2554, where it once reported the path, TS2345), so the proof that the path is the cause is the control:
+# the identical file with the described path compiles, and this one fails with one complaint, at that call.
+cat >"$WORK/asks-for-the-path.ts" <<TS
 import { createApiClient } from '$INDEX';
-export const all = () => createApiClient({ baseUrl: 'http://alpha.localhost:8090' }).GET('/api/v1/salons');
+export const all = () => createApiClient({ baseUrl: 'http://alpha.localhost:8090' }).GET('/api/v1/salon');
 TS
+compile "$WORK/asks-for-the-path.ts"
+expect_equal "exit code compiling the control, the same call to $SALON_PATH (${COMPILE_OUTPUT:0:300})" 0 "$COMPILE_EXIT"
+sed "s#'/api/v1/salon'#'/api/v1/salons'#" "$WORK/asks-for-the-path.ts" >"$WORK/asks-for-another-path.ts"
+expect_equal "the two files differ only in the path" "1" "$(diff "$WORK/asks-for-the-path.ts" "$WORK/asks-for-another-path.ts" | grep -c '^>')"
 compile "$WORK/asks-for-another-path.ts"
 expect_not_equal "exit code compiling a call to /api/v1/salons, which the contract does not describe" 0 "$COMPILE_EXIT"
-expect_matches "the compiler's complaint is about the path" 'error TS2345: .*"/api/v1/salons"' "$COMPILE_OUTPUT"
+expect_matches "the compiler's complaint is about that call" 'asks-for-another-path\.ts\(2,[0-9]+\): error TS(2345|2554|2769)' "$COMPILE_OUTPUT"
 expect_only_that_complaint "$COMPILE_OUTPUT"
 
 cat >"$WORK/asks-for-a-tenant-id.ts" <<TS

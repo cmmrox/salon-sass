@@ -249,6 +249,18 @@ cases:
     priority: high
     covers:
       - AC-10
+  - id: TC-F02-S01-031
+    title: a burst of staff sign-ins on two salons leaves a third salon answered at once, and a sign-in beyond the password-check cap is an honest 503 that answers correctly when tried again
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-1
+  - id: TC-F02-S01-032
+    title: a sign-in whose rate buckets the security cleanup job removes while the attempt is counted is answered 200, not 500
+    type: concurrency
+    priority: high
+    covers:
+      - AC-1
 verification:
   commands:
     - cd apps/api && ./mvnw -q verify
@@ -300,6 +312,14 @@ verification:
       file: qa/checks/F02/S01-nonlocal-secrets.sh
       covers:
         - TC-F02-S01-030
+      suites: [regression]
+    - id: sign-in-pressure
+      tool: playwright
+      file: qa/api/F02/S01-sign-in-pressure.spec.ts
+      project: api
+      covers:
+        - TC-F02-S01-031
+        - TC-F02-S01-032
       suites: [regression]
   manual: []
   deferred: []

@@ -350,3 +350,55 @@ test(`${id(14)} Lifecycle, export, email and deletion are audited without conten
   expect(history.find(e => e.kind === 'deleted')!.actor.kind).toBe('system');
 });
 
+
+test(`${id(18)} After deletion the tombstone keeps no name, contact or Owner email: the console's detail and list show none of them, the slug stays retired, and the invoices and the platform audit stay readable without them`, async ({ operator, identity, clock }) => {
+  // BUG-F03-009, PLT-06, NFR-09; docs/architecture/operator-console.md "Retention" (the tombstone's columns, V34) and its
+  // platform audit rule (no contact or profile values). A salon made here; never alpha, beta or gamma.
+  test.setTimeout(240_000);
+  const { admin, plan, target, closed } = await arrange(operator, identity, clock, '2026-12-21T07:00:00Z', true);
+  const { input, created } = target;
+  const before = await operator.salonDetail(admin, created.id);
+  // The values as the console holds them (the phone is stored in its international form), each one shown before deletion,
+  // so their absence afterwards means something.
+  const profile = { name: before.name!, contactEmail: before.contactEmail!, contactPhone: before.contactPhone!, address: before.address!, ownerEmail: before.ownerEmail! };
+  expect(before, 'before deletion the console shows the profile').toMatchObject({
+    status: 'closed', name: input.name, contactEmail: input.contactEmail, address: input.address });
+  expect(before.ownerEmail?.toLowerCase(), 'and the Owner\'s email').toBe(input.owner.email.toLowerCase());
+  expect(profile.contactPhone, 'and the contact phone').toMatch(/^\+?\d{9,15}$/);
+  const invoicesBefore = (await operator.invoices(admin, created.id)).total;
+  expect(invoicesBefore, 'the salon has an invoice').toBe(1);
+  const auditBefore = platformAudit(created.id).length;
+
+  // The scheduler's own deletion pass is due at the same instant and may be the one that deletes it (as in -011).
+  await clock.set(closed.deleteAt!);
+  await operator.runDeletions();
+  await schedulerSettled(operator);
+  await operator.renew(admin);
+  expect(platformAudit(created.id).filter(e => e.action === 'salon.deleted').length, 'deleted, by whichever pass').toBe(1);
+
+  const tombstone = await operator.salonDetail(admin, created.id);
+  expect(tombstone).toMatchObject({ id: created.id, slug: created.slug, status: 'deleted', name: null, contactEmail: null, contactPhone: null, address: null, ownerEmail: null });
+  expect(tombstone.deletedAt, 'the deletion instant is kept').not.toBeNull();
+  expect(tombstone.closedAt, 'the closure instant is kept').toBe(closed.closedAt);
+  const detailText = JSON.stringify(tombstone);
+  for (const [field, value] of Object.entries(profile)) expect(detailText, `the detail holds no ${field}`).not.toContain(value);
+
+  const bySlug = await operator.salonPage(admin, `?size=100&q=${encodeURIComponent(created.slug)}`);
+  const listed = bySlug.items.find(s => s.id === created.id);
+  expect(listed, 'the tombstone is still listed by its slug').toMatchObject({ slug: created.slug, status: 'deleted', name: null });
+  for (const [field, value] of Object.entries(profile)) expect(JSON.stringify(bySlug), `the list holds no ${field}`).not.toContain(value);
+  const byName = await operator.salonPage(admin, `?size=100&q=${encodeURIComponent(profile.name)}`);
+  expect(byName.items.map(s => s.id), 'its old name finds it no more').not.toContain(created.id);
+
+  expect(countRows('tenant', `id = ${sqlLiteral(created.id)} AND name IS NULL AND contact_email IS NULL AND contact_phone IS NULL AND address IS NULL AND owner_email IS NULL`),
+    'the registry row itself keeps none of them').toBe(1);
+  await operatorProblem(await operator.createSalonRaw(admin, { ...input, planId: plan.id, owner: { ...input.owner, email: `again-${input.owner.email}` } }), 409, 'slug_taken');
+
+  const invoices = await operator.invoices(admin, created.id);
+  expect(invoices.total, 'the invoices are still readable').toBe(invoicesBefore);
+  expect((await operator.invoice(admin, invoices.items[0].id)).salonId, 'and still name the salon by its id').toBe(created.id);
+  const audit = platformAudit(created.id);
+  expect(audit.length, 'the platform audit is kept, with the deletion').toBeGreaterThan(auditBefore);
+  expect(audit.filter(e => e.action === 'salon.deleted').length).toBe(1);
+  for (const [field, value] of Object.entries(profile)) expect(JSON.stringify(audit), `the platform audit holds no ${field}`).not.toContain(value);
+});

@@ -183,8 +183,9 @@ test(`${id(35)} Each operator role sees exactly its console navigation and Suppo
   await adminPage.goto(consoleUrl('/console/salons'));
   await expect(adminPage.getByTestId('console-salons')).toBeVisible();
   const adminLinks = (await navigation(adminPage).evaluateAll(links => links.map(l => new URL((l as HTMLAnchorElement).href).pathname))).sort();
-  // Final navigation (lead, cf2ba18; supersedes S01 AC-18): Salons, Plans, Support sessions, Sign out.
-  expect(adminLinks, 'Admin navigation').toEqual(['/console/plans', '/console/salons', '/console/support']);
+  // Final navigation (lead, cf2ba18; supersedes S01 AC-18): Salons, Plans, Support sessions, Sign out; and since
+  // F04-S03 the Holiday calendar page, which both roles read (operator-console.md, "Roles" and "Screens").
+  expect(adminLinks, 'Admin navigation').toEqual(['/console/holidays', '/console/plans', '/console/salons', '/console/support']);
   await expect(adminPage.getByTestId('console-sign-out')).toBeVisible();
   await adminContext.close();
   // From S04 Support reads the directory (operator-console.md); it has no plan or billing management.
@@ -197,7 +198,7 @@ test(`${id(35)} Each operator role sees exactly its console navigation and Suppo
   await expect(supportPage.getByTestId('console-denied'), 'plans are refused clearly').toBeVisible();
   await expect(supportPage.getByTestId('console-create-plan')).toHaveCount(0);
   const supportLinks = (await navigation(supportPage).evaluateAll(links => links.map(l => new URL((l as HTMLAnchorElement).href).pathname))).sort();
-  expect(supportLinks, 'Support navigation: Salons, Support sessions').toEqual(['/console/salons', '/console/support']);
+  expect(supportLinks, 'Support navigation: Salons, Support sessions, Holiday calendar (read only, F04-S03 AC-3)').toEqual(['/console/holidays', '/console/salons', '/console/support']);
   await expect(supportPage.getByTestId('console-sign-out')).toBeVisible();
   await supportContext.close();
 });

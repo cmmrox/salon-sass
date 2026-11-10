@@ -74,7 +74,8 @@ expect_equal "what the web app's port is bound to" "127.0.0.1 [::1]" "$(bound_to
 # ---------------------------------------------------------------------------------------------
 begin_case TC-F01-S02-061 "A salon's hostname works from curl and from Node.js on both ports, whether it is reached over IPv4 or IPv6"
 API_ALPHA="$(salon_api alpha)"
-WEB_ALPHA="$(on_hostname "$WEB_URL" "$ALPHA_HOST")/"
+# The staff sign-in page: since CR-013 the web app's / answers 307 to /workspace, which signed out leads here (TC-F01-S03-001).
+WEB_ALPHA="$(on_hostname "$WEB_URL" "$ALPHA_HOST")/workspace/sign-in"
 note "this machine resolves $ALPHA_HOST to: $(node -e 'require("node:dns").lookup(process.argv[1], { all: true }, (error, found) => console.log(error ? error.code : found.map((entry) => entry.address).join(", ")))' "$ALPHA_HOST")"
 for family in "" -4 -6; do
   label="curl ${family:-with the order the system gives}"

@@ -11,7 +11,8 @@ export function identitySql(query: string, tenant?: string | null, strict = true
     POSTGRES_CONTAINER,'psql',...(application?['-h','localhost']:[]),'-U',role,'-d',process.env.SALON_DB_NAME??'salon','-X','-qAt',
     ...(strict?['-v','ON_ERROR_STOP=1']:[])];
   const result = spawnSync('docker',args,options);
-  if(result.error) throw new Error('ENVIRONMENT: database observer could not start');
+  // The cause (a timeout under a loaded machine, a missing docker) is named, so a triage need not guess.
+  if(result.error) throw new Error(`ENVIRONMENT: database observer could not start (${(result.error as NodeJS.ErrnoException).code ?? result.error.message})`);
   if(strict && (result.status !== 0 || /ERROR:/.test(result.stderr))) throw new Error('ENVIRONMENT: database observation failed');
   return `${result.stdout}${strict?'':result.stderr}`.trim();
 }

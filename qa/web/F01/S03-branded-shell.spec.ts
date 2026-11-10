@@ -9,8 +9,15 @@ import { startApi, stopApi, standInForApi } from '@qa/services';
 import { DESIGN_WIDTHS, designScreenshot, referenceFit, referenceTypeAndPalette } from '@qa/design-reference';
 
 const suspend = (action: string) => execFileSync(path.join(PRODUCT_ROOT, 'infra/scripts/local-salon.sh'), [action, gamma.slug], { cwd: PRODUCT_ROOT });
+/**
+ * The product's copy that happens to contain a synthetic salon's value: Settings' colour help (F04-S02) gives
+ * "like #D6086A", the platform default, which is also alpha's colour. Every page carries the message
+ * catalogue, so that copy is removed before looking for another salon's data; any other occurrence still fails.
+ */
+const COPY_WITH_SALON_VALUES = allMessages().filter(text => salons.some(s => [s.name, s.brandColour, s.id].some(v => text.includes(v))));
 function noOtherBrand(body: string, own?: typeof alpha) {
-  for (const s of salons.filter(s => s !== own)) for (const value of [s.name, s.brandColour, s.id]) expect(body).not.toContain(value);
+  const shown = COPY_WITH_SALON_VALUES.reduce((html, text) => html.split(text).join(''), body);
+  for (const s of salons.filter(s => s !== own)) for (const value of [s.name, s.brandColour, s.id]) expect(shown, `${own?.slug ?? 'no salon'}: shows nothing of ${s.slug}`).not.toContain(value);
 }
 
 test('TC-F01-S03-001 each hostname renders only its salon in heading and document title', async ({ page, request }) => {
