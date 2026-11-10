@@ -14,7 +14,7 @@ requirement detail is in `qa/coverage.md`.
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | complete | merged | 4/4 | 6 | - |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | complete | merged | 3/3 | 7 | - |
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | complete | merged | 3/3 | 4 | - |
-| F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | in-qa | awaiting owner | 3/3 | 8 | **developer**: `bug-fix F07` |
+| F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | in-qa | awaiting owner | 3/3 | 8 | **qa**: `feature-verify F07` |
 | F08 | [Payments, deposits and refunds](F08-payments-deposits-and-refunds/) | M1-web | backlog | - | - | 8 | after F07 |
 | F09 | [Manage a booking: reschedule, cancel and waitlist](F09-manage-a-booking/) | M1-web | backlog | - | - | 4 | after F08 |
 | F10 | [Salon calendar and front desk](F10-salon-calendar-and-front-desk/) | M1-web | backlog | - | - | 8 | after F08 |

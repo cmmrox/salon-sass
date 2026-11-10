@@ -2,12 +2,12 @@
 id: BUG-F07-005
 title: '"Most booked" counts confirmed bookings still to come, so a service booked only for the future outranks one booked in the last 90 days'
 severity: minor
-status: open
+status: fixed
 found_by: "TC-F07-S01-039; PR #26 review (Codex, BookingRepository.countByService)"
 breaks: AC-13
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
+fixed_in: 1f78391acec790b67a48316f045fd327a865c2b3
+fix_note: "ServiceBookingCounts counts bookings that started from the 90 days' start up to now by the injected clock (the test clock applies), so bookings still to come no longer count; the contract and query Javadoc say so."
 developer_note: null
 verified_on: null
 approved_by: null

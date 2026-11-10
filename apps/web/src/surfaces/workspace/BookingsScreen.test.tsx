@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
 import { chooseOption } from '@test/select';
 import { setViewportWidth } from '@test/viewport';
+import type { Booking } from '@/features/booking';
 import {
   AMAYA,
   DETAIL,
@@ -255,6 +256,56 @@ describe('the Bookings page (F07-S03 AC-2, AC-3)', () => {
     expect(window.location.search).toBe('?page=2');
   });
 
+  /** A day of 51 bookings, the 51st alone on page 2, until it leaves the day's list: then 50, all on page 1. */
+  function aLaterPageThatEmpties(last: Booking) {
+    let gone = false;
+    answers.bookings = (call) => {
+      const index = Number(call.query.get('page'));
+      const total = gone ? 50 : 51;
+      return Response.json({ ...page(index === 0 ? [AMAYA] : gone ? [] : [last], total), page: index });
+    };
+    return () => (gone = true);
+  }
+  async function showsTheLastPageThatExists(entries: number) {
+    // A hold runs out a second after the clock's 08:00, as in BUG-F07-001's cases.
+    await waitFor(() => expect(window.location.search).toBe(''), { timeout: 4000 });
+    await waitFor(() => expect(screen.getAllByTestId('booking-row')).toHaveLength(1));
+    expect(sent('bookings').at(-1)?.query.get('page')).toBe('0');
+    expect(heading()).toHaveTextContent(/^50 bookings on/);
+    expect(screen.queryByTestId('bookings-empty')).toBeNull();
+    // The address is corrected in place: back does not return to the empty page.
+    expect(window.history.length).toBe(entries);
+  }
+
+  it('a hold running out alone on a later page shows the last page that exists, not Empty (BUG-F07-004)', async () => {
+    const expired = { ...KAVINDI, holdExpiresAt: '2086-06-15T08:00:01+05:30' };
+    const empties = aLaterPageThatEmpties(expired);
+    window.history.replaceState(null, '', '/workspace/bookings?page=2');
+    const entries = window.history.length;
+    render();
+    await ready();
+    expect(within(screen.getByTestId('booking-row')).getByTestId('booking-reference')).toHaveTextContent('W6S-2Z5');
+    empties();
+    await showsTheLastPageThatExists(entries);
+  });
+
+  it('releasing the only booking on a later page shows the last page that exists, not Empty (BUG-F07-004)', async () => {
+    const empties = aLaterPageThatEmpties(KAVINDI);
+    answers.booking = () => Response.json({ ...DETAIL, booking: KAVINDI, allowedActions: ['confirm', 'release'] });
+    answers['booking-release'] = () => {
+      empties();
+      return Response.json({ ok: true });
+    };
+    window.history.replaceState(null, '', '/workspace/bookings?page=2');
+    const entries = window.history.length;
+    render();
+    await ready();
+    fireEvent.click(screen.getByTestId('booking-row'));
+    fireEvent.click(await within(await screen.findByTestId('appointment-sheet')).findByTestId('appointment-release'));
+    expect(await screen.findByText('Hold released. The time is open again.')).toBeInTheDocument();
+    await showsTheLastPageThatExists(entries);
+  });
+
   it('says when the bookings cannot be reached, and tries again', async () => {
     answers.bookings = problem('service_unavailable', 503);
     render();
@@ -460,6 +511,150 @@ describe('New appointment (F07-S03 AC-4 to AC-6)', () => {
     // Sent so that leaving the page at once does not cancel it.
     expect(sent('booking-release')[0]?.keepalive).toBe(true);
     await waitFor(() => expect(screen.queryByTestId('new-appointment')).toBeNull());
+  });
+
+  /** An answer the test holds back until it lets it go, as a slow connection does. */
+  function heldBack() {
+    let letGo!: () => void;
+    const gate = new Promise<void>((resolve) => (letGo = resolve));
+    return {
+      answer: (respond: () => Response) => async () => {
+        await gate;
+        return respond();
+      },
+      letGo: async () => {
+        letGo();
+        // The answer reaches the screen, and whatever it starts (a release) is sent.
+        await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+      },
+    };
+  }
+  async function pick(sheet: HTMLElement, field: string, index: number) {
+    fireEvent.keyDown(within(sheet).getByTestId(`new-appointment-${field}`), { key: 'Enter' });
+    fireEvent.keyDown((await screen.findAllByTestId(`new-appointment-${field}-option`))[index]!, { key: 'Enter' });
+  }
+  async function pickDay(sheet: HTMLElement, day: string) {
+    fireEvent.click(within(sheet).getByTestId('new-appointment-day'));
+    const calendar = await screen.findByTestId('new-appointment-calendar');
+    fireEvent.click(
+      within(calendar)
+        .getAllByRole('button')
+        .find((each) => each.textContent === day)!,
+    );
+  }
+  const CHANGES: [string, (sheet: HTMLElement) => Promise<void>][] = [
+    ['the day', (sheet) => pickDay(sheet, '17')],
+    ['the service', (sheet) => pick(sheet, 'service', 1)],
+    ['the variant', (sheet) => pick(sheet, 'variant', 1)],
+    [
+      'the professional',
+      (sheet) => chooseOption(within(sheet).getByTestId('new-appointment-professional'), 'Ishara Fonseka'),
+    ],
+    [
+      'the customer’s name',
+      async (sheet) =>
+        void fireEvent.change(within(sheet).getByTestId('new-appointment-name'), { target: { value: 'Ruwini F' } }),
+    ],
+    ['the source', (sheet) => chooseOption(within(sheet).getByTestId('new-appointment-source'), 'WhatsApp')],
+  ];
+
+  it.each(CHANGES)(
+    'free times answered after %s changed are not shown for the changed form (BUG-F07-002)',
+    async (field, changeIt) => {
+      const late = heldBack();
+      answers['booking-availability'] = late.answer(() => Response.json(FREE));
+      const sheet = await openDesk();
+      await fillCustomer(sheet);
+      // The variant has to be offered before it can change: the service with variants, chosen before the search.
+      if (field === 'the variant') await pick(sheet, 'service', 1);
+      fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+      await waitFor(() => expect(sent('booking-availability')).toHaveLength(1));
+      await changeIt(sheet);
+      await late.letGo();
+      expect(within(sheet).queryAllByTestId('new-appointment-time')).toEqual([]);
+      expect(within(sheet).queryByTestId('new-appointment-times-intro')).toBeNull();
+    },
+  );
+
+  it('an earlier search answered last does not replace the times of the search after it (BUG-F07-002)', async () => {
+    const late = heldBack();
+    const LATER = { date: '2086-06-17', reason: null, times: [{ ...FREE.times[0]!, time: '11:00' }] };
+    answers['booking-availability'] = (call) =>
+      call.query.get('date') === '2086-06-15' ? late.answer(() => Response.json(FREE))() : Response.json(LATER);
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    await pickDay(sheet, '17');
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    await within(sheet).findAllByTestId('new-appointment-time');
+    await late.letGo();
+    expect(
+      within(sheet)
+        .getAllByTestId('new-appointment-time')
+        .map((chip) => chip.textContent),
+    ).toEqual(['11:00 · Ishara']);
+    expect(within(sheet).getByTestId('new-appointment-times-intro')).toHaveTextContent(/(17 Jun|Jun 17), 2086/);
+  });
+
+  it('a hold answered after the sheet closed is released, not kept (BUG-F07-003)', async () => {
+    const late = heldBack();
+    answers['booking-place'] = late.answer(() => Response.json(HELD, { status: 201 }));
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[0]!);
+    await waitFor(() => expect(sent('booking-place')).toHaveLength(1));
+    fireEvent.click(within(sheet).getByTestId('new-appointment-close'));
+    fireEvent.click(await screen.findByTestId('new-appointment-leave-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('new-appointment')).toBeNull());
+    expect(sent('booking-release')).toEqual([]);
+    await late.letGo();
+    await waitFor(() => expect(sent('booking-release').map((call) => call.body)).toEqual([{ id: HELD.id }]));
+    expect(sent('booking-release')[0]?.keepalive).toBe(true);
+  });
+
+  it('a hold answered after a field changed is released and never confirmed; the changed form holds anew (BUG-F07-003)', async () => {
+    const late = heldBack();
+    const EARLIER = { ...HELD, id: '66666666-0000-4000-8000-000000000009' };
+    answers['booking-place'] = (call) =>
+      sent('booking-place').length === 1
+        ? late.answer(() => Response.json(EARLIER, { status: 201 }))()
+        : // The hold as the API places it: for the customer it was sent.
+          Response.json({ ...HELD, customer: call.body?.customer }, { status: 201 });
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[0]!);
+    await waitFor(() => expect(sent('booking-place')).toHaveLength(1));
+    fireEvent.change(within(sheet).getByTestId('new-appointment-name'), { target: { value: 'Ruwini F' } });
+    // The changed form searches and holds at once, not held up by the attempt from before the change.
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[0]!);
+    await within(sheet).findByTestId('new-appointment-hold');
+    const [first, second] = sent('booking-place');
+    expect(second!.body).toMatchObject({ time: '09:00', customer: { name: 'Ruwini F' } });
+    // A new attempt, with its own key: the same key would answer with the hold placed for the earlier values.
+    expect(second!.body?.idempotencyKey).not.toBe(first!.body?.idempotencyKey);
+    await late.letGo();
+    await waitFor(() => expect(sent('booking-release').map((call) => call.body)).toEqual([{ id: EARLIER.id }]));
+    expect(within(sheet).getByTestId('new-appointment-hold')).toHaveTextContent('Ruwini F · 077 300 1188');
+    fireEvent.click(within(sheet).getByTestId('new-appointment-confirm'));
+    await waitFor(() => expect(sent('booking-confirm').map((call) => call.body)).toEqual([{ id: HELD.id }]));
+  });
+
+  it('a hold answered after a field changed, with nothing chosen since, leaves no hold on screen (BUG-F07-003)', async () => {
+    const late = heldBack();
+    answers['booking-place'] = late.answer(() => Response.json(HELD, { status: 201 }));
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[0]!);
+    await waitFor(() => expect(sent('booking-place')).toHaveLength(1));
+    fireEvent.change(within(sheet).getByTestId('new-appointment-name'), { target: { value: 'Ruwini F' } });
+    await late.letGo();
+    await waitFor(() => expect(sent('booking-release').map((call) => call.body)).toEqual([{ id: HELD.id }]));
+    expect(within(sheet).queryByTestId('new-appointment-hold')).toBeNull();
+    expect(within(sheet).queryByTestId('new-appointment-confirm')).toBeNull();
   });
 
   it('rules never saved: the words, and the link only for those who may set them', async () => {

@@ -9,6 +9,7 @@ import com.salonplatform.staff.MemberBookingsAffected;
 import com.salonplatform.staff.MemberPeriod;
 import com.salonplatform.staff.UpcomingMemberBookings;
 import com.salonplatform.testing.Http;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -118,7 +119,6 @@ class BookingIsolationIntegrationTest extends BookingTestBase {
             assertThat(upcomingMembers.servicesBookedFor(beta.kasun(), Set.of(beta.service())))
                     .isEmpty();
             assertThat(upcomingServices.anyFor(beta.service())).isFalse();
-            assertThat(counts.countsSince(Instant.EPOCH)).isEmpty();
             assertThat(onDate.on(alphasBranch, tomorrow)).isEmpty();
             assertThat(onDate.on(betasBranch, tomorrow)).isEmpty();
             assertThat(affected.inPeriods(beta.kasun(), Set.of(MemberPeriod.days(tomorrow, tomorrow))))
@@ -129,11 +129,16 @@ class BookingIsolationIntegrationTest extends BookingTestBase {
         inSalon(beta, () -> {
             assertThat(upcomingMembers.countFor(beta.kasun())).isEqualTo(1);
             assertThat(upcomingServices.anyFor(beta.service())).isTrue();
-            assertThat(counts.countsSince(Instant.EPOCH)).containsExactly(Map.entry(beta.service(), 1L));
             assertThat(onDate.on(betasBranch, tomorrow)).hasSize(1);
             assertThat(affected.outsideDate(beta.kasun(), tomorrow, List.of())).hasSize(1);
             return null;
         });
+
+        // "Most booked" counts bookings that have started (BUG-F07-005): once beta's has, it counts for beta only.
+        moveClock(Duration.ofDays(2));
+        assertThat(inSalon(alpha, () -> counts.countsSince(Instant.EPOCH))).isEmpty();
+        assertThat(inSalon(beta, () -> counts.countsSince(Instant.EPOCH)))
+                .containsExactly(Map.entry(beta.service(), 1L));
     }
 
     @Test

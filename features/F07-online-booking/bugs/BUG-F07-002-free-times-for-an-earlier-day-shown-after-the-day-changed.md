@@ -2,12 +2,12 @@
 id: BUG-F07-002
 title: Free times asked for one day are shown after the day (or service) was changed, and choosing one holds that time on the day now in the form
 severity: major
-status: open
+status: fixed
 found_by: "TC-F07-S03-019; PR #26 review (Codex, use-new-appointment.ts search)"
 breaks: AC-5
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
+fixed_in: d65fd1d1718d646609a937f32ed9eae38c504d98
+fix_note: "New appointment remembers the form and the search each free-times read was asked for, and ignores an answer (or refusal) for a form changed since, by any field, opening or closing, or overtaken by a later search."
 developer_note: null
 verified_on: null
 approved_by: null

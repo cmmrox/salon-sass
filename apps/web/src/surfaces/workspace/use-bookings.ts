@@ -1,7 +1,15 @@
 'use client';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { listRequest, queryOf, searchOf, type Booking, type BookingPage, type BookingsQuery } from '@/features/booking';
+import {
+  listRequest,
+  PAGE_SIZE,
+  queryOf,
+  searchOf,
+  type Booking,
+  type BookingPage,
+  type BookingsQuery,
+} from '@/features/booking';
 import type { Kind } from '@/features/identity';
 import type { TeamMemberList } from '@/features/staff';
 import { bookingRead, failureOf } from './booking-requests';
@@ -67,10 +75,21 @@ export function useBookings(
     if (!request) return;
     const mine = ++asked.current;
     let active = true;
+    let moved = false;
     Promise.resolve().then(() => active && setLoading(true));
     bookingRead<BookingPage>(kind, request)
       .then((answer) => {
         if (mine !== asked.current) return;
+        // A later page emptied under the person (a change, a hold run out) while the day still has bookings: the last
+        // page that exists is shown instead, the address corrected in place so back does not return to the empty one
+        // (BUG-F07-004). The address is read as it is now, after whatever the change did to it (a sheet closed).
+        const last = Math.max(1, Math.ceil(answer.total / PAGE_SIZE));
+        const shown = queryOf(new URLSearchParams(window.location.search));
+        if (answer.items.length === 0 && answer.total > 0 && shown.page > last) {
+          moved = true;
+          window.history.replaceState(null, '', `${window.location.pathname}${searchOf({ ...shown, page: last })}`);
+          return;
+        }
         setPage(answer);
         setProblem(null);
       })
@@ -82,7 +101,7 @@ export function useBookings(
           failure.code === 'service_unavailable' || failure.code === 'browser_unsupported' ? 'unavailable' : 'refused',
         );
       })
-      .finally(() => mine === asked.current && setLoading(false));
+      .finally(() => mine === asked.current && !moved && setLoading(false));
     return () => {
       active = false;
     };
