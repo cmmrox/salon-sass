@@ -42,6 +42,30 @@ public class ExpiredSecurityState {
                 .update();
     }
 
+    /**
+     * At most {@code max} of the salon's sessions that expired or were revoked before the given instant, with their
+     * refresh history (removed with them by its foreign key). A session a second-step challenge still names is kept
+     * until that challenge is removed. Returns how many sessions were removed.
+     */
+    public int removeSessionsEndedBefore(Instant before, int max) {
+        return jdbc.sql("""
+                        DELETE FROM identity_session
+                         WHERE tenant_id = ? AND id IN (
+                            SELECT s.id FROM identity_session s
+                             WHERE s.tenant_id = ? AND (s.expires_at < ? OR s.revoked_at < ?)
+                               AND NOT EXISTS (SELECT 1 FROM identity_mfa_challenge c
+                                                WHERE c.tenant_id = s.tenant_id AND c.session_id = s.id)
+                             LIMIT ?)
+                        """)
+                .params(
+                        TenantContext.require().id(),
+                        TenantContext.require().id(),
+                        Timestamp.from(before),
+                        Timestamp.from(before),
+                        max)
+                .update();
+    }
+
     /** Customer codes past their expiry. */
     public void removeCustomerChallengesExpiredBy(Instant now) {
         jdbc.sql("DELETE FROM identity_customer_challenge WHERE tenant_id = ? AND expires_at <= ?")
