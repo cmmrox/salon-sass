@@ -8,6 +8,10 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +26,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(OutboxSettings.class)
 class OutboxConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(OutboxConfiguration.class);
 
     @Bean
     @ConditionalOnProperty(name = "salon.outbox.enabled", havingValue = "true", matchIfMissing = true)
@@ -51,15 +57,16 @@ class OutboxConfiguration {
                 ChannelGuard.withoutBreaker(settings.provider().concurrency()));
         DeliveryAttempts attempts =
                 new DeliveryAttempts(settings, store, providers, events, transactions, clock, traces, metrics);
+        Set<String> unsubscribed = new TreeSet<>(eventTypes.names());
+        unsubscribed.removeAll(events.types());
+        if (!unsubscribed.isEmpty()) {
+            log.info(
+                    "No subscriber in this build for the event types {}: their events wait for a build that has"
+                            + " one, and are closed as unrouted after {}",
+                    unsubscribed,
+                    settings.unroutedAfter());
+        }
         return new OutboxDispatcher(
-                settings,
-                store,
-                attempts,
-                eventTypes.names(),
-                Map.copyOf(guards),
-                tenants,
-                transactions,
-                clock,
-                metrics);
+                settings, store, attempts, events.types(), Map.copyOf(guards), tenants, transactions, clock, metrics);
     }
 }

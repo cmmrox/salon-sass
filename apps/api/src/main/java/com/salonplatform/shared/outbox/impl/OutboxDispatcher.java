@@ -30,7 +30,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Delivers the outbox (NFR-15): provider messages, and events between modules (NFR-22). On each poll it
  * asks what is due across salons (ids only): messages of its providers' channels, and events of the types its
- * build declares, so that an event of a type it does not know waits for an instance that does (decision 064).
+ * build has a subscriber for, so that an event of a type it does not know (decision 064), or knows but does
+ * not subscribe to (decision 119), waits for an instance that subscribes to it, rather than being marked
+ * delivered with nothing done.
  * Then for each message, with that message's salon set (T-7):
  *
  * <ol>
@@ -69,7 +71,7 @@ final class OutboxDispatcher implements SmartLifecycle {
     /** The channels this dispatcher delivers to a provider. */
     private final Set<String> channels;
 
-    /** The event types this build declares: the only events it claims. */
+    /** The event types this build has a subscriber for: the only events it claims. */
     private final Set<String> eventTypes;
 
     private final Map<String, ChannelGuard> guards;
@@ -169,7 +171,7 @@ final class OutboxDispatcher implements SmartLifecycle {
     private int pollOnce() {
         Instant now = clock.instant();
         try {
-            metrics.backlog(store.backlog(now), now);
+            metrics.backlog(store.backlog(now, eventTypes), now);
         } catch (RuntimeException ex) {
             log.debug("The outbox backlog could not be read", ex);
         }

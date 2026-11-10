@@ -339,6 +339,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "active_tenant_ids",
                 "outbox_due",
                 "outbox_backlog",
+                // Decision 119: the backlog of an instance, with the events no subscriber of its build takes
+                // counted apart (outbox_backlog(timestamptz, text[])); the one above stays for the previous version.
+                "outbox_backlog",
                 "job_claim",
                 "job_finish",
                 "salon_entitlements",

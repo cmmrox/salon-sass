@@ -139,11 +139,41 @@ class ModuleEventsIntegrationTest {
                 .isEqualTo(application.bean(JsonMapper.class).readTree("{\"mark\":\"" + mark + "\"}"));
     }
 
+    /** Decision 119 reverses decision 064's "a declared type with no subscriber is delivered at once". */
     @Test
-    void anEventOfADeclaredTypeWithNoSubscriberIsDeliveredAtOnce() throws Exception {
-        UUID event = publish(alpha, new Unheard(UUID.randomUUID()));
+    void anEventOfADeclaredTypeWithNoSubscriberStaysPendingAndUnattemptedWhileOtherEventsFlow() throws Exception {
+        assertThat(application.bean(EventSubscribers.class).types())
+                .contains("probe.Noted.v1")
+                .doesNotContain("probe.Unheard.v1");
+        UUID unheard = publish(alpha, new Unheard(UUID.randomUUID()));
 
-        awaitStatus(event, "sent");
+        UUID mark = UUID.randomUUID();
+        awaitStatus(publish(alpha, new Noted(mark)), "sent");
+        Thread.sleep(300);
+
+        assertThat(owner.queryForMap("SELECT status, attempts, lease_until FROM outbox_message WHERE id = ?", unheard))
+                .containsEntry("status", "pending")
+                .containsEntry("attempts", 0)
+                .containsEntry("lease_until", null);
+        assertThat(EventProbes.handled(FIRST, mark)).containsExactly(alpha.id());
+    }
+
+    /**
+     * A rolling deployment that adds the first subscriber of a type: the instance without one leaves the event
+     * alone, and the instance with one delivers it, so the event is not lost (decision 119).
+     */
+    @Test
+    void anEventNoInstanceSubscribedToIsDeliveredByTheFirstBuildThatSubscribesToIt() throws Exception {
+        UUID mark = UUID.randomUUID();
+        UUID event = publish(beta, new Unheard(mark));
+        Thread.sleep(300);
+        assertThat(status(event)).isEqualTo("pending");
+
+        try (StartedApplication _ = database.startWith(EventProbes.Hearing.class, DISPATCHER)) {
+            awaitStatus(event, "sent");
+        }
+
+        assertThat(EventProbes.handled(EventProbes.HEARER, mark)).containsExactly(beta.id());
         assertThat(owner.queryForObject("SELECT attempts FROM outbox_message WHERE id = ?", Integer.class, event))
                 .isEqualTo(1);
     }

@@ -178,8 +178,13 @@ salon:
     breaker:
       failure-threshold: 5
       wait-duration: 60s
-    # Delivered messages are kept this long, then removed by the outbox-cleanup job.
+    # Delivered messages, and events closed as unrouted, are kept this long, then removed by the
+    # outbox-cleanup job.
     retention: 30d
+    # An event of a type no subscriber of this build takes waits this long, never attempted, for a
+    # build that has one (a rolling deployment, a short rollback); then the outbox-cleanup job closes
+    # it as unrouted (decision 119).
+    unrouted-after: 7d
     # On stop, calls in flight are given this long to finish; what is left is recovered by its lease.
     shutdown-grace: 5s
   jobs:

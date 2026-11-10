@@ -13,9 +13,10 @@ import org.springframework.util.ClassUtils;
 
 /**
  * The event types this build declares: every record annotated with {@link EventType} in the application's
- * packages, found once at startup. The dispatcher claims events of these types only, so that an event a newer
- * version published, of a type this build does not know, waits unclaimed for an instance that knows it
- * (decision 064). A declared type with no subscriber is delivered at once.
+ * packages, found once at startup. The dispatcher claims only the types that have a subscriber in this build
+ * ({@link EventSubscribers#types}), a subset of these, so that an event of a type this build does not know
+ * (decision 064), or knows but does not subscribe to (decision 119), waits unclaimed for an instance that
+ * subscribes to it. The declared types are what the dispatcher names at startup as waiting for a subscriber.
  */
 @Component
 class DeclaredEventTypes {
