@@ -172,6 +172,8 @@ const MUTATIONS = new Set([
 
 /** One allowlisted console operation; neither an upstream URL nor a tenant selector comes from input. */
 export async function handleOperator(request: NextRequest, action: string): Promise<NextResponse> {
+  // Whether a renewal's call to rotate has been made and its new credentials not yet issued.
+  let rotating = false;
   try {
     const host = consoleRequestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
@@ -204,31 +206,52 @@ export async function handleOperator(request: NextRequest, action: string): Prom
     if (!PUBLIC.has(action)) {
       const answer = await client.GET('/api/v1/operator/me', options);
       if (!answer.data) {
-        const renewable = (await operatorRenewal(host.hostname, credentials, answer.response.status)) === 'renewable';
+        // The session is judged only on the API's own evidence about it (BUG-F03-013): an answer that is not its
+        // refusal of the credential (an outage, a timeout) is an outage, the session's cookies left as they are.
+        if (answer.response.status !== 401)
+          return answer.response.status === 403
+            ? problem('permission_denied', 403)
+            : problem('service_unavailable', 503);
+        const verdict = await operatorRenewal(host.hostname, credentials, 401);
+        // Whether it may renew could not be found out (the API's clock unreadable): an outage, never an ended session.
+        if (verdict === 'unknown') return problem('service_unavailable', 503);
+        const renewable = verdict === 'renewable';
         if (action === 'refresh') {
           if (!renewable) {
             const response = problem('invalid_session', 401);
             clearOperatorCookies(response);
             return response;
           }
+          rotating = true;
           const rotated = await client.POST('/api/v1/operator/sessions/refresh', {
             body: { refreshToken: credentials.refresh! },
             signal: requestSignal(),
           });
-          const verified = rotated.data
-            ? await client.GET('/api/v1/operator/me', {
-                headers: { Authorization: `Bearer ${rotated.data.accessToken}` },
-                signal: requestSignal(),
-              })
-            : null;
-          const valid = Boolean(rotated.data && verified?.data?.kind === 'operator');
-          const response = valid ? output({ ok: true }) : problem('invalid_session', 401);
-          if (valid && rotated.data) issue(response, rotated.data);
-          else clearOperatorCookies(response);
+          if (!rotated.data) {
+            // Refused: nothing was rotated, so the cookies stay unless the API refused the refresh credential itself.
+            rotating = false;
+            if (rotated.response.status !== 401) return problem('service_unavailable', 503);
+            const response = problem('invalid_session', 401);
+            clearOperatorCookies(response);
+            return response;
+          }
+          const verified = await client.GET('/api/v1/operator/me', {
+            headers: { Authorization: `Bearer ${rotated.data.accessToken}` },
+            signal: requestSignal(),
+          });
+          // The new credential is someone else's, or refused at once: the session is not this caller's to keep.
+          if (verified.response.status === 401 || (verified.data && verified.data.kind !== 'operator')) {
+            const response = problem('invalid_session', 401);
+            clearOperatorCookies(response);
+            return response;
+          }
+          // Rotated: the old refresh credential is spent, so the new ones are kept.
+          const response = output({ ok: true });
+          issue(response, rotated.data);
+          rotating = false;
           return response;
         }
-        if (answer.response.status === 401) return problem('invalid_session', 401, { renewable });
-        return answer.response.status === 403 ? problem('permission_denied', 403) : problem('service_unavailable', 503);
+        return problem('invalid_session', 401, { renewable });
       }
       if (action === 'principal') {
         const p = answer.data;
@@ -580,8 +603,9 @@ export async function handleOperator(request: NextRequest, action: string): Prom
     }
   } catch {
     const response = problem('service_unavailable', 503);
-    // An unknown rotation outcome is never retried: a spent family is never restored.
-    if (action === 'refresh') clearOperatorCookies(response);
+    // An unknown rotation outcome (the call to rotate was made and no answer came) is never retried: a spent family is
+    // never restored. A failure before the rotation leaves the session as it is (BUG-F03-013).
+    if (action === 'refresh' && rotating) clearOperatorCookies(response);
     return response;
   }
 }

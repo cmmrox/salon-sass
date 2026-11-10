@@ -386,3 +386,53 @@ describe('the operator’s export archive’s own time limit', () => {
     }
   });
 });
+
+// BUG-F03-013: the console ends an operator's session only on the API's own evidence; an outage leaves it to go on.
+describe('the console’s renewal on the API’s evidence only', () => {
+  const lapsed = 'salon_operator_refresh=private-refresh; salon_operator_expires=2026-01-01T00:05:00Z';
+  const cleared = (response: Response) =>
+    response.headers
+      .getSetCookie()
+      .filter((cookie) => /Max-Age=0/i.test(cookie))
+      .map((cookie) => cookie.split('=')[0]);
+  const refresh = () => run(request('refresh', { cookies: lapsed }), 'refresh');
+
+  it('with the operator’s principal unreadable (an outage), answers 503 and clears nothing', async () => {
+    answer = () => ({ status: 503, data: { code: 'service_unavailable' } });
+    const response = await refresh();
+    expect(response.status).toBe(503);
+    expect(cleared(response)).toEqual([]);
+  });
+
+  it('with the API’s clock unreadable, answers 503 and clears nothing', async () => {
+    answer = (call) =>
+      call.path === '/api/v1/meta'
+        ? { status: 503, data: { code: 'service_unavailable' } }
+        : { status: 401, data: { code: 'invalid_session' } };
+    const response = await refresh();
+    expect(response.status).toBe(503);
+    expect(cleared(response)).toEqual([]);
+  });
+
+  it('with the rotation refused for an outage, answers 503 and clears nothing: nothing was rotated', async () => {
+    answer = (call) =>
+      call.path === '/api/v1/meta'
+        ? { status: 200, data: { time: '2026-01-01T00:10:00Z' } }
+        : call.path.endsWith('/sessions/refresh')
+          ? { status: 503, data: { code: 'service_unavailable' } }
+          : { status: 401, data: { code: 'invalid_session' } };
+    const response = await refresh();
+    expect(response.status).toBe(503);
+    expect(cleared(response)).toEqual([]);
+  });
+
+  it('with the refresh credential revoked, ends the session and clears it', async () => {
+    answer = (call) =>
+      call.path === '/api/v1/meta'
+        ? { status: 200, data: { time: '2026-01-01T00:10:00Z' } }
+        : { status: 401, data: { code: 'invalid_session' } };
+    const response = await refresh();
+    expect(response.status).toBe(401);
+    expect(cleared(response)).toEqual(expect.arrayContaining(['salon_operator_access', 'salon_operator_refresh']));
+  });
+});

@@ -208,7 +208,11 @@ export async function principalInsideLock<P>(session: Session): Promise<P> {
     }
     try {
       await send(session, 'refresh', { body: {} });
-    } catch {
+    } catch (failure) {
+      // An answer that says nothing was rotated (a suspended salon, an outage the BFF met before rotating) leaves the
+      // session as it is: a suspension or an outage never ends a session (BUG-F03-013). Only the refusal of the
+      // refresh credential, or a lost answer whose rotation may have happened, needs a fresh sign-in.
+      if (failure instanceof RequestFailure && failure.status >= 500) throw failure;
       await send(session, 'clear', { body: {} }).catch(() => undefined);
       throw new RequestFailure('invalid_session');
     }

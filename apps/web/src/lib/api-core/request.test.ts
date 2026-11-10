@@ -136,6 +136,27 @@ describe('renewal (web H1, decision 121)', () => {
     expect(calls.filter((call) => call.url.endsWith('/team-member-save'))).toHaveLength(4);
   });
 
+  // BUG-F03-013: a session ends only on the API's evidence; a suspension or an outage leaves it to go on.
+  it.each([
+    ['a suspended salon', 'salon_suspended'],
+    ['an outage', 'service_unavailable'],
+  ] as const)('a renewal refused for %s clears nothing and says so', async (_case, code) => {
+    answers.bookings = expired;
+    answers.principal = expired;
+    answers.refresh = () => Response.json({ code }, { status: 503 });
+    await expect(read(workspaceSession('staff'), 'bookings')).rejects.toMatchObject({ code });
+    expect(asked()).not.toContain('clear');
+  });
+
+  it('a renewal whose refresh credential the API refused ends the session and clears it', async () => {
+    answers.bookings = expired;
+    answers.principal = expired;
+    answers.refresh = () => Response.json({ code: 'invalid_session' }, { status: 401 });
+    answers.clear = () => Response.json({ ok: true });
+    await expect(read(workspaceSession('staff'), 'bookings')).rejects.toMatchObject({ code: 'invalid_session' });
+    expect(asked()).toContain('clear');
+  });
+
   it('does not renew for any other refusal', async () => {
     answers['team-members'] = () => Response.json({ code: 'permission_denied' }, { status: 403 });
     await expect(read(workspaceSession('staff'), 'team-members')).rejects.toMatchObject({

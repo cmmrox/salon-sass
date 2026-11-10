@@ -70,6 +70,13 @@ beforeEach(async () => {
   vi.stubEnv('SALON_WEB_LOCAL_HTTP', 'true');
   vi.stubEnv('SALON_IDENTITY_PROXY_KEY', '12'.repeat(32));
   server = createServer((request, response) => {
+    // The API's clock answers anyone, as the API's own endpoint does (MetaController): the BFF reads it to decide
+    // whether a refused session may renew.
+    if (request.url === '/api/v1/meta') {
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ time: '2026-01-01T00:00:00Z' }));
+      return;
+    }
     // Only the session the tests sign in with is valid; any other credential is refused, as the API refuses it.
     if (request.headers.authorization !== 'Bearer private-access') {
       response.writeHead(401, { 'Content-Type': 'application/json' });

@@ -332,8 +332,11 @@ async function answeredForSession(
     refresh: request.cookies.get(cookieName(kind, 'refresh'))?.value,
     expiry: request.cookies.get(cookieName(kind, 'expires'))?.value,
   };
-  const renewable = (await renewal(host.hostname, credentials, 401).catch(() => 'unknown')) === 'renewable';
-  return problem('invalid_session', 401, { renewable });
+  const verdict = await renewal(host.hostname, credentials, 401).catch(() => 'unknown' as const);
+  // Whether the session may renew could not be found out (the API's clock unreadable): an outage, never an ended
+  // session (BUG-F03-013).
+  if (verdict === 'unknown') return problem('service_unavailable', 503);
+  return problem('invalid_session', 401, { renewable: verdict === 'renewable' });
 }
 
 /**
@@ -358,6 +361,8 @@ async function handleIdentity(
   routes: RouteTable,
   principalFirst: (method: string, action: string) => boolean,
 ) {
+  // Whether a renewal's call to rotate has been made and its new credentials not yet issued.
+  let rotating = false;
   try {
     const host = requestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
@@ -388,30 +393,54 @@ async function handleIdentity(
     const publicActions = ['sign-in', 'mfa-enroll', 'mfa-verify'];
     let principal: Principal | undefined;
     const checked = principalFirst(request.method, action);
-    // A module's read without an access credential is refused here, without asking the API.
-    if (!checked && !access) return problem('invalid_session', 401);
+    // A module's read is asked of the API even without an access credential (its cookie lapses after five minutes):
+    // the API's answer says whether the salon is suspended (403) or the credential is needed (401), which the BFF
+    // cannot know by itself (BUG-F03-013).
     if (checked && !publicActions.includes(action) && action !== 'clear') {
       const answer = await client.GET('/api/v1/identity/me', options);
       principal = answer.data;
       if (!principal || principal.kind !== kind) {
+        // The session is judged only on the API's own evidence about it (BUG-F03-013): a suspended salon is said as
+        // one and an outage as an outage, the session's cookies left as they are, so that the same session goes on
+        // after a reactivation (F03-S03 AC-1, decision 027).
+        if (answer.error?.code === 'salon_suspended') return suspendedSalon();
+        const refused = answer.response.status === 401 || principal !== undefined;
+        if (!refused) return problem('service_unavailable', 503);
         const expiry = request.cookies.get(cookieName(kind, 'expires'))?.value;
-        const renewable =
-          (await renewal(host.hostname, { access, refresh, expiry }, answer.response.status)) === 'renewable';
+        const verdict = await renewal(host.hostname, { access, refresh, expiry }, 401);
+        if (verdict === 'unknown') return problem('service_unavailable', 503);
+        const renewable = verdict === 'renewable';
         if (action === 'refresh' && renewable) {
+          rotating = true;
           const rotated = await client.POST('/api/v1/identity/sessions/refresh', {
             body: { refreshToken: refresh! },
             signal: requestSignal(),
           });
-          const verified = rotated.data
-            ? await client.GET('/api/v1/identity/me', {
-                headers: { Authorization: `Bearer ${rotated.data.accessToken}` },
-                signal: requestSignal(),
-              })
-            : null;
-          const valid = Boolean(rotated.data && verified?.data?.kind === kind);
-          const response = valid ? output({ ok: true }) : problem('invalid_session', 401);
-          if (valid && rotated.data) issue(response, kind, rotated.data);
-          else clearCookies(response, kind);
+          if (!rotated.data) {
+            // An answer that refused the rotation: nothing was rotated, so the cookies stay unless the API refused the
+            // refresh credential itself.
+            rotating = false;
+            if (rotated.error?.code === 'salon_suspended') return suspendedSalon();
+            if (rotated.response.status !== 401) return problem('service_unavailable', 503);
+            const response = problem('invalid_session', 401);
+            clearCookies(response, kind);
+            return response;
+          }
+          const verified = await client.GET('/api/v1/identity/me', {
+            headers: { Authorization: `Bearer ${rotated.data.accessToken}` },
+            signal: requestSignal(),
+          });
+          // The new credential is someone else's, or refused at once: the session is not this caller's to keep.
+          if (verified.response.status === 401 || (verified.data && verified.data.kind !== kind)) {
+            const response = problem('invalid_session', 401);
+            clearCookies(response, kind);
+            return response;
+          }
+          // Rotated: the old refresh credential is spent, so the new ones are kept whatever else the API says (a
+          // salon suspended meanwhile is said as one).
+          const response = verified.error?.code === 'salon_suspended' ? suspendedSalon() : output({ ok: true });
+          issue(response, kind, rotated.data);
+          rotating = false;
           return response;
         }
         if (action === 'refresh') {
@@ -419,9 +448,6 @@ async function handleIdentity(
           clearCookies(response, kind);
           return response;
         }
-        if (answer.response.status === 503) return problem('service_unavailable', 503);
-        // A suspended salon, which the proxy's lookup no longer answers for a module's call (F03-S03 AC-1).
-        if (answer.error?.code === 'salon_suspended') return suspendedSalon();
         return problem('invalid_session', 401, { renewable });
       }
     }
@@ -576,8 +602,9 @@ async function handleIdentity(
     }
   } catch {
     const response = problem('service_unavailable', 503);
-    // Unknown rotation outcome is never retried: prevent restoring the spent family.
-    if (action === 'refresh') clearCookies(response, kind);
+    // An unknown rotation outcome (the call to rotate was made and no answer came) is never retried: prevent restoring
+    // the spent family. A failure before the rotation leaves the session as it is (BUG-F03-013).
+    if (action === 'refresh' && rotating) clearCookies(response, kind);
     return response;
   }
 }
