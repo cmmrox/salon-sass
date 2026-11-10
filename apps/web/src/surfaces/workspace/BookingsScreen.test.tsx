@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { focusManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
 import { chooseOption } from '@test/select';
@@ -818,5 +819,51 @@ describe('the appointment sheet (F07-S03 AC-7 to AC-9)', () => {
     expect(await screen.findByText('Hold released. The time is open again.')).toBeInTheDocument();
     await waitFor(() => expect(window.location.search).toBe(''));
     await act(async () => undefined);
+  });
+});
+
+describe('a list other people change (web M2, decision 121)', () => {
+  /** The window comes back into view: the list is read again, as its poll would read it. */
+  const comeBack = () =>
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+  afterEach(() => focusManager.setFocused(undefined));
+
+  it('a failed re-read keeps the last good list and says it may be out of date, until a read succeeds', async () => {
+    render();
+    await ready();
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+    const good = answers.bookings!;
+    answers.bookings = problem('service_unavailable', 503);
+    comeBack();
+    expect(await screen.findByTestId('bookings-stale')).toHaveTextContent('These bookings may be out of date');
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+    expect(screen.queryByTestId('bookings-unavailable')).toBeNull();
+    answers.bookings = good;
+    fireEvent.click(screen.getByTestId('bookings-stale-retry'));
+    await waitFor(() => expect(screen.queryByTestId('bookings-stale')).toBeNull());
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+  });
+
+  it('a new question that fails says so: another question’s list is never shown as this one’s', async () => {
+    render();
+    await ready();
+    answers.bookings = problem('service_unavailable', 503);
+    await chooseOption(screen.getByTestId('bookings-status'), 'Held');
+    expect(await screen.findByTestId('bookings-unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('bookings-stale')).toBeNull();
+    expect(screen.queryAllByTestId('booking-row')).toHaveLength(0);
+  });
+
+  it('shows a booking someone else made once the list is read again, without anyone acting here', async () => {
+    answers.bookings = () => Response.json(page([AMAYA, KAVINDI]));
+    render();
+    await ready();
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(2);
+    answers.bookings = () => Response.json(page([AMAYA, KAVINDI, NETHMI]));
+    comeBack();
+    await waitFor(() => expect(screen.getAllByTestId('booking-row')).toHaveLength(3));
   });
 });

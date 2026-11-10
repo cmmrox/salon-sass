@@ -61,7 +61,16 @@ export function useDataScope(): string {
 }
 
 /** What a read is asked with: its session, and the values that narrow it. */
-type ReadOptions = { enabled?: boolean; refetchInterval?: number | false; keepPrevious?: boolean };
+type ReadOptions = {
+  enabled?: boolean;
+  /** How often to read again while the page is in view; a list other people change states it (decision 121). */
+  refetchInterval?: number | false;
+  refetchOnWindowFocus?: boolean;
+  /** Keep showing the last answer, marked as a placeholder, while another question is read. */
+  keepPrevious?: boolean;
+  /** Forget the answer as soon as nothing shows it, so that asking again shows the loading state, not an old answer. */
+  forget?: boolean;
+};
 
 /**
  * A module's typed queries and changes. Each module declares its actions once (`ReadMap`, `ChangeMap`) and makes its
@@ -85,7 +94,9 @@ export function moduleData<Reads extends ReadMap, Changes extends ChangeMap>(mod
       queryFn: ({ signal }) => read<Reads[A]['answer']>(session, action, query as Query | undefined, signal),
       enabled: options.enabled ?? true,
       refetchInterval: options.refetchInterval ?? false,
+      refetchOnWindowFocus: options.refetchOnWindowFocus ?? false,
       placeholderData: options.keepPrevious ? (previous) => previous : undefined,
+      ...(options.forget ? { gcTime: 0 } : {}),
     });
   }
 

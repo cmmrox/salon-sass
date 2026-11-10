@@ -1,19 +1,5 @@
 'use client';
 import { IdentityFailure, type Kind } from '@/features/identity';
-import { change, read, workspaceSession } from '@/lib/api-core/request';
-
-/**
- * A read of the Bookings page: the page stays open for a working day, longer than an access credential lasts, so a
- * read refused for an expired credential renews the session under its cross-tab lock and is asked once more.
- */
-export function bookingRead<T>(kind: Kind, action: string): Promise<T> {
-  return read<T>(workspaceSession(kind), action);
-}
-
-/** A change, renewed once the same way. */
-export function bookingChange<T>(kind: Kind, action: string, body: unknown): Promise<T> {
-  return change<T>(workspaceSession(kind), action, body);
-}
 
 /** A failure as the screens branch on it: its stable code and the fields it named. */
 export const failureOf = (error: unknown) =>

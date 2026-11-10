@@ -14,6 +14,7 @@ export type {
   TaxSettings,
 } from './types';
 export {
+  useCatalogueAsk,
   useCatalogueChanges,
   useCategories,
   usePopularSetting,

@@ -75,6 +75,9 @@ export const usePublicTax = (kind: WorkspaceKind) => catalogue.useRead(workspace
 export const useTaxHistory = (kind: WorkspaceKind, page: number, enabled: boolean) =>
   catalogue.useRead(workspaceSession(kind), 'catalogue-tax-history', { page }, { enabled });
 
+/** The catalogue read when something happens elsewhere (New appointment opened), through the same cache and keys. */
+export const useCatalogueAsk = (kind: WorkspaceKind) => catalogue.useAsk(workspaceSession(kind));
+
 /** Puts a change's answer in place of a read's. */
 export const useSetCatalogueAnswer = (kind: WorkspaceKind) => catalogue.useSetAnswer(workspaceSession(kind));
 

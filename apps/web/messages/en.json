@@ -1785,6 +1785,8 @@
       "unavailableTitle": "The bookings could not be reached",
       "unavailableBody": "Check your connection and try again.",
       "retry": "Try again",
+      "staleTitle": "These bookings may be out of date",
+      "staleBody": "They could not be read again just now. They are read again on their own; check your connection.",
       "refused": "You can’t see these bookings. Ask the salon owner.",
       "readOnlySupport": "A support session can read bookings but cannot change them.",
       "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read bookings but not change them."

@@ -139,6 +139,21 @@ export function BookingsScreen({ kind, timeZone, scope, canBook, canAct, canSetR
           onProfessional={(professional) => list.change({ professional })}
         />
       )}
+      {list.stale && !unavailable && (
+        <Alert variant="caution" role="status" data-testid="bookings-stale">
+          <AlertTitle>{t('notices.staleTitle')}</AlertTitle>
+          <AlertDescription>{t('notices.staleBody')}</AlertDescription>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            onClick={() => list.reload()}
+            data-testid="bookings-stale-retry"
+          >
+            {t('notices.retry')}
+          </Button>
+        </Alert>
+      )}
       {unavailable ? (
         <Alert variant="caution" data-testid="bookings-unavailable">
           <AlertTitle>{t('notices.unavailableTitle')}</AlertTitle>
