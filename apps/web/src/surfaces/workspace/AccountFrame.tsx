@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Salon } from '@/features/branding';
 import { BrandStyle } from '@/components/shared/BrandStyle';
+import { DataLayer } from '@/lib/api-core/data-layer';
 import { WorkspaceShell, type WorkspaceView } from './WorkspaceShell';
 import { SessionRenewal } from './SessionRenewal';
 import { StaffSignInFrame } from './StaffSignInFrame';
@@ -17,6 +18,7 @@ export function AccountFrame({
   supportBanner,
   support = false,
   renew,
+  scope = 'signed-out',
 }: {
   salon: Salon;
   children: ReactNode;
@@ -28,6 +30,8 @@ export function AccountFrame({
   support?: boolean;
   /** Rendered without a principal: the session the browser renews before rendering the page again. */
   renew?: Kind;
+  /** The frame's data scope (`dataScope`): the browser's query cache is this frame's and this session's alone. */
+  scope?: string;
 }) {
   const t = useTranslations('account');
   if (signIn)
@@ -38,7 +42,7 @@ export function AccountFrame({
       </>
     );
   return (
-    <>
+    <DataLayer scope={scope}>
       <BrandStyle colour={salon.brandColour} />
       {renew && <SessionRenewal kind={renew} />}
       <WorkspaceShell
@@ -77,6 +81,6 @@ export function AccountFrame({
           {children}
         </div>
       </WorkspaceShell>
-    </>
+    </DataLayer>
   );
 }

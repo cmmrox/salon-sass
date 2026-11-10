@@ -14,8 +14,11 @@ export type FailureCode = components['schemas']['Problem']['code'] | 'browser_un
 /** A BFF session: where its actions are answered, the Web Lock its renewals take, and who it belongs to. */
 export type Session = { readonly path: string; readonly lock: string; readonly kind: string };
 
-/** A salon's workspace session: its staff, or the operator's read-only support view (F03-S04). */
-export function workspaceSession(kind: 'staff' | 'support'): Session {
+/** Who a workspace session belongs to: salon staff, or the operator's read-only support view (F03-S04). */
+export type WorkspaceKind = 'staff' | 'support';
+
+/** A salon's workspace session. */
+export function workspaceSession(kind: WorkspaceKind): Session {
   return { path: `/identity-web/${kind}`, lock: `salon:identity:${kind}`, kind };
 }
 

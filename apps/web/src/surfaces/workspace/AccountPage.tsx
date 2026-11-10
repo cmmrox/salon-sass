@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { decodeSalon, SALON_HEADER } from '@/features/branding/server';
 import { AccountScreen, Denied, SignIn } from '@/features/identity';
 import { workspaceEntry, cookieName, requestHost, type Kind } from '@/features/identity/server';
+import { dataScope } from '@/lib/api-core/data-scope';
 import { BillingBanner } from '@/features/platform';
 import { readEntitlements } from '@/features/platform/server';
 import { AccountFrame } from './AccountFrame';
@@ -101,6 +102,7 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
         banner={banner}
         supportBanner={supportBanner}
         support={support}
+        scope={dataScope(host.hostname, kind, store.get(cookieName(kind, 'session'))?.value)}
       >
         <Denied />
       </AccountFrame>
@@ -121,6 +123,7 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
       supportBanner={supportBanner}
       support={support}
       renew={principal === null && !screenRenews ? kind : undefined}
+      scope={dataScope(host.hostname, kind, store.get(cookieName(kind, 'session'))?.value)}
     >
       {view === 'bookings' ? (
         <BookingsScreen

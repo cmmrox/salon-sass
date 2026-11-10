@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shared/Navigation';
+import { DataLayer } from '@/lib/api-core/data-layer';
 import { ConsoleSignOut } from './ConsoleSignOut';
 
 export type ConsoleView = 'salons' | 'plans' | 'support' | 'holidays' | 'none';
@@ -18,11 +19,14 @@ export function ConsoleShell({
   permissions = [],
   view = 'none',
   signedIn = true,
+  scope = 'signed-out',
 }: {
   children: ReactNode;
   permissions?: string[];
   view?: ConsoleView;
   signedIn?: boolean;
+  /** The frame's data scope (`dataScope`): the browser's query cache is this frame's and this session's alone. */
+  scope?: string;
 }) {
   const t = useTranslations('console');
   const items: NavigationItem[] = [];
@@ -80,7 +84,9 @@ export function ConsoleShell({
           className="min-w-0 px-4 pt-4 pb-12 rail:p-6 rail:pb-12 wide:px-9 wide:pt-7 wide:pb-14"
           data-testid="console-main"
         >
-          <div className="mx-auto w-full max-w-content min-w-0 rail:max-w-workspace">{children}</div>
+          <div className="mx-auto w-full max-w-content min-w-0 rail:max-w-workspace">
+            <DataLayer scope={scope}>{children}</DataLayer>
+          </div>
         </SidebarInset>
       </div>
     </NavigationProvider>

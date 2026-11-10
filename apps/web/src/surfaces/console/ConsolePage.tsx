@@ -9,6 +9,7 @@ import {
   InvoiceList,
 } from '@/features/platform';
 import { operatorEntry, operatorCookie } from '@/features/platform/server';
+import { dataScope } from '@/lib/api-core/data-scope';
 import { consoleRequestHost } from '@/lib/tenancy/console-host';
 import { platformDomainOf } from '@/lib/tenancy/hostname';
 import { ConsolePending, ConsoleUnavailable } from './ConsolePending';
@@ -73,7 +74,11 @@ export async function ConsolePage({
     );
   const platformDomain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN);
   return (
-    <ConsoleShell permissions={permissions} view={view}>
+    <ConsoleShell
+      permissions={permissions}
+      view={view}
+      scope={dataScope(host.hostname, 'operator', store.get(operatorCookie('session'))?.value)}
+    >
       {view === 'holidays' ? (
         id && /^\d{4}$/.test(id) ? (
           <HolidayYearScreen year={Number(id)} canManage={permissions.includes('operator.holiday.manage')} />
