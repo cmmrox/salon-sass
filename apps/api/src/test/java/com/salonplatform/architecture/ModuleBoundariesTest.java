@@ -208,7 +208,15 @@ class ModuleBoundariesTest {
                 arguments(
                         "misplacedevent",
                         rule(ModuleRules::eventRecordsLiveInTheirModulesRootPackage),
-                        "event.BookingConfirmed"));
+                        "event.BookingConfirmed"),
+                arguments(
+                        "providedjoins",
+                        rule(ModuleRules::providedInterfacesOpenNoTransactionOfTheirOwn),
+                        "BookingSlotsImpl"),
+                arguments(
+                        "providedjoins",
+                        rule(ModuleRules::providedInterfacesOpenNoTransactionOfTheirOwn),
+                        "BookingRulesImpl"));
     }
 
     /**
