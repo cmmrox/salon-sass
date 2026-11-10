@@ -22,7 +22,7 @@ salon:
     # QA and a developer sign in many times from this one machine, across the synthetic salons, and
     # reset each salon's own limits through /local/identity. The limit across salons (decision 120)
     # has no such reset, so it is out of the way here unless SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS
-    # sets it (to 300, the default everywhere else, to try it).
+    # sets it (to 60, the default everywhere else, to try it).
     sign-in:
       address-limit-across-salons: ${SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS:100000}
   operator:

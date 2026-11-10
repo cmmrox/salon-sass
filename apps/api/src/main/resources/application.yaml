@@ -248,13 +248,14 @@ salon.identity:
   # waits up to two seconds, then is refused 503. Unset, it is the number of processors the JVM sees; set it with
   # SALON_IDENTITY_PASSWORD_CHECKS_CONCURRENT.
   # password-checks.concurrent:
-  # Staff sign-in attempts one address may make across every salon in fifteen minutes, beside each salon's own 30
-  # (decision 120); set it with SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS. Not tighter, because many
-  # salons' staff reach us through one carrier-grade NAT address on mobile data and every attempt counts, successful
-  # ones too; guessing one account's password is already bounded by its identifier limit, and the CPU by the checks
-  # in flight. This only stops one address spending its thirty attempts at every salon.
+  # Failed staff sign-ins one address may make across every salon in fifteen minutes, beside each salon's own limits,
+  # which count every attempt (decision 120); set it with SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS. It counts
+  # failures only: many salons' staff reach us through one carrier-grade NAT address on mobile data and sign in
+  # successfully, so they do not use it up, while password spraying (a guess or two at each of many accounts, which
+  # never trips one account's limit) fails and does. An attempt is counted before its password is checked and given
+  # back when the password proves correct.
   sign-in:
-    address-limit-across-salons: ${SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS:300}
+    address-limit-across-salons: ${SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS:60}
   codes:
     number-limit: ${SALON_IDENTITY_CODE_NUMBER_LIMIT:3}
     device-limit: ${SALON_IDENTITY_CODE_DEVICE_LIMIT:10}

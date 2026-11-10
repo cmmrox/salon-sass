@@ -354,8 +354,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "holiday_calendar_published",
                 // F04-S04: the current salon's currency, the tenant role's only path to that registry column.
                 "salon_currency",
-                // Decision 120: an address's sign-in attempts counted across every salon.
-                "shared_count_address_attempt");
+                // Decision 120: an address's failed sign-ins counted across every salon, and a correct one given back.
+                "shared_count_address_attempt",
+                "shared_return_address_attempt");
         // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
         // staff-seat usage count and billing's outbox write.
         // F03-S03: closure's session revocation and message cancellation, and each module's guarded eraser,

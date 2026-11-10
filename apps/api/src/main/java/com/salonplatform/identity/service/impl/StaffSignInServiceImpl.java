@@ -40,7 +40,7 @@ class StaffSignInServiceImpl implements StaffSignInService {
 
     private static final int ATTEMPTS_PER_ADDRESS = 30;
 
-    /** What the address's attempts across every salon are counted for ({@link AddressAttempts}). */
+    /** What the address's failed attempts across every salon are counted for ({@link AddressAttempts}). */
     private static final String SIGN_IN = "staff-sign-in";
 
     private final IdentityWork work;
@@ -67,27 +67,30 @@ class StaffSignInServiceImpl implements StaffSignInService {
      * salon's identity lock for the whole check, so a few sign-ins in flight stalled every salon on the instance.
      *
      * <p>The check is reserved before anything is counted, so a sign-in refused 503 because the checks were at their
-     * limit counts toward none of the limits. Besides the salon's own limits per identifier and per address, the
-     * address's attempts are counted across every salon ({@link AddressAttempts}), so that one address cannot try
-     * {@value #ATTEMPTS_PER_ADDRESS} times on each of many salons (decision 120).
+     * limit counts toward none of the limits. Besides the salon's own limits per identifier and per address, which
+     * count every attempt, the address's failed attempts are counted across every salon ({@link AddressAttempts}), so
+     * that one address cannot spray guesses at the accounts of many salons (decision 120). That attempt is counted
+     * at the start like the others, and given back by a sign-in whose password proves correct (one that then needs
+     * the second step included), in the transaction that records its outcome.
      */
     @Override
     public SignIn signIn(String identifier, String password, String deviceLabel, String address) {
         String key = normalized(identifier);
+        String addressAcrossSalons = crypto.hash("rate-staff-address-across-salons", address);
         Optional<Checked> checked;
         boolean correct;
+        AddressAttempts.Counted counted;
         try (PasswordChecks.Reserved check = passwords.reserve()) {
-            work.run(() -> {
+            counted = work.run(() -> {
                 boolean identifierAllowed = attempt("staff-identifier", key, ATTEMPTS_PER_IDENTIFIER);
                 boolean addressAllowed = attempt("staff-address", address, ATTEMPTS_PER_ADDRESS);
-                boolean allowedAcrossSalons = addressAttempts.count(
-                                SIGN_IN, crypto.hash("rate-staff-address-across-salons", address), RATE_WINDOW)
-                        <= limits.addressAcrossSalons();
+                AddressAttempts.Counted acrossSalons = addressAttempts.count(SIGN_IN, addressAcrossSalons, RATE_WINDOW);
+                boolean allowedAcrossSalons = acrossSalons.attempts() <= limits.addressAcrossSalons();
                 if (!identifierAllowed || !addressAllowed || !allowedAcrossSalons) {
                     record(Actor.system("sign-in"), "sign_in_limited", crypto.hash("audit", key));
                     throw new ApplicationProblemException(429, ErrorCode.RATE_LIMITED);
                 }
-                return null;
+                return acrossSalons;
             });
             checked = work.read(() -> accounts.findByIdentifier(key).stream()
                     .findFirst()
@@ -110,6 +113,8 @@ class StaffSignInServiceImpl implements StaffSignInService {
                 throw IdentityProblems.invalidCredentials();
             }
             StaffAccount account = now.get();
+            // The password was right: not a failure across salons (decision 120).
+            addressAttempts.giveBack(SIGN_IN, addressAcrossSalons, counted);
             StaffValidation.requireDeviceLabel(deviceLabel);
             if (account.hasMfa() || account.getRole() == StaffRole.OWNER) {
                 return mfaChallenges.issue(

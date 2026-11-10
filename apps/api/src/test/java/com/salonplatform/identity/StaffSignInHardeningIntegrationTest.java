@@ -48,20 +48,30 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * The sign-in hardening left over from BUG-F02-016 (decision 120): one address's attempts are limited across every
- * salon, not only salon by salon; a sign-in refused 503 because the password checks were at their limit counts
- * toward no limit; the staff 429 says when to try again; and a staff account's password, and a new Owner's, are
- * hashed through the password checks, outside any transaction. One check at once here, and four attempts per address
- * across salons.
+ * The sign-in hardening left over from BUG-F02-016 (decision 120): one address's failed sign-ins are limited across
+ * every salon, not only salon by salon, while correct ones give their count back; a sign-in refused 503 because the
+ * password checks were at their limit counts toward no limit; the staff 429 says when to try again; and a staff
+ * account's password, and a new Owner's, are hashed through the password checks, outside any transaction. One check
+ * at once here, and sixty failures per address across salons, set here whatever the default.
  */
 // JSON bodies are read as untyped maps; each cast states the shape the assertion beside it checks.
 @SuppressWarnings("unchecked")
 @TestPropertySource(
         properties = {
             "salon.identity.password-checks.concurrent=1",
-            "salon.identity.sign-in.address-limit-across-salons=4"
+            "salon.identity.sign-in.address-limit-across-salons=60"
         })
 class StaffSignInHardeningIntegrationTest extends IntegrationTest {
+
+    private static final int FAILURES_ACROSS_SALONS = 60;
+
+    /** The accounts of each salon, so that no identifier reaches its own limit of ten. */
+    private static final int ACCOUNTS_PER_SALON = 3;
+
+    /** One hash of the test's password, made once, for every account the tests create. */
+    private static String passwordHash;
+
+    private static String password;
 
     @MockitoSpyBean
     IdentityCrypto crypto;
@@ -91,21 +101,28 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
     private final CountDownLatch checking = new CountDownLatch(1);
     private final CountDownLatch release = new CountDownLatch(1);
     private final AtomicBoolean holdNextCheck = new AtomicBoolean();
+    private final List<TestSalon> salons = new java.util.ArrayList<>();
     private TestSalon alpha;
     private TestSalon beta;
-    private String password;
 
     @BeforeEach
-    void twoSalons() throws Exception {
+    void fourSalonsWithThreeAccountsEach() throws Exception {
         // The counters across salons are shared by every test of this context: each test starts with none.
         owner.update("DELETE FROM shared_address_attempt");
-        TestSalons salons = new TestSalons(owner);
-        alpha = salons.create("Hardening Alpha", "#123456");
-        beta = salons.create("Hardening Beta", "#654321");
-        password = UUID.randomUUID() + " synthetic";
-        for (TestSalon salon : List.of(alpha, beta)) {
-            add(salon, "receptionist@example.test", "+94770000301", StaffRole.RECEPTIONIST);
+        if (passwordHash == null) {
+            password = UUID.randomUUID() + " synthetic";
+            passwordHash = crypto.encodePassword(password);
         }
+        TestSalons registry = new TestSalons(owner);
+        for (String name : List.of("Alpha", "Beta", "Gamma", "Delta")) {
+            TestSalon salon = registry.create("Hardening " + name, "#123456");
+            salons.add(salon);
+            for (int i = 0; i < ACCOUNTS_PER_SALON; i++) {
+                add(salon, staff(i), "+9477000030" + i, StaffRole.RECEPTIONIST);
+            }
+        }
+        alpha = salons.get(0);
+        beta = salons.get(1);
         doAnswer(call -> {
                     if (holdNextCheck.compareAndSet(true, false)) {
                         checking.countDown();
@@ -130,23 +147,24 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void oneAddressIsLimitedAcrossEverySalonNotOnlySalonBySalon() {
-        for (int i = 0; i < 2; i++) {
-            assertThat(signIn(alpha, "nobody-" + i + "@example.test", "wrong password")
+    void sixtyFailuresFromOneAddressAcrossSalonsAreThenRefusedAtEverySalonAndSayWhenToTryAgain() {
+        for (int i = 0; i < FAILURES_ACROSS_SALONS; i++) {
+            TestSalon salon = salons.get(i % 3);
+            assertThat(signIn(salon, "nobody-" + i + "@example.test", "wrong password")
                             .status())
-                    .isEqualTo(401);
-            assertThat(signIn(beta, "nobody-" + i + "@example.test", "wrong password")
-                            .status())
+                    .as("failure %d, the %dth on its salon", i + 1, i / 3 + 1)
                     .isEqualTo(401);
         }
 
-        Http.Exchange limited = signIn(beta, "receptionist@example.test", password);
-
-        assertThat(limited.status())
-                .as("the fifth attempt from this address, though only the third on this salon")
-                .isEqualTo(429);
-        assertThat((String) json.readValue(limited.body(), Map.class).get("code"))
-                .isEqualTo("rate_limited");
+        for (TestSalon salon : salons) {
+            Http.Exchange limited = signIn(salon, staff(0), password);
+            assertThat(limited.status())
+                    .as("%s, though no salon has seen thirty attempts", salon.slug())
+                    .isEqualTo(429);
+            assertThat((String) json.readValue(limited.body(), Map.class).get("code"))
+                    .isEqualTo("rate_limited");
+            assertThat(limited.headers().get("retry-after")).isEqualTo("900");
+        }
         assertThat(owner.queryForList("SELECT key_hash FROM shared_address_attempt", String.class))
                 .as("the counter keeps a keyed hash, never the address")
                 .singleElement()
@@ -154,25 +172,57 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void theStaff429SaysWhenToTryAgain() {
-        for (int i = 0; i < 4; i++) {
-            signIn(alpha, "nobody-" + i + "@example.test", "wrong password");
+    void aHundredCorrectSignInsFromOneAddressAcrossSalonsAreNeverRefused() {
+        for (int i = 0; i < 100; i++) {
+            TestSalon salon = salons.get(i % salons.size());
+            Http.Exchange signedIn = signIn(salon, staff(i / salons.size() % ACCOUNTS_PER_SALON), password);
+            assertThat(signedIn.status())
+                    .withFailMessage("sign-in %d: %s", i + 1, signedIn.body())
+                    .isEqualTo(200);
         }
 
-        Http.Exchange limited = signIn(alpha, "receptionist@example.test", password);
+        assertThat(failuresAcrossSalons()).as("every one gave its count back").isZero();
+    }
 
-        assertThat(limited.status()).isEqualTo(429);
-        assertThat(limited.headers().get("retry-after")).isEqualTo("900");
+    @Test
+    void aFailureAfterManyCorrectSignInsStillCounts() {
+        for (int i = 0; i < 10; i++) {
+            assertThat(signIn(salons.get(i % 2), staff(i % ACCOUNTS_PER_SALON), password)
+                            .status())
+                    .isEqualTo(200);
+        }
+
+        assertThat(signIn(alpha, staff(0), "wrong password").status()).isEqualTo(401);
+
+        assertThat(failuresAcrossSalons()).isEqualTo(1);
+    }
+
+    @Test
+    void twoCorrectSignInsAtOnceGiveBackExactlyTwo() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            assertThat(signIn(beta, "nobody-" + i + "@example.test", "wrong password")
+                            .status())
+                    .isEqualTo(401);
+        }
+
+        Future<Http.Exchange> first = requests.submit(() -> signIn(alpha, staff(0), password));
+        Future<Http.Exchange> second = requests.submit(() -> signIn(beta, staff(1), password));
+
+        assertThat(first.get(15, TimeUnit.SECONDS).status()).isEqualTo(200);
+        assertThat(second.get(15, TimeUnit.SECONDS).status()).isEqualTo(200);
+        assertThat(failuresAcrossSalons())
+                .as("the three failures, and nothing of the two correct ones")
+                .isEqualTo(3);
     }
 
     @Test
     void aSignInRefused503BecauseTheChecksAreBusyCountsTowardNoLimit() throws Exception {
         holdNextCheck.set(true);
-        Future<Http.Exchange> held = requests.submit(() -> signIn(alpha, "receptionist@example.test", "wrong one"));
+        Future<Http.Exchange> held = requests.submit(() -> signIn(alpha, staff(0), "wrong one"));
         assertThat(checking.await(15, TimeUnit.SECONDS)).isTrue();
 
         for (int i = 0; i < 3; i++) {
-            assertThat(signIn(alpha, "receptionist@example.test", "wrong again").status())
+            assertThat(signIn(alpha, staff(0), "wrong again").status())
                     .as("the only check is busy")
                     .isEqualTo(503);
         }
@@ -185,8 +235,7 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
         assertThat(owner.queryForObject("SELECT sum(attempts) FROM shared_address_attempt", Integer.class))
                 .as("the address's attempts across salons: only the one that was checked")
                 .isEqualTo(1);
-        assertThat(signIn(alpha, "receptionist@example.test", password).status())
-                .isEqualTo(200);
+        assertThat(signIn(alpha, staff(0), password).status()).isEqualTo(200);
     }
 
     @Test
@@ -226,13 +275,14 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
             "INSERT INTO shared_address_attempt VALUES ('x', 'y', now(), now() + interval '1 minute', 1, now(), now())"
         };
         String count = "SELECT shared_count_address_attempt('staff-sign-in', 'h', now(), interval '15 minutes')";
+        String giveBack = "SELECT shared_return_address_attempt('staff-sign-in', 'h', now())";
         String cleanup = "SELECT shared_remove_spent_address_attempts(now(), 10)";
         try (Connection application = database.connectAsApplication();
                 Connection platformRole = database.connectAsPlatform()) {
             refused(application, table);
             refused(application, cleanup);
             refused(platformRole, table);
-            refused(platformRole, count);
+            refused(platformRole, count, giveBack);
         }
     }
 
@@ -271,8 +321,8 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
         TenantContext.callAs(
                 new TestSalons(owner).asCurrent(salon),
                 () -> new TransactionTemplate(manager).execute(status -> {
-                    StaffAccount account = StaffAccount.create(
-                            email, mobile, crypto.encodePassword(password), role, false, clock.instant());
+                    StaffAccount account =
+                            StaffAccount.create(email, mobile, passwordHash, role, false, clock.instant());
                     em.persist(account);
                     return account;
                 }));
@@ -287,7 +337,7 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
                     () -> new TransactionTemplate(manager).execute(status -> {
                         StaffAccount account = StaffAccount.create(
                                 "owner@example.test",
-                                "+94770000300",
+                                "+94770000399",
                                 crypto.encodePassword(password),
                                 StaffRole.OWNER,
                                 false,
@@ -318,6 +368,14 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
                 null);
         assertThat(verified.status()).withFailMessage("%s", verified.body()).isEqualTo(200);
         return (String) json.readValue(verified.body(), Map.class).get("accessToken");
+    }
+
+    private static String staff(int number) {
+        return "staff-" + number + "@example.test";
+    }
+
+    private int failuresAcrossSalons() {
+        return owner.queryForObject("SELECT coalesce(sum(attempts), 0) FROM shared_address_attempt", Integer.class);
     }
 
     private int identifierAttempts(TestSalon salon) {
