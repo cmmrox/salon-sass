@@ -2,6 +2,8 @@
 stage.yaml, feature.yaml and the bug files, never from a conversation, so that the roles can
 be different sessions or different tools.
 """
+import re
+
 from . import schema as S
 
 NOBODY = ("-", "-")
@@ -17,11 +19,26 @@ def merged(feature):
                 integration.get("merged_at"))
 
 
+def milestone_number(feature):
+    """M3-growth -> 3, or None when the feature names no milestone."""
+    match = re.match(r"M(\d+)-", str(feature.get("milestone") or ""))
+    return int(match.group(1)) if match else None
+
+
 def predecessors(feature, features):
-    """Portfolio order, plus any explicit dependency outside that order."""
+    """Portfolio order within the feature's milestone and the ones before it, plus any explicit
+    dependency outside that order. A lower-numbered feature of a later milestone is delivered
+    after this one (F22 in M4 comes after F25 in M3), so it is not a predecessor."""
     fid = feature.get("id", "")
     dependencies = feature.get("depends_on") or []
-    return [f for f in features if f.get("id", "") < fid or f.get("id") in dependencies]
+    mine = milestone_number(feature)
+
+    def earlier_in_order(other):
+        theirs = milestone_number(other)
+        later_milestone = mine is not None and theirs is not None and theirs > mine
+        return other.get("id", "") < fid and not later_milestone
+
+    return [f for f in features if earlier_in_order(f) or f.get("id") in dependencies]
 
 
 # A change request in this state is decided but its follow-up has not merged yet.

@@ -59,6 +59,21 @@ class StateTest(unittest.TestCase):
         self.assertEqual(flow.feature_turn(unrelated, [], [previous, unrelated], [changing]),
                          ("lead", "feature-new F08"))
 
+    def test_a_lower_numbered_feature_of_a_later_milestone_is_not_a_predecessor(self):
+        done = fx.feature(status="released", qa_status="pass", integration=merged_record(), released_in="v1.0.0")
+        assistance = fx.feature(id="F22", status="backlog", milestone="M4-assistance", requirements=[])
+        growth = fx.feature(id="F25", status="backlog", milestone="M3-growth", requirements=[])
+        same = fx.feature(id="F21", status="backlog", milestone="M3-growth", requirements=[])
+        features = [done, assistance, growth]
+        self.assertEqual([f["id"] for f in flow.predecessors(growth, features)], ["F07"])
+        self.assertEqual(flow.feature_turn(growth, [], features), ("lead", "feature-new F25"))
+        # The same milestone keeps portfolio order, and an explicit dependency always counts.
+        self.assertEqual(flow.feature_turn(growth, [], features + [same]),
+                         ("waiting", "after GitHub merge of F21"))
+        growth["depends_on"] = ["F22"]
+        self.assertEqual(flow.feature_turn(growth, [], features), ("waiting", "after F22"))
+        self.assertIn(assistance, flow.predecessors(growth, features))
+
     def test_status_shows_a_backlog_feature_held_by_a_change_request(self):
         import contextlib
         import io
@@ -182,6 +197,21 @@ class LiveMergeTest(unittest.TestCase):
                 integration.start_check(bundle, "F08")
             bundle["change_requests"][0]["status"] = "implemented"
             self.assertEqual(integration.start_check(bundle, "F08")["id"], "F08")
+
+    def test_start_check_does_not_wait_for_a_lower_numbered_feature_of_a_later_milestone(self):
+        self.scope.update(status="released", released_in="v1.0.0", milestone="M1-web")
+        assistance = fx.feature(id="F22", status="backlog", milestone="M4-assistance", requirements=[])
+        growth = fx.feature(id="F25", status="backlog", milestone="M3-growth", requirements=[])
+        asked = []
+        def merged_pr(previous, _main):
+            asked.append(previous["id"])
+            return merged_record()
+        with patch.object(integration, "remote_main", return_value="d" * 40), \
+                patch.object(integration, "merged_pr", side_effect=merged_pr), \
+                patch.object(integration, "ancestor", return_value=True):
+            self.assertEqual(integration.start_check(fx.bundle(features=[self.scope, assistance, growth]), "F25")["id"],
+                             "F25")
+        self.assertEqual(asked, ["F07"])
 
     def test_ci_must_pass_on_the_pr_head(self):
         head = "c" * 40
