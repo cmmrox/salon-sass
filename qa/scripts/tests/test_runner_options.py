@@ -90,13 +90,55 @@ class EntryOptionTest(Workspace):
 
 
 class RerunFailedTest(Workspace):
-    def earlier_run(self, outcomes):
+    def earlier_run(self, outcomes, **summary):
+        """A summary.json as an earlier runner left it: by default a complete run without the
+        'selected' list (the runner's format before that list was recorded)."""
         report = Path("qa/reports/earlier")
         report.mkdir(parents=True)
         entries = [{"scope": ref.split(":")[0], "id": ref.split(":")[1], "outcome": outcome}
                    for ref, outcome in outcomes.items()]
-        (report / "summary.json").write_text(json.dumps({"label": "F07", "entries": entries}))
+        data = {"label": "F07", "state": "complete", "entries": entries, **summary}
+        (report / "summary.json").write_text(json.dumps(data))
         return str(report)
+
+    def test_an_interrupted_run_reruns_its_current_entry_and_those_it_never_reached(self):
+        selected = ["F07-S01:api", "F07-S01:slots", "F07-S02:api", "F07:journey"]
+        report = self.earlier_run({"F07-S01:api": "pass"}, state="interrupted", selected=selected,
+                                  current={"scope": "F07-S01", "id": "slots", "index": 2})
+        self.assertEqual(self.refs(runner.narrow(self.entries(), rerun_report=report)),
+                         ["F07-S01:slots", "F07-S02:api", "F07:journey"])
+
+    def test_an_interrupted_run_from_before_the_selection_was_recorded_reruns_what_it_did_not_pass(self):
+        report = self.earlier_run({"F07-S01:api": "pass", "F07-S01:slots": "fail"}, state="interrupted",
+                                  current={"scope": "F07-S02", "id": "api", "index": 3})
+        self.assertEqual(self.refs(runner.narrow(self.entries(), rerun_report=report)),
+                         ["F07-S01:slots", "F07-S02:api", "F07-S02:holds", "F07:journey"])
+
+    def test_a_complete_run_with_its_selection_reruns_only_its_failures(self):
+        selected = ["F07-S01:api", "F07-S01:slots", "F07:journey"]
+        report = self.earlier_run({"F07-S01:api": "pass", "F07-S01:slots": "fail", "F07:journey": "pass"},
+                                  selected=selected)
+        self.assertEqual(self.refs(runner.narrow(self.entries(), rerun_report=report)), ["F07-S01:slots"])
+
+    def test_the_runner_records_its_selection_and_an_interrupted_run_is_rerun_from_it(self):
+        entries = self.entries()
+        original = subprocess.Popen
+        def interrupt_third(argv, *args, **kwargs):
+            if argv[0] == "bash":  # an entry, not the runner's own git and ps calls
+                if interrupt_third.calls == 2:
+                    raise KeyboardInterrupt
+                interrupt_third.calls += 1
+            return original(argv, *args, **kwargs)
+        interrupt_third.calls = 0
+        with patch.object(runner.subprocess, "Popen", side_effect=interrupt_third):
+            with self.assertRaises(KeyboardInterrupt):
+                runner.run(entries, "F07")
+        report = str(next(Path("qa/reports").glob("*/summary.json")).parent)
+        data = json.loads((Path(report) / "summary.json").read_text())
+        self.assertEqual(data["state"], "interrupted")
+        self.assertEqual(data["selected"], self.refs(entries))
+        self.assertEqual(self.refs(runner.narrow(entries, rerun_report=report)),
+                         ["F07-S01:slots"] + self.refs(entries)[2:])
 
     def test_only_the_entries_that_did_not_pass_run_again(self):
         report = self.earlier_run({"F07-S01:api": "pass", "F07-S01:slots": "fail", "F07-S02:api": "timeout",

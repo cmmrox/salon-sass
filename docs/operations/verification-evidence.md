@@ -36,8 +36,15 @@ together with the feature's specs. Documents, skills, status and review changes 
 pass. A change to one of these paths is verified for its affected scope: the fixed bug and what
 depends on it, not the whole feature again, unless the change is broad.
 
-Playwright's global setup refuses a run unless the API was built from `HEAD`
-(`infra/scripts/qa-redeploy.sh` rebuilds the QA instance there). The tooling cannot see the web
+`qa/scripts/sdlc run` refuses a run, before its first entry and for every tool, unless the API is
+a current build of `HEAD`: the commit `/api/v1/meta` reports is an ancestor of `HEAD`, and `HEAD`
+has not changed the build's sources (`infra/scripts/lib/build-sources.txt`) since, so a commit of
+tests or records alone needs no rebuild (`infra/scripts/qa-redeploy.sh` rebuilds the QA instance
+at `HEAD`). `summary.json` records the build tested: `api_commit`, `api_current` and `build`. A run
+whose entries do not need the running product (shell checks that do not call
+`require_product_up`) does not ask the API, and records `build.needed: false`. With
+`QA_ALLOW_BUILD_MISMATCH=1` the run goes ahead and records `api_current: false`. Playwright's
+global setup makes the same check for a test file run directly. The tooling cannot see the web
 build's commit or the state of the database: before relying on a run, check that the web app was
 built from the tested commit and that the fixtures are the ones the run assumed.
 
@@ -46,7 +53,9 @@ built from the tested commit and that the fixtures are the ones the run assumed.
 The runner writes `summary.json` atomically while it runs: the current entry, completed counts,
 elapsed time and the child process. An interrupted run is marked `interrupted` and is not a pass.
 Read the summary to report progress; never start a second run while the first one's process is
-alive. An entry that reaches its time limit is recorded `timeout`. A run narrowed by `--entry` or
+alive. `infra/scripts/qa-redeploy.sh` reads the same summaries and refuses, naming the report
+folder and stopping nothing, while a run of its checkout is alive: restarting the API and web app
+would break that run partway. An entry that reaches its time limit is recorded `timeout`. A run narrowed by `--entry` or
 `--rerun-failed` is `partial` and is not held to the suite budget.
 
 ## Older records

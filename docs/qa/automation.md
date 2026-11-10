@@ -64,10 +64,21 @@ qa/
   `QA_REPORT_DIR/playwright/<invocation>/`.
 - The product must already be running (`infra/scripts/local-up.sh`). The automation checks this
   first and stops with a line starting `ENVIRONMENT:` when it is not, so that a stopped product is
-  never reported as a failing one. It also refuses the run unless the API's `/api/v1/meta` commit is
-  this checkout's `HEAD`: rebuild the QA instance with `infra/scripts/qa-redeploy.sh`, or set
-  `QA_ALLOW_BUILD_MISMATCH=1` to test another build on purpose and say so in the evidence. The web
-  build's commit is not checked; `qa-redeploy.sh` rebuilds both.
+  never reported as a failing one.
+- **The build under test is checked once per run, for every tool.** Before its first entry,
+  `qa/scripts/sdlc run` asks the QA instance's API (`/api/v1/meta`) which commit it was built from,
+  records it in `summary.json` (`api_commit`, `api_current`, `build`), and refuses the run with a
+  line starting `ENVIRONMENT:` unless the API is a current build of this checkout's `HEAD`: the
+  reported commit is an ancestor of `HEAD`, and `HEAD` has not changed the build's sources
+  (`infra/scripts/lib/build-sources.txt`) since. A commit that changes only tests, bug files or
+  records therefore needs no rebuild; one that changes the product does: rebuild the QA instance
+  with `infra/scripts/qa-redeploy.sh`, or set `QA_ALLOW_BUILD_MISMATCH=1` to test another build on
+  purpose and say so in the evidence. The check applies when an entry of the run needs the
+  running product: every Playwright, k6 and Maestro entry, and a shell check that calls
+  `require_product_up`; a run of only other shell checks (a reader of the CI workflow, a scan of
+  the build) does not ask the API. Playwright's global setup makes the same check again, for a test
+  file run directly. The web build's commit is not checked; `qa-redeploy.sh` rebuilds both. It
+  refuses, stopping nothing, while a `sdlc run` of this checkout is still going.
 - Start a test's title with its case id:
 
   ```ts
@@ -76,7 +87,8 @@ qa/
 
   Only a test that runs declares a case: a comment, `test.skip`, `test.fixme`, `test.only`, a test
   inside a skipped describe, or one whose body calls `test.skip()` (even conditionally) counts for
-  nothing. k6, shell and Maestro files title their cases in a header comment.
+  nothing. A `test.describe` title declares no case either: only the `test(...)` titles inside it
+  do. k6, shell and Maestro files title their cases in a header comment.
 
 ## Playwright: salons and sign-in
 
@@ -141,7 +153,9 @@ hang" needs requests in flight at the moment the dependency goes quiet: a reques
 is handed a connection the pool has already tested. If the control a check needs does not exist, that is a
 testability bug for the developer; QA does not write under `infra/`. A check exits non-zero on
 failure, prints what it found, and leaves the environment as it found it (a stopped service is
-started again, even when the check fails).
+started again, even when the check fails). A check of the running product calls
+`require_product_up` (`qa/shared/checks.sh`) before its first case: that call is also how
+`sdlc run` knows the check needs the build check described above.
 
 ## k6: concurrency
 
@@ -209,7 +223,7 @@ qa/scripts/sdlc run --feature F07              # the feature's QA pass: every st
 qa/scripts/sdlc run --feature F07 --dry-run    # show what would run
 qa/scripts/sdlc run --stage F07-S02            # one stage's automation, for a stage pass the owner asked for
 qa/scripts/sdlc run --feature F07 --entry catalogue-api          # one named entry of the scope (`scope:id` where ids repeat); repeatable
-qa/scripts/sdlc run --feature F07 --rerun-failed qa/reports/<folder>   # only the entries that did not pass there (decision 069)
+qa/scripts/sdlc run --feature F07 --rerun-failed qa/reports/<folder>   # the entries that did not pass there, an interrupted one and those never reached included (decision 069)
 ```
 
 Each entry stops at its time limit (30 minutes, or its own `timeout_minutes`) and is recorded as

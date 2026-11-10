@@ -6,15 +6,18 @@
 # Stops the QA instance's web app and API (by the process ids the local scripts recorded, through
 # local-service.sh), starts it again with local-up.sh, which rebuilds the API jar and the web app
 # and starts PostgreSQL first if it is down, and then asks the API's /api/v1/meta which commit it
-# was built from. Exits non-zero unless that commit is HEAD. PostgreSQL and its data are left as
-# they are.
+# was built from. Exits non-zero unless that build is current for HEAD: the reported commit is an
+# ancestor of HEAD and HEAD has not changed the build's sources since (git diff --quiet). That is
+# the rule `qa/scripts/sdlc run` and Playwright's global setup apply before a run. PostgreSQL and
+# its data are left as they are.
 #
 # Only ever the QA instance (decision 105): SALON_LOCAL_INSTANCE is set to qa, and any other value
 # in the shell is refused before anything is stopped. Refuses, before stopping anything, when the
-# build's sources (apps, packages, the workspace and lock files) have uncommitted changes: a build
-# of them would not be HEAD, though /api/v1/meta would say it was. Commit them first.
-#
-# Playwright's global setup (qa/shared/global-setup.ts) makes the same comparison before every run.
+# build's sources (lib/build-sources.txt, the one list of them) have uncommitted changes: a build
+# of them would not be HEAD, though /api/v1/meta would say it was. Commit them first. Refuses, too,
+# while a `qa/scripts/sdlc run` of this checkout is in progress (its qa/reports summary.json),
+# which restarting the services would break partway, and when a prerequisite of local-up.sh is
+# missing, which would leave the instance down.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -28,21 +31,60 @@ export SALON_LOCAL_INSTANCE=qa
 # shellcheck source=lib/common.sh
 . "$HERE/lib/common.sh"
 
-# What the build is made from; a change to anything else does not change what runs.
-BUILD_SOURCES=(apps packages package.json pnpm-lock.yaml pnpm-workspace.yaml .nvmrc .sdkmanrc)
+# What the build is made from (one path per line); a change to anything else does not change
+# what runs.
+BUILD_SOURCES=()
+while IFS= read -r source || [ -n "$source" ]; do
+  case "$source" in ''|'#'*) continue ;; esac
+  BUILD_SOURCES+=("$source")
+done <"$HERE/lib/build-sources.txt"
+[ "${#BUILD_SOURCES[@]}" -gt 0 ] || fail "$HERE/lib/build-sources.txt names no build source. Nothing was done."
 
-# Whether two commit ids name the same commit: equal, or one an abbreviation (7 or more hex
-# digits) of the other.
-same_commit() {
-  local a b
-  a="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
-  b="$(printf '%s' "${2:-}" | tr '[:upper:]' '[:lower:]')"
-  case "$a$b" in *[!0-9a-f]*) return 1 ;; esac
-  [ "${#a}" -ge 7 ] && [ "${#b}" -ge 7 ] || return 1
-  case "$a" in "$b"*) return 0 ;; esac
-  case "$b" in "$a"*) return 0 ;; esac
+# Whether the build of commit $1 is current for HEAD: $1 is a commit of this repository, an
+# ancestor of HEAD, and HEAD has not changed the build's sources since.
+build_is_current() {
+  local commit
+  commit="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  case "$commit" in ''|*[!0-9a-f]*) return 1 ;; esac
+  [ "${#commit}" -ge 7 ] || return 1
+  git -C "$ROOT" cat-file -e "${commit}^{commit}" 2>/dev/null || return 1
+  git -C "$ROOT" merge-base --is-ancestor "$commit" HEAD 2>/dev/null || return 1
+  git -C "$ROOT" diff --quiet "$commit" HEAD -- "${BUILD_SOURCES[@]}"
+}
+
+# The report folder of a run of this checkout's `qa/scripts/sdlc run` that is still going, or
+# nothing. The runner keeps summary.json current while it runs: state "running" and its own process
+# id and start time under "runner". A process with that id is the runner when it started at that
+# time, or when it is still a `sdlc_lib` process (ps may print the time in another zone); a summary
+# left "running" by a runner that was killed names a process that is gone, and is not a run.
+active_run() {
+  local summary pid started now
+  for summary in "$ROOT"/qa/reports/*/summary.json; do
+    [ -f "$summary" ] && grep -q '"state": *"running"' "$summary" || continue
+    # Node.js is a prerequisite of the web app, so it is here; it reads the JSON as JSON.
+    pid="$(node -e 'const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+      if (s.state === "running" && Number.isInteger(s.runner?.pid)) process.stdout.write(String(s.runner.pid));' \
+      "$summary" 2>/dev/null || true)"
+    started="$(node -e 'const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+      process.stdout.write(String(s.runner?.process_start ?? ""));' "$summary" 2>/dev/null || true)"
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null || continue
+    now="$(ps -p "$pid" -o lstart= 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//')"
+    if { [ -n "$started" ] && [ "$now" = "$started" ]; } || ps -p "$pid" -o command= 2>/dev/null | grep -q 'sdlc_lib'; then
+      printf '%s (process %s)' "${summary%/summary.json}" "$pid"
+      return 0
+    fi
+  done
   return 1
 }
+
+# What local-up.sh needs to start the instance again (Docker, JDK 25, Node.js with Corepack, curl),
+# checked by the same function before anything is stopped: a missing one would otherwise leave the
+# QA instance down.
+require_prerequisites postgres api web
+
+if run="$(active_run)"; then
+  fail "a QA run of this checkout is in progress: ${run#"$ROOT"/}. Restarting the API and web app now would break it partway. Wait for it to finish, or stop it, and run again. Nothing was stopped."
+fi
 
 head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)" || fail "cannot read HEAD of $ROOT. Nothing was done."
 changes="$(git -C "$ROOT" status --porcelain --untracked-files=all -- "${BUILD_SOURCES[@]}")"
@@ -62,7 +104,7 @@ say "qa-redeploy: rebuilding the QA instance at $head"
 
 meta="$(curl -s --max-time 10 "http://localhost:${api_port}/api/v1/meta" 2>/dev/null || true)"
 running="$(printf '%s' "$meta" | sed -n 's/.*"commit"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
-if ! same_commit "$running" "$head"; then
-  fail "the QA instance's API at http://localhost:${api_port}/api/v1/meta reports commit '${running:-none}', not HEAD $head. See $LOG_DIR/api-build.log and $LOG_DIR/api.log."
+if ! build_is_current "$running"; then
+  fail "the QA instance's API at http://localhost:${api_port}/api/v1/meta reports commit '${running:-none}', which is not a current build of HEAD $head. See $LOG_DIR/api-build.log and $LOG_DIR/api.log."
 fi
-say "qa-redeploy: the QA instance's API runs HEAD $head"
+say "qa-redeploy: the QA instance's API runs a current build of HEAD $head (commit $running)"
