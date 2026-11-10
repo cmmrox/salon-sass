@@ -212,6 +212,29 @@ def _revision():
         return None
 
 
+SOURCE_CHANGES_LISTED = 200
+
+
+def _source_state():
+    """Whether the checkout differed from HEAD when the run started, and how.
+
+    A pass is evidence for source_revision only when source_dirty is false; otherwise
+    source_changes names what was uncommitted (git status --porcelain lines, untracked files
+    included, ignored ones such as qa/reports not). None when Git cannot say."""
+    try:
+        found = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"],
+                               capture_output=True, text=True)
+    except OSError:
+        return {"source_dirty": None, "source_changes": None}
+    if found.returncode != 0:
+        return {"source_dirty": None, "source_changes": None}
+    changes = [line for line in found.stdout.splitlines() if line.strip()]
+    state = {"source_dirty": bool(changes), "source_changes": changes[:SOURCE_CHANGES_LISTED]}
+    if len(changes) > SOURCE_CHANGES_LISTED:
+        state["source_changes_omitted"] = len(changes) - SOURCE_CHANGES_LISTED
+    return state
+
+
 # Decision 105: automated QA runs only against the QA instance; the default instance holds the
 # owner's manual testing. qa/shared/env.ts and qa/shared/checks.sh refuse it too; this refusal
 # stops a run before any child starts.
@@ -311,9 +334,12 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
     os.makedirs(report_dir, exist_ok=False)
     env = {**os.environ, "QA_REPORT_DIR": os.path.abspath(report_dir), "SALON_LOCAL_INSTANCE": "qa"}
     started = time.monotonic()
-    summary = {"label": label, "run_id": run_id, "source_revision": _revision(),
+    summary = {"label": label, "run_id": run_id, "source_revision": _revision(), **_source_state(),
                "state": "running", "result": "running", "selected_count": len(entries),
                "entries": [], "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    if summary["source_dirty"]:
+        print(f"WARNING: the checkout has {len(summary['source_changes'])} uncommitted change(s); "
+              "summary.json lists them, and this run is not evidence for source_revision alone", flush=True)
     summary["runner"] = {"pid": os.getpid(), "process_start": _process_start(os.getpid()),
                          "started_at": summary["started_at"]}
     summary["partial"] = bool(selection)

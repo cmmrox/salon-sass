@@ -214,6 +214,11 @@ def check_qa_status(scope, scope_id):
     findings = []
     if scope.get("qa_status") not in S.QA_STATUSES:
         _add(findings, scope, f"qa_status '{scope.get('qa_status')}' is not one of {S.QA_STATUSES}")
+    evidence = scope.get("evidence") if isinstance(scope.get("evidence"), dict) else {}
+    last_run = evidence.get("last_run")
+    if last_run and not S.REPORT_FOLDER_RE.fullmatch(str(last_run)):
+        _add(findings, scope, f"evidence.last_run '{last_run}' must name the run's report folder, "
+                              "qa/reports/<folder>, as qa/scripts/sdlc run printed it")
     if scope.get("qa_status") == "blocked" and not scope.get("blocked_reason"):
         _add(findings, scope, f"{scope_id} is blocked in QA but gives no blocked_reason")
     return findings

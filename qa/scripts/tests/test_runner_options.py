@@ -183,7 +183,7 @@ class BudgetTest(Workspace):
         data = json.loads((Path(report) / "summary.json").read_text())
         self.assertEqual(data["budget"]["minutes"], 5)
         self.assertFalse(data["budget"]["exceeded"])
-        self.assertNotIn("WARNING", self.output.getvalue())
+        self.assertNotIn("WARNING: smoke", self.output.getvalue())
 
 
 class ToolVocabularyTest(unittest.TestCase):

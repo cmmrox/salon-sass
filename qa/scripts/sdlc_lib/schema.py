@@ -81,6 +81,8 @@ CASE_ID_RE = re.compile(r"^TC-(F\d{2}(?:-S\d{2}[a-z]?)?)-\d{3}$")
 BUG_ID_RE = re.compile(r"^BUG-(F\d{2}(?:-S\d{2}[a-z]?)?)-\d{3}$")
 CR_ID_RE = re.compile(r"^CR-\d{3}$")
 RELEASE_VERSION_RE = re.compile(r"^v\d+\.\d+\.\d+$")
+# evidence.last_run: the folder qa/scripts/sdlc run wrote, one level under qa/reports.
+REPORT_FOLDER_RE = re.compile(r"qa/reports/[A-Za-z0-9][A-Za-z0-9._-]*/?")
 
 # Headings every stage spec.md must carry, in this order. A section that does not apply
 # keeps its heading and says "Not applicable for this stage".
