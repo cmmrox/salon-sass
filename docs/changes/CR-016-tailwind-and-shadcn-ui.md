@@ -1,7 +1,7 @@
 ---
 id: CR-016
 title: Tailwind CSS and shadcn/ui for every web screen
-status: approved
+status: implemented
 requested_by: owner
 requested_on: 2026-10-17
 decided_on: 2026-10-17
@@ -75,3 +75,5 @@ on the new standard.
 
 Approved by the owner's instruction on 2026-10-17, which states the required outcome directly and
 asks for the documents to be updated so later development keeps to it.
+
+Implemented by PR #12, merged 2026-10-18. Marked `implemented` on 2026-11-10 (decision 124); the status had been left at `approved`.

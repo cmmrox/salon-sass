@@ -1,7 +1,7 @@
 ---
 id: CR-017
 title: shadcn/ui components everywhere, including navigation
-status: approved
+status: implemented
 requested_by: owner
 requested_on: 2026-10-18
 decided_on: 2026-10-18
@@ -95,3 +95,5 @@ shadcn/ui adoption.
 
 Approved by the owner's instructions of 2026-10-18 quoted above, which state the required outcome
 directly.
+
+Implemented by PR #12, merged 2026-10-18. Marked `implemented` on 2026-11-10 (decision 124); the status had been left at `approved`.
