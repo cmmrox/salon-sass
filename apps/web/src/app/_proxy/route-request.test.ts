@@ -96,6 +96,35 @@ describe('routeRequest', () => {
     expect(await response.text()).toContain('data-testid="status-unavailable"');
   });
 
+  // Web H3: a module's BFF call costs no salon lookup; the handler reads the principal and the API resolves the salon by
+  // Host on the call. The session's own actions keep the lookup.
+  it.each([
+    '/identity-web/staff/bookings',
+    '/identity-web/staff/team-members',
+    '/identity-web/staff/catalogue-service-save',
+    '/identity-web/support/bookings',
+  ])(
+    'answers a module’s BFF call %s without the salon’s lookup, nothing handed on and nothing stored',
+    async (path) => {
+      const resolve = resolving({ kind: 'unavailable' });
+      const response = await routeRequest(request(path, { [SALON_HEADER]: 'forged' }), resolve);
+      expect(resolve).not.toHaveBeenCalled();
+      expect(response.headers.get('x-middleware-next')).toBe('1');
+      expect(handedOn(response)).toBeNull();
+      expect(response.headers.get('cache-control')).toContain('no-store');
+    },
+  );
+
+  it.each(['principal', 'refresh', 'sign-in', 'logout', 'sessions', 'staff', 'entry', 'end'])(
+    'keeps the salon’s lookup for the session’s own action %s',
+    async (action) => {
+      const resolve = resolving({ kind: 'unavailable' });
+      const response = await routeRequest(request(`/identity-web/staff/${action}`), resolve);
+      expect(resolve).toHaveBeenCalledOnce();
+      expect(response.status).toBe(503);
+    },
+  );
+
   it.each([
     ['/', '/workspace'],
     ['/sign-in', '/workspace/sign-in'],

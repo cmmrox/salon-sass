@@ -50,6 +50,11 @@ beforeEach(async () => {
     request.on('data', (chunk) => chunks.push(chunk));
     request.on('end', () => {
       const path = request.url ?? '';
+      if (path === '/api/v1/identity/me' && principalKind === 'suspended') {
+        response.writeHead(403, { 'Content-Type': 'application/problem+json' });
+        response.end(JSON.stringify({ code: 'salon_suspended', status: 403, title: 'Forbidden' }));
+        return;
+      }
       if (path === '/api/v1/identity/me') {
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(
@@ -403,6 +408,18 @@ describe('leave and blocked time through the BFF (F06-S03)', () => {
     const impact = await send(`team-block-affected?memberId=${MEMBER}&date=2026-11-12`, undefined, 'support');
     expect(impact.status).toBe(403);
     expect(await impact.json()).toMatchObject({ code: 'permission_denied' });
+    expect(calls).toEqual([]);
+  });
+});
+
+// Web H3: the proxy no longer looks the salon up for a module's call, so a suspended salon is answered here as the
+// lookup answered it, unavailable, rather than as an ended session that would send the person to sign-in.
+describe('a suspended salon', () => {
+  it('answers a module’s call service_unavailable, without asking for its data', async () => {
+    principalKind = 'suspended';
+    const response = await send('team-members');
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ code: 'service_unavailable' });
     expect(calls).toEqual([]);
   });
 });

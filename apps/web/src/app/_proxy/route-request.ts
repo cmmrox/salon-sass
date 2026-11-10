@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { SALON_HEADER, encodeSalon } from '@/features/branding/server';
 import {
+  answersWithoutLookup,
   clearCookies,
   cookieName,
   endSupportView,
@@ -184,6 +185,13 @@ export async function routeRequest(
     return rewrite(request, NOWHERE, headers);
   }
 
+  // A module's BFF call is answered without the salon's lookup (web H3): the handler checks the host's form and the
+  // API resolves the salon by Host on the call. Nothing about a salon is handed on, and nothing is stored.
+  if (answersWithoutLookup(path)) {
+    const response = NextResponse.next({ request: { headers } });
+    response.headers.set('Cache-Control', NOT_STORED);
+    return response;
+  }
   const site = await resolve(request.headers.get('host'));
   // The Owner's export download page and its BFF (F03-S03) exist on the bare platform host only.
   const exportPath = isUnder(path, '/exports') || isUnder(path, '/platform-web');

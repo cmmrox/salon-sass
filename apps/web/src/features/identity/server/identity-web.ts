@@ -342,6 +342,40 @@ export function createIdentityWeb(
     });
 }
 
+/**
+ * The identity module's own actions: signing in, the session and its devices, and the salon's sign-in accounts. They
+ * keep the proxy's salon lookup.
+ */
+const IDENTITY_ACTIONS = new Set([
+  'principal',
+  'refresh',
+  'clear',
+  'sign-in',
+  'mfa-start',
+  'mfa-enroll',
+  'mfa-verify',
+  'password',
+  'logout',
+  'revoke',
+  'revoke-all',
+  'sessions',
+  'staff',
+  'audit',
+  'staff-create',
+  'staff-change',
+  'staff-remove',
+]);
+
+/**
+ * Whether a request to the workspace BFF is answered without the proxy's salon lookup: a module's action. The
+ * handler checks the host's form itself and reads the principal, and the API resolves (and refuses) the salon by
+ * `Host` on every call; a suspended salon is answered as the lookup answered it, unavailable.
+ */
+export function answersWithoutLookup(path: string): boolean {
+  const match = /^\/identity-web\/(?:staff|support)\/([a-z0-9-]+)$/.exec(path);
+  return Boolean(match && !IDENTITY_ACTIONS.has(match[1]!) && match[1] !== 'entry' && match[1] !== 'end');
+}
+
 /** The other modules' calls the BFF reaches, handed in by the route. */
 type Ports = {
   salonAccountFor: SalonAccountFor;
@@ -459,6 +493,8 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
           return response;
         }
         if (answer.response.status === 503) return problem('service_unavailable', 503);
+        // A suspended salon, which the proxy's lookup no longer answers for a module's call: unavailable, as before.
+        if (answer.error?.code === 'salon_suspended') return problem('service_unavailable', 503);
         return problem('invalid_session', 401, { renewable });
       }
     }
