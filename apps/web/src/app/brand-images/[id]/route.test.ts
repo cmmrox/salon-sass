@@ -46,13 +46,14 @@ function get(id: string, cookie = '') {
 }
 
 describe('a brand image on the salon hostname', () => {
-  it('passes a published image through with no-store caching and nosniff, asked with no credential', async () => {
+  it('passes a published image through for the browser alone to keep, with nosniff, asked with no credential', async () => {
     const response = await get(ID, 'salon_staff_access=private-access');
 
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('image/png');
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
-    expect(response.headers.get('cache-control')).toBe('private, no-cache, no-store, max-age=0, must-revalidate');
+    // The lead's ruling on web M6: a published image, which the API gives anyone, addressed by an id an upload replaces.
+    expect(response.headers.get('cache-control')).toBe('private, max-age=86400, immutable');
     expect(Buffer.from(await response.arrayBuffer())).toEqual(PNG);
     expect(calls).toEqual([
       { path: `/api/v1/salon/brand/images/${ID}`, host: 'alpha.localhost', authorization: undefined },
@@ -69,6 +70,8 @@ describe('a brand image on the salon hostname', () => {
 
     expect(response.status).toBe(200);
     expect(calls.map((call) => call.authorization)).toEqual([undefined, 'Bearer private-support']);
+    // A draft, fetched with the session, is never stored.
+    expect(response.headers.get('cache-control')).toBe('private, no-cache, no-store, max-age=0, must-revalidate');
   });
 
   it('answers 404 with the same headers, and calls nothing for an id that is not one', async () => {

@@ -19,14 +19,15 @@ const get = (host: string, id = ID) =>
 describe('a team photo on the salon’s own hostname (F06-S01 AC-9)', () => {
   beforeEach(() => teamPhoto.mockReset());
 
-  it('passes the bytes through as a JPEG that nothing stores, with nosniff', async () => {
+  it('passes the bytes through as a JPEG the browser alone keeps for an hour, with nosniff', async () => {
     teamPhoto.mockResolvedValue({ kind: 'image', bytes: new Uint8Array([1, 2, 3]).buffer });
 
     const response = await get('alpha.salon.test');
 
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('image/jpeg');
-    expect(response.headers.get('cache-control')).toContain('no-store');
+    // The lead's ruling on web M6: a person's photo stops being shown from a browser's cache within the hour.
+    expect(response.headers.get('cache-control')).toBe('private, max-age=3600, immutable');
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
     expect(teamPhoto).toHaveBeenCalledWith('alpha.salon.test', ID);
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
@@ -39,12 +40,21 @@ describe('a team photo on the salon’s own hostname (F06-S01 AC-9)', () => {
 
     expect(response.status).toBe(404);
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('cache-control')).toContain('no-store');
+  });
+
+  it('stores nothing for a suspended salon', async () => {
+    teamPhoto.mockResolvedValue({ kind: 'none', status: 403 });
+    const response = await get('alpha.salon.test');
+    expect(response.status).toBe(403);
+    expect(response.headers.get('cache-control')).toContain('no-store');
   });
 
   it('asks nothing for a hostname that names no salon', async () => {
     const response = await get('elsewhere.test');
 
     expect(response.status).toBe(404);
+    expect(response.headers.get('cache-control')).toContain('no-store');
     expect(teamPhoto).not.toHaveBeenCalled();
   });
 });

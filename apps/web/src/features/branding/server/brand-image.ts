@@ -6,7 +6,14 @@ import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 
 /** A brand image as the API answered it, or that it answered none. */
 export type BrandImageAnswer =
-  { kind: 'image'; bytes: ArrayBuffer; mediaType: string } | { kind: 'none'; status: number };
+  | {
+      kind: 'image';
+      bytes: ArrayBuffer;
+      mediaType: string;
+      /** Answered with no credential: the published brand uses it, and the API gives it to anyone. */
+      published: boolean;
+    }
+  | { kind: 'none'; status: number };
 
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const MEDIA_TYPES = new Set(['image/png', 'image/jpeg']);
@@ -30,7 +37,7 @@ export async function brandImage(hostname: string, id: string, access: string | 
     });
     const mediaType = (response.headers.get('content-type') ?? '').split(';')[0]!.trim();
     return response.status === 200 && data && MEDIA_TYPES.has(mediaType)
-      ? { kind: 'image', bytes: data as ArrayBuffer, mediaType }
+      ? { kind: 'image', bytes: data as ArrayBuffer, mediaType, published: !credential }
       : { kind: 'none', status: response.status === 200 ? 502 : response.status };
   };
   try {

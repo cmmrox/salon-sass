@@ -20,7 +20,11 @@ beforeEach(async () => {
   answer = () => ({ status: 200, type: 'image/jpeg', body: JPEG });
   server = createServer((request, response) => {
     calls.push({ path: request.url!, host: request.headers.host, authorization: request.headers.authorization });
-    const result = answer(request.headers.authorization);
+    // The API reads a photo under the hostname's salon only (row-level security): another salon has none of it.
+    const result =
+      request.headers.host === 'alpha.localhost'
+        ? answer(request.headers.authorization)
+        : { status: 404, type: 'application/problem+json', body: Buffer.from('{"code":"not_found"}') };
     response.writeHead(result.status, { 'Content-Type': result.type });
     response.end(result.body);
   });
@@ -33,9 +37,9 @@ afterEach(async () => {
   vi.unstubAllEnvs();
 });
 
-function get(id: string, cookie = '') {
-  const request = new NextRequest(`http://alpha.localhost:3100/service-photos/${id}`, {
-    headers: { Host: 'alpha.localhost:3100', Cookie: cookie },
+function get(id: string, cookie = '', host = 'alpha.localhost:3100') {
+  const request = new NextRequest(`http://${host}/service-photos/${id}`, {
+    headers: { Host: host, Cookie: cookie },
   });
   const context = {
     ...contextFromTraceparent(undefined),
@@ -46,13 +50,14 @@ function get(id: string, cookie = '') {
 }
 
 describe('a service photo on the salon hostname', () => {
-  it('passes the photo through with no-store caching and nosniff, never with a credential', async () => {
+  it('passes the photo through for the browser alone to keep, with nosniff, never with a credential', async () => {
     const response = await get(ID, 'salon_staff_access=private-access');
 
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('image/jpeg');
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
-    expect(response.headers.get('cache-control')).toBe('private, no-cache, no-store, max-age=0, must-revalidate');
+    // The lead's ruling on web M6: a service photo, public and addressed by an id a new upload replaces.
+    expect(response.headers.get('cache-control')).toBe('private, max-age=86400, immutable');
     expect(Buffer.from(await response.arrayBuffer())).toEqual(JPEG);
     expect(calls).toEqual([
       { path: `/api/v1/catalogue/photos/${ID}`, host: 'alpha.localhost', authorization: undefined },
@@ -75,5 +80,19 @@ describe('a service photo on the salon hostname', () => {
     answer = () => ({ status: 200, type: 'text/html', body: Buffer.from('<script>') });
 
     expect((await get(ID)).status).toBe(502);
+  });
+});
+
+// The isolation argument of the lead's ruling on web M6, as a check: the browser keeps a photo under its full address,
+// whose hostname is the salon's, and the same path on another salon's hostname is that salon's question, answered not
+// found and stored by nothing.
+describe('a photo kept by one salon’s visitors', () => {
+  it('is not found, and not stored, on another salon’s hostname', async () => {
+    const own = await get(ID);
+    expect(own.headers.get('cache-control')).toBe('private, max-age=86400, immutable');
+    const other = await get(ID, '', 'beta.localhost:3100');
+    expect(other.status).toBe(404);
+    expect(other.headers.get('cache-control')).toBe('private, no-cache, no-store, max-age=0, must-revalidate');
+    expect(calls.map((call) => call.host)).toEqual(['alpha.localhost', 'beta.localhost']);
   });
 });
