@@ -1,7 +1,7 @@
 package com.salonplatform.booking;
 
 /**
- * The rules themselves (BKG-02, BKG-09), as one version of a salon's booking rules holds them.
+ * The rules themselves (BKG-02, BKG-03, BKG-04, BKG-09), as one version of a salon's booking rules holds them.
  *
  * @param slotIntervalMinutes how often start times are offered: 10, 15, 20 or 30 minutes
  * @param minimumNoticeMinutes how long before an appointment it must be booked: 0 (any time before), 30, 60,
@@ -13,6 +13,10 @@ package com.salonplatform.booking;
  * @param lateCancellation what a later cancellation keeps
  * @param noShow what a no-show keeps (never {@link Retention.Nothing})
  * @param reschedule how the customer may move the booking themselves
+ * @param holdMinutes how long a hold placed under these rules lasts: 5, 10, 15, 20 or 30 minutes (10 for a version
+ *     saved before F07-S02)
+ * @param noPreference how a "No preference" booking is assigned ({@link NoPreference#LEAST_BOOKED} for a version saved
+ *     before F07-S02)
  */
 public record BookingTerms(
         int slotIntervalMinutes,
@@ -22,4 +26,6 @@ public record BookingTerms(
         int freeCancellationHours,
         Retention lateCancellation,
         Retention noShow,
-        Rescheduling reschedule) {}
+        Rescheduling reschedule,
+        int holdMinutes,
+        NoPreference noPreference) {}

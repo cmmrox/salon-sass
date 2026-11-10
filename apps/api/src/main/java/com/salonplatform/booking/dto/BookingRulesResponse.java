@@ -3,7 +3,7 @@ package com.salonplatform.booking.dto;
 import com.salonplatform.booking.BookingTerms;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** The booking rules of one version. */
+/** The booking rules of one version, as settings staff keep them. */
 @Schema(
         name = "BookingRules",
         additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
@@ -15,7 +15,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
             "freeCancellationHours",
             "lateCancellation",
             "noShow",
-            "reschedule"
+            "reschedule",
+            "holdMinutes",
+            "noPreference"
         })
 public record BookingRulesResponse(
         @Schema(description = "How often start times are offered: 10, 15, 20 or 30 minutes.")
@@ -41,7 +43,16 @@ public record BookingRulesResponse(
         @Schema(description = "`deposit` or `share`, never `nothing`.")
         RetentionResponse noShow,
 
-        RescheduleResponse reschedule) {
+        RescheduleResponse reschedule,
+
+        @Schema(description = "How long a hold lasts: 5, 10, 15, 20 or 30 minutes.")
+        int holdMinutes,
+
+        @Schema(
+                allowableValues = {"least_booked", "most_booked"},
+                description = "Who a \"No preference\" booking goes to: the eligible, free professional with the least"
+                        + " (or the most) booked that day.")
+        String noPreference) {
 
     static BookingRulesResponse from(BookingTerms terms) {
         return new BookingRulesResponse(
@@ -52,6 +63,8 @@ public record BookingRulesResponse(
                 terms.freeCancellationHours(),
                 RetentionResponse.from(terms.lateCancellation()),
                 RetentionResponse.from(terms.noShow()),
-                RescheduleResponse.from(terms.reschedule()));
+                RescheduleResponse.from(terms.reschedule()),
+                terms.holdMinutes(),
+                terms.noPreference().value());
     }
 }

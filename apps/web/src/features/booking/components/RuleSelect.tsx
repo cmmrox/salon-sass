@@ -1,10 +1,11 @@
 'use client';
-import { Field, FieldLabel } from '@/components/ui/field';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 /**
  * One rule chosen from a list (F04-S04, the prototype's `sel`): a Field whose label names the Select (no
- * native control). Each option carries the test id `<testId>-option-<value>`.
+ * native control), with an optional help text under it that describes the Select. Each option carries the test
+ * id `<testId>-option-<value>`.
  */
 export function RuleSelect({
   id,
@@ -14,9 +15,11 @@ export function RuleSelect({
   onChange,
   disabled,
   testId,
+  description,
 }: {
   id: string;
   label: string;
+  description?: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
@@ -27,7 +30,12 @@ export function RuleSelect({
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger id={id} className="w-full" data-testid={testId}>
+        <SelectTrigger
+          id={id}
+          className="w-full"
+          aria-describedby={description ? `${id}-description` : undefined}
+          data-testid={testId}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent position="popper" sideOffset={4}>
@@ -38,6 +46,11 @@ export function RuleSelect({
           ))}
         </SelectContent>
       </Select>
+      {description && (
+        <FieldDescription id={`${id}-description`} className="text-foreground" data-testid={`${testId}-help`}>
+          {description}
+        </FieldDescription>
+      )}
     </Field>
   );
 }

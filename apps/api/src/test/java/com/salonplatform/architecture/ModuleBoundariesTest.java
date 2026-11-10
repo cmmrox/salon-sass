@@ -186,6 +186,10 @@ class ModuleBoundariesTest {
                         rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
                         "PaymentGatewayImpl"),
                 arguments(
+                        "declaredforanother",
+                        rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
+                        "CatalogueClosuresImpl"),
+                arguments(
                         "sharedservice",
                         rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
                         "SystemClockService"),

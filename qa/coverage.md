@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 97 | 97 | 34 | 34 |
+| R1 | 97 | 97 | 42 | 42 |
 | R2 | 74 | 48 | 44 | 0 |
 | R3 | 21 | 8 | 8 | 0 |
 
@@ -32,14 +32,17 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
 | F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 28 | 28 | 0 | 0 |
 | F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 34 | 34 | 0 | 0 |
-| F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 31 | 0 | 1 |
+| F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 32 | 0 | 0 |
 | F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
-| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 20 | 50 | 49 | 0 | 1 |
-| F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 20 | 0 | 1 |
+| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 20 | 50 | 50 | 0 | 0 |
+| F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 21 | 0 | 0 |
 | F05-S03 | complete | - | CAT-05, INV-01 | 15 | 27 | 27 | 0 | 0 |
-| F06-S01 | complete | - | STF-01 | 17 | 56 | 53 | 0 | 3 |
-| F06-S02 | complete | - | STF-02 | 17 | 47 | 45 | 0 | 2 |
-| F06-S03 | complete | - | STF-03, STF-05 | 16 | 46 | 44 | 0 | 2 |
+| F06-S01 | complete | - | STF-01 | 17 | 56 | 56 | 0 | 0 |
+| F06-S02 | complete | - | STF-02 | 17 | 47 | 47 | 0 | 0 |
+| F06-S03 | complete | - | STF-03, STF-05 | 16 | 46 | 46 | 0 | 0 |
+| F07-S01 | complete | - | BKG-04, BKG-05, BKG-06, BKG-14, BKG-16, NFR-05 | 15 | 39 | 37 | 0 | 2 |
+| F07-S02 | complete | - | BKG-01, BKG-03, NFR-03 | 12 | 16 | 15 | 0 | 1 |
+| F07-S03 | complete | - | BKG-04, BKG-11, NFR-12 | 12 | 21 | 21 | 0 | 0 |
 
 ## Deferred cases
 
@@ -48,17 +51,9 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | Scope | Case | Reason | Unblocked by |
 | --- | --- | --- | --- |
 | F01 | TC-F01-002 | First real-host deployment is outside local F01 proof, explicitly deferred by decision 018 and CR-005; public certificate, remote delivery and provider-dependent monitoring are not certified. | Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests staging deployment. |
-| F04-S03 | TC-F04-S03-031 | The closure sheet and the hours card listing real bookings a change affects ("N upcoming bookings fall outside these hours", the bookings on a closed day) cannot be shown on the running product, because no booking exists before F07 and the stage adds no hook to make one (spec, "Requirements covered" and "Out of scope"). From outside, TC-F04-S03-009 and TC-F04-S03-011 show the empty BookingsOnDate answers (no bookings, 0 affected, no outside-hours bookings) and the priority; the developer's integration and component tests hold the rest. | F07, when bookings exist and replace the empty BookingsOnDate. |
-| F05-S01 | TC-F05-S01-020 | A delete refused with 409 in_use, and the screen's "This service has upcoming bookings. Hide it from online booking instead.", need an upcoming booking that uses the service. No booking exists before F07, and until booking implements UpcomingServiceBookings the catalogue's own implementation answers "none" (decision 093). The spec has the developer's integration test, with an implementation that reports a booking, prove the refusal. From outside, TC-F05-S01-019 and TC-F05-S01-035 show delete when no booking uses the service. | F07, when booking implements UpcomingServiceBookings and a booking can use a service. |
-| F05-S02 | TC-F05-S02-015 | "Most booked" ranks up to six services by the booking counts of the last 90 days, most first, leaving out hidden and deleted services. No booking exists before F07, and until booking implements ServiceBookingCounts the catalogue's own implementation reports none (decision 095), so the ranking, its 90-day window and what it leaves out cannot be shown on the running product. The spec has an integration test with an implementation that reports counts prove them. From outside, TC-F05-S02-009 and TC-F05-S02-018 show the setting, its fallback to the chosen services and the sheet while "Most booked" is on. | F07, when booking implements ServiceBookingCounts and bookings exist to count. |
-| F06 | TC-F06-004 | The README's journey ends with "the working windows and the public team API then say exactly that". The working windows are TeamSchedule's, a Java interface with no route until F07, so TC-F06-001 stops at the schedule, the card and the public team API. With F07 the times offered for a person with a week, a half day, leave and a block must be exactly those windows inside the salon's own hours. | F07 |
-| F06-S01 | TC-F06-S01-011 | A removal refused with 409 in_use (its errors carrying {field upcomingBookings, detail N}), nothing changed, and the sheet's "<name> has N upcoming bookings. Move or cancel them first.", need an upcoming booking for the person. No booking exists before F07, and until booking implements UpcomingMemberBookings staff's own implementation answers "none" (decision 100). The spec has the developer's integration test, with an implementation that reports a booking, prove the refusal. From outside, TC-F06-S01-010 and TC-F06-S01-049 show removal when no booking needs the person. | F07 |
-| F06-S01 | TC-F06-S01-012 | A save that stops a person performing a service with an upcoming booking for them, refused with 409 in_use (its errors carrying one {field services, detail <service name>} per service), nothing changed, and the sheet's "This person has upcoming bookings for <services>. Move them first.", needs such a booking. No booking exists before F07, and the interface answers "none" until then (decision 100). The spec has the developer's integration test prove the refusal. From outside, TC-F06-S01-010 shows the save when no booking needs the service. | F07 |
-| F06-S01 | TC-F06-S01-013 | TeamMembers is a Java interface with no route, whose first callers from outside are F07's bookings and F10's calendar. The developer's integration tests call it for the caller's salon only. From outside until then, TC-F06-S01-009 proves a removed person's id and name stay stored. With F07 a past booking must keep the removed person's name, and another salon's person must not be bookable. | F07 |
-| F06-S02 | TC-F06-S02-028 | TeamSchedule is a Java interface with no route, whose first caller from outside is F07's availability, and it is this stage's highest risk because F07 trusts its windows. Not reachable until then, so not tested by QA from outside - whether a person works, the windows after breaks at every edge, in time order, always at least one when working; a date change replacing the week on that date only, and saying it decided the answer; a removed member working no date; an unknown or another salon's id "not found"; a range too long or reversed refused; closures and holidays ignored; nothing cached. The developer's TeamScheduleContractIntegrationTest and ScheduleRulesTest carry this until F07, read by QA and not run by QA; they try no published holiday and no past date. From outside until then, cases 007, 009, 014, 015 and 019 prove what it reads, that a stored day holds what was sent and that no working day can be stored with no time left. With F07 the offered times must match the windows, for this salon only. | F07 |
-| F06-S02 | TC-F06-S02-029 | The upcoming bookings a new week leaves outside the person's working time, and those a date change affects, need a booking. No booking exists before F07, and MemberBookingsAffected answers "none" until booking implements it (decision 102). The spec has the developer's integration test, with an implementation that reports a booking, prove the list and that nothing is moved or cancelled. From outside until then, cases 005 and 014 show the empty answers, and case 041 shows the sheet's words and list from a real save whose answer gains a list in the browser. With F07 the list must name real bookings, each kept. | F07 |
-| F06-S03 | TC-F06-S03-030 | TeamSchedule is a Java interface with no route, whose first caller from outside is F07's availability, and it is again this stage's highest risk, as F07 trusts its windows. Not tested by QA from outside until then - a date within leave not worked whichever way its hours or date change read; a block taken out of the windows at their edges and across a break; a day whose blocks leave no time not worked; what decided the day; removal restoring the answer; another salon's id "not found". The spec has the developer's integration tests carry these until F07. From outside, cases 001, 011, 015 and 018 prove what it reads, and 027 that another salon's rows answer "not found" through every route. With F07 the offered times must leave out leave and blocks, for this salon only. | F07 |
-| F06-S03 | TC-F06-S03-031 | The bookings a period would affect, "N bookings to resolve" above zero, the flag being worked out when read so that removing leave clears it, and a booking left untouched, all need a booking. No booking exists before F07, and MemberBookingsAffected answers "none" until booking implements it (decision 104). The spec has the developer's integration test, with an implementation that reports a booking, prove the list, the count and that the booking is untouched. From outside until then, cases 001, 008, 011 and 019 show the empty answers, and case 036 shows the sheet's words and lists from real requests whose answers gain a list in the browser. With F07 the list and the count must name real bookings, each kept. | F07 |
+| F07-S01 | TC-F07-S01-037 | A processing segment occupies no professional (decision 074), but no R1 service has one and no endpoint can make one; only F17 brings them. The developer's BookingOverlapIntegrationTest inserts one through the domain. From outside, TC-F07-S01-009 proves the active and buffer segments occupy the professional. | F17 |
+| F07-S01 | TC-F07-S01-038 | Only AC-8's payment and checkout routes are deferred. The in-process contracts that move a hold to pending payment and back, and that complete a booking, have no route until F08 (payment) and F10 (checkout); the same holds for AC-6's one clause that the job never ends a hold in pending payment. AC-6 itself (the job ending run-out holds as the system, with history and audit) is automated in TC-F07-S01-014 and -015, and AC-8's confirmation event in TC-F07-S01-021, with TC-F07-S01-018 proving that no route reaches pending payment or completed. The developer's integration tests through the domain hold the payment and checkout paths until then. | F08 and F10 |
+| F07-S02 | TC-F07-S02-018 | load test; the release suite runs only when the owner asks (decision 068). The developer measured p95 99 ms on 200 sequential calls (F07-S02 handoff). The scenario is qa/api/F07/S02-availability-load.spec.ts with qa/load/F07/S02-availability.js, unregistered (the lead's ruling). | release-prepare, where the lead adds it to the release manifest's gates |
 
 ## Requirements
 
@@ -116,22 +111,22 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | STF-07 | R2 | should | unowned | - |
 | STF-08 | R2 | should | unowned | - |
 | STF-09 | R3 | could | unowned | - |
-| BKG-01 | R1 | must | F07 | - |
+| BKG-01 | R1 | must | F07 | F07-S02 (complete) |
 | BKG-02 | R1 | must | F04 | F04-S04 (complete) |
-| BKG-03 | R1 | must | F07 | - |
-| BKG-04 | R1 | must | F07 | - |
-| BKG-05 | R1 | must | F07 | - |
-| BKG-06 | R1 | must | F07 | - |
+| BKG-03 | R1 | must | F07 | F07-S02 (complete) |
+| BKG-04 | R1 | must | F07 | F07-S01 (complete), F07-S03 (complete) |
+| BKG-05 | R1 | must | F07 | F07-S01 (complete) |
+| BKG-06 | R1 | must | F07 | F07-S01 (complete) |
 | BKG-07 | R1 | must | F09 | - |
 | BKG-08 | R1 | must | F09 | - |
 | BKG-09 | R1 | must | F04 | F04-S04 (complete) |
 | BKG-10 | R1 | must | F10 | - |
-| BKG-11 | R1 | must | F10 | - |
+| BKG-11 | R1 | must | F07 | F07-S03 (complete) |
 | BKG-12 | R1 | must | F10 | - |
 | BKG-13 | R1 | must | F10 | - |
-| BKG-14 | R1 | must | F07 | - |
+| BKG-14 | R1 | must | F07 | F07-S01 (complete) |
 | BKG-15 | R1 | must | F01 | F01-S04 (complete) |
-| BKG-16 | R1 | must | F07 | - |
+| BKG-16 | R1 | must | F07 | F07-S01 (complete) |
 | BKG-17 | R1 | should | F09 | - |
 | BKG-18 | R2 | should | unowned | - |
 | BKG-19 | R2 | should | unowned | - |

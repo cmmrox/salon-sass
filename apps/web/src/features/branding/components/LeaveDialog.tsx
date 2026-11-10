@@ -26,7 +26,7 @@ export function LeaveDialog({
   open: boolean;
   onStay: () => void;
   onLeave: () => void;
-  area?: 'profile' | 'rules' | 'services' | 'tax' | 'products' | 'team';
+  area?: 'profile' | 'rules' | 'services' | 'tax' | 'products' | 'team' | 'new-appointment';
 }) {
   const t = useTranslations('settings.leave');
   return (

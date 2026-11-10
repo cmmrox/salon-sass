@@ -5,13 +5,19 @@ summary: Staff create bookings on any open day using shared availability, holds 
   are delivered later in the React Native app.
 release: R1
 milestone: M1-web
-status: backlog
-qa_status: not-run
+status: complete
+qa_status: pass
 released_in: null
 depends_on:
 - F02
 - F05
 - F06
+integration:
+  branch: charithm/feature/F07-online-booking
+  pull_request: https://github.com/cmmrox/salon-sass/pull/26
+  qa_revision: e0c1d4bcfdfb1aa5bc06c4eec6823d130692fee1
+  merged_commit: null
+  merged_at: null
 surfaces:
 - api
 - web
@@ -21,6 +27,7 @@ requirements:
 - BKG-04
 - BKG-05
 - BKG-06
+- BKG-11
 - BKG-14
 - BKG-16
 nfr_focus:
@@ -29,9 +36,57 @@ nfr_focus:
 - NFR-12
 cases: []
 verification:
-  automation: []
+  automation:
+  - id: journey-desk-books-a-customer
+    tool: playwright
+    file: qa/web/F07/journey-desk-books-a-customer.spec.ts
+    project: web
+    suites:
+    - smoke
+    - regression
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261110-060856-F07-S03-d5c497afa957
+  last_result: pass
+  full_pass_revision: dcf0033233221719a4b5b1b7d4ad895dd4308a19
+  full_pass_run: qa/reports/20261109-223501-F07-10961619c25e
+  reverification:
+  - revision: 0f7e321bd948b4367ba655e67ea18ad5f2d1ca6d
+    date: 2026-11-09
+    changed: 'BUG-F07-001 fix bdf2e354 (merged as 0f7e321b): the Bookings list asks again every 2 s while the API still
+      lists a hold whose time is up. Only apps/web/src/surfaces/workspace/use-bookings.ts and BookingsScreen.test.tsx;
+      no API, contract or migration change (git diff 76e3b080 0f7e321b -- apps/api packages docs/api is empty).'
+    scope: 'sdlc run --stage F07-S03, the narrowest scope the runner selects that holds TC-F07-S03-003: its four entries
+      each open the Bookings page, whose only data hook is the changed use-bookings.ts. Not rerun, with the reason: S01 and
+      S02 (API only, unchanged); the feature journey TC-F07-001, which also opens the page and passed in the full pass, but
+      runs only in the feature scope; the F04 to F06 cases F07 unblocked (other screens and the API). The bug''s own steps
+      were repeated by hand with the page''s requests recorded.'
+    run: 'QA instance web rebuilt at 0f7e321b (apps/web/.next-qa at 22:58, PID 67534); API at 76e3b080 (unchanged).
+      Report qa/reports/20261109-225843-F07-S03-433387f968b2: 4 of 4 entries, 18 of 18 cases passed; BUG-F07-001-steps.log
+      in it.'
+    result: pass; BUG-F07-001 verified.
+  - revision: e0c1d4bcfdfb1aa5bc06c4eec6823d130692fee1
+    date: 2026-11-10
+    changed: 'PR #26 review fixes BUG-F07-002..005 (merged as a5a7d8fe): apps/web use-new-appointment.ts (late free-times
+      answers and late holds for an earlier form ignored or released) and use-bookings.ts (an emptied later page moves to
+      the last page); apps/api BookingRepository.countByService, ServiceBookingCountsImpl and the ServiceBookingCounts
+      Javadoc ("Most booked" counts up to now); developer tests. No migration, no contract change. e0c1d4bc adds QA test
+      repairs only (TC-F07-S01-026, -035, TC-F05-S02-015, qa/shared/booking.ts bookingSnapshot), product identical to a5a7d8fe.'
+    scope: 'Decision 069: each bug''s own steps by hand, then sdlc run --stage F07-S03 (both changed hooks drive the New
+      appointment sheet and the Bookings page; holds TC-F07-S03-019, -020, -021), --stage F07-S01 (the guards and "Most
+      booked", TC-F07-S01-039; also the entries using the repaired bookingSnapshot), and --stage F05-S02 (the narrowest scope
+      holding F05''s "Most booked" case TC-F05-S02-015). Not rerun, with the reason: F07-S02 (availability, no-preference,
+      rules: countByService is read only by ServiceBookingCounts, and nothing else in the API changed); the feature journey
+      TC-F07-001 (it drives the changed sheet but runs only in the whole-feature scope; S03''s cases cover each step it
+      takes: search, hold, confirm, the list); F04 to F06 cases other than F05-S02 (no changed code reaches them); smoke,
+      regression and release suites (not asked).'
+    run: 'QA instance rebuilt and restarted at a5a7d8fe (API PID 84142, /api/v1/meta a5a7d8fe; web PID 84363,
+      apps/web/.next-qa built 06:00 +05:30; old web 67534 and API 4997 stopped by exact PID). Reports:
+      qa/reports/20261110-060856-F07-S03-d5c497afa957 (4 of 4 entries, 21 of 21 cases; BUG-F07-002-003-004-steps.log),
+      qa/reports/20261110-060558-F07-S01-dbcafc6434ad (8 of 8 entries, 37 of 37; BUG-F07-005-steps.log and the two
+      before-repair logs), qa/reports/20261110-060726-F05-S02-d335d8a44a60 (3 of 3 entries, 21 of 21). An earlier S01 run,
+      qa/reports/20261110-060246-F07-S01-c95384bb02a0, failed TC-F07-S01-026 on a race in that test (the hold-expiry job
+      between its snapshot''s two reads), repaired in e0c1d4bc. The runs record HEAD a5a7d8fe; the repaired test files
+      were final before each counted run began and are committed unchanged as e0c1d4bc.'
+    result: pass; BUG-F07-002, -003, -004 and -005 verified.

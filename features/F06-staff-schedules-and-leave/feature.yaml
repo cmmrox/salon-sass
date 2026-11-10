@@ -43,20 +43,14 @@ verification:
     project: api
     suites:
     - regression
+  - id: journey-times-offered
+    tool: playwright
+    file: qa/api/F06/journey-times-offered.spec.ts
+    project: api
+    suites:
+    - regression
   manual: []
-  deferred:
-  - case: TC-F06-004
-    covers:
-    - STF-02
-    - STF-03
-    - STF-05
-    reason: The README's journey ends with "the working windows and the public team
-      API then say exactly that". The working windows are TeamSchedule's, a Java interface
-      with no route until F07, so TC-F06-001 stops at the schedule, the card and the
-      public team API. With F07 the times offered for a person with a week, a half
-      day, leave and a block must be exactly those windows inside the salon's own
-      hours.
-    unblocked_by: F07
+  deferred: []
 evidence:
   last_run: qa/reports/20261109-041519-F06-d54eee4e1822
   last_result: pass

@@ -8,7 +8,7 @@ import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
 import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
-import { salonBookingRulesFor } from '@/features/booking/server';
+import { salonBookingRulesFor, salonBookingsFor } from '@/features/booking/server';
 import { salonCatalogueFor } from '@/features/catalogue/server';
 
 /** The settings actions of the workspace BFF (F04-S01), as the route wires them, against a fake API on loopback. */
@@ -19,6 +19,7 @@ const handleIdentity = createIdentityWeb(
   salonBookingRulesFor,
   salonCatalogueFor,
   salonTeamFor,
+  salonBookingsFor,
 );
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
@@ -613,6 +614,17 @@ describe('the settings user’s booking rules actions (F04-S04)', () => {
     const [save] = apiCalls();
     expect(save).toMatchObject({ method: 'PUT', path: '/api/v1/salon/booking-rules/settings' });
     expect(JSON.parse(save!.body)).toEqual({ version: 2, rules });
+  });
+
+  it('passes on the hold length and the "No preference" strategy, and leaves them out when the browser did (F07-S02)', async () => {
+    answer = (_method, path) => me(path, { ...kept, version: 3, rules });
+    const chosen = { ...rules, holdMinutes: 20, noPreference: 'most_booked' };
+    await run('POST', 'staff', 'booking-rules-save', { version: 2, rules: chosen });
+    expect(JSON.parse(apiCalls()[0]!.body)).toEqual({ version: 2, rules: chosen });
+
+    await run('POST', 'staff', 'booking-rules-save', { version: 3, rules });
+    expect(JSON.parse(apiCalls()[1]!.body).rules).not.toHaveProperty('holdMinutes');
+    expect(JSON.parse(apiCalls()[1]!.body).rules).not.toHaveProperty('noPreference');
   });
 
   it('hands on the API’s refusal with its code and field names', async () => {

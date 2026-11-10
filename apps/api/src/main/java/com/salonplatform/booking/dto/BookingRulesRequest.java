@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.booking.service.BookingRulesService.RulesInput;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** The booking rules as a save sends them: every rule, each one of the salon's choices. */
+/**
+ * The booking rules as a save sends them: every rule, each one of the salon's choices. The hold length and the
+ * "No preference" strategy (F07-S02) may be left out, and then keep the current version's.
+ */
 @Schema(
         name = "BookingRulesInput",
         additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
@@ -41,7 +44,19 @@ public record BookingRulesRequest(
 
         LateCancellationRequest lateCancellation,
         NoShowRequest noShow,
-        RescheduleRequest reschedule) {
+        RescheduleRequest reschedule,
+
+        @Schema(
+                description = "How long a hold lasts: 5, 10, 15, 20 or 30 minutes. Left out, the current version's (10"
+                        + " before any is chosen).")
+        Integer holdMinutes,
+
+        @Schema(
+                allowableValues = {"least_booked", "most_booked"},
+                description = "Who a \"No preference\" booking goes to: of the professionals who perform the service"
+                        + " and are free, the one with the least (or the most) booked that day. Left out, the current"
+                        + " version's (`least_booked` before any is chosen).")
+        String noPreference) {
 
     @JsonAnySetter
     void unknown(String field, Object ignored) {
@@ -57,6 +72,8 @@ public record BookingRulesRequest(
                 freeCancellationHours,
                 lateCancellation == null ? null : lateCancellation.input(),
                 noShow == null ? null : noShow.input(),
-                reschedule == null ? null : reschedule.input());
+                reschedule == null ? null : reschedule.input(),
+                holdMinutes,
+                noPreference);
     }
 }

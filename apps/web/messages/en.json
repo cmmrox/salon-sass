@@ -145,7 +145,9 @@
       "catalogue_read": "Read the service catalogue",
       "team_read": "Read the team",
       "team_manage": "Change the team",
-      "team_block": "Add and remove blocked time"
+      "team_block": "Add and remove blocked time",
+      "booking_manage": "Book, confirm, release and cancel bookings, and mark no-shows",
+      "booking_attend": "Mark bookings arrived and in service"
     },
     "billing": "Plan and billing",
     "readOnlyReason": "This salon is read-only because an invoice is overdue, so staff changes are paused. They work again as soon as the overdue invoices are paid.",
@@ -172,7 +174,9 @@
     "servicesNav": "Services",
     "team": "Team",
     "teamNav": "Staff",
-    "noTeamProfile": "No team profile"
+    "noTeamProfile": "No team profile",
+    "bookingsNav": "Bookings",
+    "bookings": "Bookings"
   },
   "console": {
     "title": "Operator console",
@@ -956,6 +960,16 @@
         "90": "3 months ahead",
         "180": "6 months ahead"
       },
+      "holding": "Holding and assigning",
+      "hold": "Hold a chosen time for",
+      "holdOption": "{minutes} minutes",
+      "holdHelp": "While a time is held nobody else can take it. It is released by itself afterwards, unless a payment is in progress.",
+      "noPreference": "“No preference” bookings go to",
+      "noPreferenceOption": {
+        "least_booked": "Whoever has the least booked that day",
+        "most_booked": "Whoever has the most booked that day"
+      },
+      "noPreferenceHelp": "The first shares work evenly. The second fills one person’s day first and keeps others free for walk-ins. Only people who do the service and are free are considered.",
       "deposit": "Deposit",
       "depositKind": {
         "none": "No deposit",
@@ -1021,6 +1035,8 @@
         "slotIntervalMinutes": "start times",
         "minimumNoticeMinutes": "notice",
         "bookingHorizonDays": "how far ahead",
+        "holdMinutes": "how long a time is held",
+        "noPreference": "“No preference” bookings",
         "deposit": "deposit",
         "freeCancellationHours": "free cancellation",
         "lateCancellation": "late cancellation",
@@ -1701,5 +1717,235 @@
       "confirm": "Delete product",
       "cancel": "Cancel"
     }
+  },
+  "bookings": {
+    "loading": "Loading bookings",
+    "heading": "{count, plural, one {# booking} other {# bookings}} on {day}",
+    "new": "+ New appointment",
+    "tools": {
+      "label": "Find bookings",
+      "search": "Search bookings",
+      "searchPlaceholder": "Search name, mobile or reference",
+      "day": "Day",
+      "dayCalendar": "Choose a day",
+      "today": "Today",
+      "status": "Status",
+      "professional": "Professional",
+      "everyone": "Everyone",
+      "allStatuses": "All statuses",
+      "dayChosen": "Day: {day}"
+    },
+    "states": {
+      "held": "Held",
+      "pending_payment": "Pending",
+      "confirmed": "Confirmed",
+      "arrived": "Arrived",
+      "in_service": "In service",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "no_show": "No-show"
+    },
+    "heldLeft": "Held · {left} left",
+    "channels": {
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "front_desk": "Front desk",
+      "walk_in": "Walk-in",
+      "instagram": "Instagram",
+      "google": "Google",
+      "customer_app": "App",
+      "shared_app_link": "Shared link",
+      "staff_web": "Workspace"
+    },
+    "table": {
+      "label": "Bookings on {day}",
+      "when": "When",
+      "customer": "Customer",
+      "service": "Service",
+      "professional": "Professional",
+      "status": "Status",
+      "reference": "Reference"
+    },
+    "list": "Bookings on {day}",
+    "time": "{starts} – {ends}",
+    "serviceVariant": "{service} · {variant}",
+    "itemFacts": "<p>{professional}</p> · <r>{reference}</r>",
+    "open": "Open the booking: {name}, {time}",
+    "emptyTitle": "No bookings match.",
+    "emptyHint": "Try another day, or clear the search.",
+    "clear": "Clear filters",
+    "pager": {
+      "label": "Pages of bookings",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {pages}"
+    },
+    "notices": {
+      "unavailableTitle": "The bookings could not be reached",
+      "unavailableBody": "Check your connection and try again.",
+      "retry": "Try again",
+      "refused": "You can’t see these bookings. Ask the salon owner.",
+      "readOnlySupport": "A support session can read bookings but cannot change them.",
+      "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read bookings but not change them."
+    },
+    "toasts": {
+      "booked": "Booked for {day} at {time} with {name}. Reference {reference}.",
+      "arrive": "Marked arrived.",
+      "start": "Service started.",
+      "no-show": "{name} marked no-show.",
+      "undo-no-show": "No-show undone.",
+      "release": "Hold released. The time is open again.",
+      "cancel": "Cancelled. The time is open again."
+    },
+    "newAppointment": {
+      "title": "New appointment",
+      "intro": "For phone calls, messages and front-desk bookings on any open day.",
+      "close": "Close",
+      "loading": "Loading the services and team",
+      "name": "Customer name",
+      "mobile": "Mobile number",
+      "mobilePlaceholder": "077 123 4567",
+      "mobileHelp": "Required. The confirmation goes to this number.",
+      "day": "Day",
+      "dayHelp": "Any day the salon is open, up to a year ahead. Closed days are not listed.",
+      "dayPlaceholder": "Choose a day",
+      "dayCalendar": "Choose an open day",
+      "noOpenDays": "The salon is not open on any day in the next year. Set its opening hours in Settings.",
+      "service": "Service",
+      "servicePlaceholder": "Choose a service",
+      "serviceOption": "{service} · {price}",
+      "from": "From {price}",
+      "variant": "Option",
+      "variantOption": "{variant} · {price}",
+      "noServices": "There are no services to book yet. Add them on the Services page.",
+      "professional": "Professional",
+      "noPreference": "No preference",
+      "source": "How did they book?",
+      "find": "Find free times",
+      "finding": "Finding free times",
+      "problems": {
+        "name": "Add the customer’s name.",
+        "mobile": "Add a valid mobile number so the customer gets the confirmation."
+      },
+      "timesIntro": "Free times on {day}. Choose one to hold it.",
+      "noPreferenceLine": "Each time shows who would take it.",
+      "times": "Free times",
+      "chip": "{time} · {name}",
+      "reasons": {
+        "closed": "The salon is closed on {day}.",
+        "nobody_performs": "Nobody on the team does this service.",
+        "not_working": "{name} isn’t working on {day}.",
+        "nobody_working": "Nobody who does this service is working on {day}.",
+        "fully_booked": "No free time on {day} for this service. Try another day or professional."
+      },
+      "holding": "Holding this time",
+      "left": "{left} left",
+      "minutesLeft": "{minutes, plural, one {# minute} other {# minutes}} left on the hold.",
+      "rows": {
+        "customer": "Customer",
+        "service": "Service",
+        "professional": "Professional",
+        "when": "When",
+        "source": "Source"
+      },
+      "customerValue": "{name} · {mobile}",
+      "whenValue": "{day}, {starts} – {ends}",
+      "holdNote": "Nobody else can take this time while it is held. It is released by itself when the time runs out.",
+      "confirm": "Confirm booking",
+      "another": "Choose another time",
+      "refusals": {
+        "taken": "That time was just taken. Choose another.",
+        "ranOut": "The hold ran out and the time was released. Find free times again.",
+        "unavailable": "That time can no longer be booked. Choose another.",
+        "rulesNotSet": "Set your booking rules in Settings before taking bookings.",
+        "rulesLink": "Open Booking rules",
+        "permission": "You can’t book appointments. Ask the salon owner.",
+        "support": "A support session can read bookings but cannot book them.",
+        "salonReadOnly": "This salon is read-only until its overdue invoices are paid. Nothing was booked.",
+        "offline": "The bookings could not be reached. Nothing was booked. Try again in a moment.",
+        "gone": "The service or professional has changed. Choose them again.",
+        "failed": "This could not be booked. Check the details and try again."
+      }
+    },
+    "appointment": {
+      "close": "Close",
+      "loading": "Loading the booking",
+      "rows": {
+        "reference": "Reference",
+        "mobile": "Mobile",
+        "service": "Service",
+        "professional": "Professional",
+        "date": "Date",
+        "time": "Time",
+        "source": "Source"
+      },
+      "actions": {
+        "arrive": "Mark arrived",
+        "start": "Start service",
+        "no-show": "Mark no-show",
+        "undo-no-show": "Undo no-show",
+        "cancel": "Cancel booking",
+        "release": "Release hold"
+      },
+      "explanations": {
+        "arriveOnDay": "Arrival is marked on the day.",
+        "noShowAfterStart": "You can mark a no-show once the start time has passed.",
+        "noCancelAfterArrival": "Cancel and no-show are no longer possible once the customer has arrived.",
+        "completedAtCheckout": "The booking is completed at checkout, which arrives with the front desk.",
+        "undoToday": "A no-show can be undone today only.",
+        "cancelledFinal": "Cancelled bookings can’t be changed. Make a new booking instead.",
+        "completed": "Completed at checkout.",
+        "held": "The desk confirms or releases this hold."
+      },
+      "history": "History",
+      "changes": {
+        "held": "Held",
+        "confirmed": "Confirmed",
+        "arrived": "Marked arrived",
+        "started": "Service started",
+        "noShow": "Marked no-show",
+        "noShowUndone": "No-show undone",
+        "cancelled": "Cancelled",
+        "paymentStarted": "Payment started",
+        "paymentReturned": "Payment not completed",
+        "completed": "Completed"
+      },
+      "system": "System",
+      "teamMember": "A team member",
+      "by": "{who} · {when}",
+      "when": "{day}, {time}",
+      "why": "{reason}: {note}",
+      "refusals": {
+        "changed": "This booking changed. Here is its current state.",
+        "gone": "This booking is no longer on the list. A hold may have run out or been released.",
+        "taken": "That time has been booked since, so the no-show stays.",
+        "permission": "You can’t make this change. Ask the salon owner.",
+        "support": "A support session can read bookings but cannot change them.",
+        "salonReadOnly": "This salon is read-only until its overdue invoices are paid. Nothing was changed.",
+        "offline": "The booking could not be reached. Nothing was changed. Try again in a moment.",
+        "failed": "This change could not be made. Try again in a moment."
+      },
+      "unavailable": "This booking could not be read.",
+      "retry": "Try again"
+    },
+    "cancel": {
+      "title": "Cancel this booking?",
+      "body": "{name}, {day} at {time}. The time opens again for others.",
+      "reason": "Reason",
+      "reasonPlaceholder": "Choose a reason",
+      "reasonMissing": "Choose a reason.",
+      "reasons": {
+        "customer_asked": "Customer asked to cancel",
+        "salon_unable": "The salon can’t do it",
+        "booked_by_mistake": "Booked by mistake",
+        "other": "Other"
+      },
+      "note": "Note",
+      "noteHint": "(optional, your team only)",
+      "noteCount": "{count} of {max}",
+      "confirm": "Cancel booking",
+      "keep": "Keep booking"
+    },
+    "itemWhen": "{when} · <m>{mobile}</m>"
   }
 }

@@ -372,7 +372,12 @@ shows the hostname-resolved salon name/initial and a shared decorative interior 
 
 - Every string comes from the translation files. No text literal in a component.
 - Currency, dates, times and phone numbers are formatted with the salon's locale, currency and
-  time zone, through one formatting module.
+  time zone, through one formatting module. A typed mobile number is checked with
+  `@salon/format/mobile`, a separate entry so only screens that check one load its metadata.
+- A screen that depends on "now" (a hold's countdown, "today") takes it from the API's clock
+  (`GET /api/v1/meta` through the BFF), read once on load and kept as an offset, never from the
+  browser's clock; at a deadline it asks the API what happened rather than deciding itself
+  (F07-S03).
 - Follow `docs/design/ui-ux-standards.md`: semantic elements, labels, focus order, visible focus, keyboard
   access to everything, contrast on the brand colour.
 

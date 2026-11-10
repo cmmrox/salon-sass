@@ -121,14 +121,20 @@ salon-wide calendar/customer/figures access (IAM-08), not arbitrary role customi
 | Read the team and its hours (`team.read`, F06) | yes | yes | yes | yes | no |
 | Change the team, hours and leave, and read leave notes (`team.manage`, F06) | yes | yes | no | no | no |
 | Add and remove blocked time (`team.block`, F06-S03) | yes | yes | yes | no | no |
+| Place, confirm, release and cancel bookings, mark no-shows and undo them (`booking.manage`, F07) | yes | yes | yes | no | no |
+| Mark a booking arrived or in service (`booking.attend`, F07) | yes | yes | yes | own bookings only | no |
 
 The API permission keys for these rows are `session.manage`, `password.change`, `mfa.enroll`,
 `staff.list`, `staff.manage`, `audit.list`, `payment.refund`, `catalogue.price.change`,
 `policy.change`, `customer.export`, `calendar.read`, `customer.read`, `financial.read`,
 `settings.read`, `settings.manage` (decision 085), `catalogue.read` (decision 093), and `team.read`,
-`team.manage` and `team.block` (decisions 099, 100). A support session may read settings, the catalogue
-and the team (`settings.read`, `catalogue.read` and `team.read` join its read set) and never change
-them. `catalogue.price.change` guards every change to the catalogue, not only
+`team.manage` and `team.block` (decisions 099, 100), and `booking.manage` and `booking.attend`
+(decision 108 (b)). Bookings are read with `calendar.read` and its data scope: a Professional with
+the own scope sees only the bookings of their linked team member (none when unlinked), salon-wide
+with the IAM-08 grant; acting on a booking outside the caller's scope answers 404, as for an unknown
+one (decision 109). A support session may read settings, the catalogue, the team and bookings
+(`settings.read`, `catalogue.read`, `team.read` and `calendar.read` are in its read set) and never
+change them (`support_read_only`). `catalogue.price.change` guards every change to the catalogue, not only
 prices (decision 093).
 All staff receive the first three own-account permissions; the table determines the rest.
 The customer principal has kind `customer`, null role/staff id, own scope, MFA false and

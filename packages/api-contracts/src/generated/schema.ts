@@ -20,6 +20,206 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The salon's bookings on local dates, by start time. `calendar.read`.
+         * @description A Professional who sees only their own bookings gets the bookings of the team member linked to their account, and none when no member is. Holds that ended or ran out are never listed.
+         */
+        get: operations["listBookings"];
+        put?: never;
+        /**
+         * Holds a professional's time for a service, for the booking rules' hold length. `booking.manage`.
+         * @description Nobody else can take the time until the hold is confirmed, released or runs out. Without `memberId` ("No preference") the server assigns, at that moment, an eligible professional free for the whole booking by the salon's strategy, trying the next when the time was just taken. The booking keeps the service's terms version, variant, segments and price and the current booking rules version. A repeat with the same `Idempotency-Key` and body answers the same booking and places nothing new.
+         */
+        post: operations["placeBookingHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The start times a booking of a service could take on a local date. `booking.manage`.
+         * @description Each time fits the whole booking inside the salon's opening hours and one of the professional's working windows, and overlaps none of their live bookings or unexpired holds, buffers included. Times are on the booking rules' slot interval from local midnight and after the current time; the customer notice and horizon do not apply to staff. Without `memberId` ("No preference") each time shows the eligible professional the salon's strategy picks among those free then.
+         */
+        get: operations["getBookingAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/open-days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The local dates in a range on which the salon is open. `booking.manage`.
+         * @description Weekly hours, holiday choices and closures decide, as for the opening hours.
+         */
+        get: operations["getBookingOpenDays"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One booking, its history and what the caller may do with it now. `calendar.read`. */
+        get: operations["getBooking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}/arrive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marks the customer arrived, on the booking's own date. `booking.attend`; a Professional on their own bookings. */
+        post: operations["markBookingArrived"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancels a confirmed booking before it starts, with a reason. `booking.manage`. */
+        post: operations["cancelBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirms a hold that has not run out. `booking.manage`. */
+        post: operations["confirmBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}/no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marks a confirmed booking a no-show, at or after its start time. `booking.manage`. */
+        post: operations["markBookingNoShow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Gives up a hold at once, freeing its time. `booking.manage`. */
+        post: operations["releaseBookingHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Starts the service of a customer who has arrived. `booking.attend`; a Professional on their own bookings. */
+        post: operations["startBookingService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}/undo-no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Undoes a no-show on the booking's own date. `booking.manage`. */
+        post: operations["undoBookingNoShow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogue/categories": {
         parameters: {
             query?: never;
@@ -2047,6 +2247,120 @@ export interface components {
             subjectId?: string;
             subjectKind?: string;
         };
+        Availability: {
+            /**
+             * Format: date
+             * @description The salon's local date asked for.
+             */
+            date: string;
+            /**
+             * @description Why `times` is empty: the salon is closed that date, nobody performs the service, the professional (or every eligible one) works no time that date, or no booking fits in what is free. Null when there are times.
+             * @enum {string|null}
+             */
+            reason: "closed" | "nobody_performs" | "not_working" | "fully_booked" | null;
+            /** @description In time order; each time once. */
+            times: components["schemas"]["AvailableTime"][];
+        };
+        AvailableMember: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        AvailableTime: {
+            member: components["schemas"]["AvailableMember"];
+            /**
+             * Format: date-time
+             * @description The start, an offset date-time in the salon's zone.
+             */
+            startsAt: string;
+            /** @description The salon's local start time, `HH:MM`. */
+            time: string;
+        };
+        Booking: {
+            /** @enum {string} */
+            channel: "customer_app" | "staff_web" | "shared_app_link" | "instagram" | "google" | "whatsapp" | "phone" | "front_desk" | "walk_in";
+            /** Format: date-time */
+            createdAt: string;
+            currency: string;
+            customer: components["schemas"]["BookingCustomer"];
+            /**
+             * Format: date-time
+             * @description The end of its last segment, its buffer included.
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description When the hold runs out, while it is a hold; else null.
+             */
+            holdExpiresAt: string | null;
+            /** Format: uuid */
+            id: string;
+            member: components["schemas"]["BookingMember"];
+            /**
+             * Format: int64
+             * @description The price it was booked at, in minor units of `currency`.
+             */
+            priceMinor: number;
+            /** @description Six characters, shown with a hyphen: `K7M-4QX`. */
+            reference: string;
+            service: components["schemas"]["BookingService"];
+            /** Format: date-time */
+            startsAt: string;
+            /** @enum {string} */
+            state: "held" | "pending_payment" | "confirmed" | "arrived" | "in_service" | "completed" | "cancelled" | "no_show";
+        };
+        BookingActor: {
+            /** @enum {string} */
+            kind: "staff" | "system";
+            /** @description The staff account's email, else mobile number; null for the system or an account no longer known. */
+            label: string | null;
+        };
+        BookingCustomer: {
+            /** @description In the national format: `077 123 4567`. */
+            mobile: string;
+            name: string;
+        };
+        BookingCustomerInput: {
+            /** @description A mobile number of the salon's country, in any common form: `077 123 4567`. */
+            mobile: string;
+            /** @description 2 to 60 characters, trimmed. */
+            name: string;
+        };
+        BookingDetail: {
+            /** @description The actions the caller's role allows on it now, by the booking's rules and the time. */
+            allowedActions: ("confirm" | "release" | "arrive" | "start" | "cancel" | "no-show" | "undo-no-show")[];
+            booking: components["schemas"]["Booking"];
+            history: components["schemas"]["BookingHistoryEntry"][];
+        };
+        BookingHistoryEntry: {
+            /** Format: date-time */
+            at: string;
+            by: components["schemas"]["BookingActor"];
+            /**
+             * @description The state before; null for the placing of the hold.
+             * @enum {string|null}
+             */
+            from: "held" | "pending_payment" | "confirmed" | "arrived" | "in_service" | "completed" | "cancelled" | "no_show" | null;
+            note: string | null;
+            /** @enum {string|null} */
+            reason: "customer_asked" | "salon_unable" | "booked_by_mistake" | "other" | null;
+            /** @enum {string} */
+            to: "held" | "pending_payment" | "confirmed" | "arrived" | "in_service" | "completed" | "cancelled" | "no_show";
+        };
+        BookingMember: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        BookingPage: {
+            items: components["schemas"]["Booking"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            total: number;
+        };
         BookingRules: {
             /**
              * Format: int32
@@ -2059,12 +2373,22 @@ export interface components {
              * @description Until how many hours before the appointment cancelling keeps nothing: 2, 6, 12, 24 or 48.
              */
             freeCancellationHours: number;
+            /**
+             * Format: int32
+             * @description How long a hold lasts: 5, 10, 15, 20 or 30 minutes.
+             */
+            holdMinutes: number;
             lateCancellation: components["schemas"]["RetentionRule"];
             /**
              * Format: int32
              * @description How long before an appointment it must be booked: 0 (any time before), 30, 60, 120, 240 or 1440 minutes.
              */
             minimumNoticeMinutes: number;
+            /**
+             * @description Who a "No preference" booking goes to: the eligible, free professional with the least (or the most) booked that day.
+             * @enum {string}
+             */
+            noPreference: "least_booked" | "most_booked";
             /** @description `deposit` or `share`, never `nothing`. */
             noShow: components["schemas"]["RetentionRule"];
             reschedule: components["schemas"]["RescheduleRule"];
@@ -2091,7 +2415,7 @@ export interface components {
         };
         BookingRulesHistoryEntry: {
             /** @description The rules it changed from the version before it; every rule for the first version. */
-            changedFields: ("slotIntervalMinutes" | "minimumNoticeMinutes" | "bookingHorizonDays" | "deposit" | "freeCancellationHours" | "lateCancellation" | "noShow" | "reschedule")[];
+            changedFields: ("slotIntervalMinutes" | "minimumNoticeMinutes" | "bookingHorizonDays" | "holdMinutes" | "noPreference" | "deposit" | "freeCancellationHours" | "lateCancellation" | "noShow" | "reschedule")[];
             /** Format: date-time */
             createdAt: string;
             /**
@@ -2118,12 +2442,22 @@ export interface components {
              * @description Until how many hours before the appointment cancelling keeps nothing: 2, 6, 12, 24 or 48.
              */
             freeCancellationHours: number;
+            /**
+             * Format: int32
+             * @description How long a hold lasts: 5, 10, 15, 20 or 30 minutes. Left out, the current version's (10 before any is chosen).
+             */
+            holdMinutes?: number;
             lateCancellation: components["schemas"]["LateCancellationInput"];
             /**
              * Format: int32
              * @description How long before an appointment it must be booked: 0 (any time before), 30, 60, 120, 240 or 1440 minutes.
              */
             minimumNoticeMinutes: number;
+            /**
+             * @description Who a "No preference" booking goes to: of the professionals who perform the service and are free, the one with the least (or the most) booked that day. Left out, the current version's (`least_booked` before any is chosen).
+             * @enum {string}
+             */
+            noPreference?: "least_booked" | "most_booked";
             noShow: components["schemas"]["NoShowInput"];
             reschedule: components["schemas"]["RescheduleInput"];
             /**
@@ -2142,6 +2476,20 @@ export interface components {
              * @description The current version's number, which a save is made from: 0 before the first save.
              */
             version: number;
+        };
+        BookingService: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            variantId: string | null;
+            variantName: string | null;
+        };
+        CancelBooking: {
+            /** @description Up to 200 characters, trimmed; blank is none. */
+            note?: string | null;
+            /** @enum {string} */
+            reason: "customer_asked" | "salon_unable" | "booked_by_mistake" | "other";
         };
         CatalogueCategory: {
             /** Format: uuid */
@@ -3099,6 +3447,10 @@ export interface components {
             sms: boolean;
             whatsapp: boolean;
         };
+        OpenDays: {
+            /** @description In date order. */
+            days: string[];
+        };
         OpeningException: {
             /** @description Special hours' local closing time; null when closed. */
             closes: string | null;
@@ -3249,6 +3601,33 @@ export interface components {
             /** Format: date-time */
             start: string;
         };
+        PlaceBooking: {
+            /**
+             * @description Where the booking came from.
+             * @enum {string}
+             */
+            channel: "phone" | "whatsapp" | "front_desk" | "walk_in" | "instagram" | "google" | "staff_web";
+            customer: components["schemas"]["BookingCustomerInput"];
+            /**
+             * Format: date
+             * @description The salon's local date: today to a year ahead.
+             */
+            date: string;
+            /**
+             * Format: uuid
+             * @description The team member who performs it; null or left out for "No preference", when the server assigns an eligible, free professional by the salon's strategy.
+             */
+            memberId?: string | null;
+            /** Format: uuid */
+            serviceId: string;
+            /** @description `HH:MM`, the salon's local time, on a five-minute step. */
+            time: string;
+            /**
+             * Format: uuid
+             * @description Required, and one of the service's own, when the service has variants; else absent.
+             */
+            variantId?: string | null;
+        };
         PlanDefinition: {
             /** Format: int32 */
             branches: number;
@@ -3325,7 +3704,7 @@ export interface components {
              * @description The stable reason. Branch on this.
              * @enum {string}
              */
-            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "slug_taken" | "plan_key_taken" | "idempotency_conflict" | "salon_read_only" | "entitlement_exceeded" | "invalid_state" | "in_use" | "limit_reached" | "support_read_only" | "support_session_active" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
+            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "slug_taken" | "plan_key_taken" | "idempotency_conflict" | "salon_read_only" | "entitlement_exceeded" | "invalid_state" | "in_use" | "limit_reached" | "support_read_only" | "support_session_active" | "slot_taken" | "slot_unavailable" | "hold_expired" | "rules_not_set" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
             /** @description A sentence for a person. Do not branch on it. */
             detail?: string;
             /** @description For a request body that failed validation (`bad_request`): each field that failed, when the failure has a field. Never the value that was refused. */
@@ -3371,10 +3750,42 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        PublicBookingRuleTerms: {
+            /**
+             * Format: int32
+             * @description How far ahead customers can book: 14, 30, 60, 90 or 180 days.
+             */
+            bookingHorizonDays: number;
+            deposit: components["schemas"]["DepositRule"];
+            /**
+             * Format: int32
+             * @description Until how many hours before the appointment cancelling keeps nothing: 2, 6, 12, 24 or 48.
+             */
+            freeCancellationHours: number;
+            /**
+             * Format: int32
+             * @description How long a chosen time is held: 5, 10, 15, 20 or 30 minutes.
+             */
+            holdMinutes: number;
+            lateCancellation: components["schemas"]["RetentionRule"];
+            /**
+             * Format: int32
+             * @description How long before an appointment it must be booked: 0 (any time before), 30, 60, 120, 240 or 1440 minutes.
+             */
+            minimumNoticeMinutes: number;
+            /** @description `deposit` or `share`, never `nothing`. */
+            noShow: components["schemas"]["RetentionRule"];
+            reschedule: components["schemas"]["RescheduleRule"];
+            /**
+             * Format: int32
+             * @description How often start times are offered: 10, 15, 20 or 30 minutes.
+             */
+            slotIntervalMinutes: number;
+        };
         PublicBookingRules: {
             /** @description The ISO 4217 currency of the amounts. */
             currency: string;
-            rules: components["schemas"]["BookingRules"];
+            rules: components["schemas"]["PublicBookingRuleTerms"];
             /**
              * Format: uuid
              * @description The current version, which a booking made now keeps.
@@ -4422,6 +4833,975 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Acknowledged"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listBookings: {
+        parameters: {
+            query: {
+                /** @description The first local date, `YYYY-MM-DD`. */
+                from: string;
+                /** @description The last local date, at most 30 days after `from`. */
+                to: string;
+                /** @description Only these states; repeat it for several. All by default. */
+                state?: string[];
+                /** @description Only this professional's. */
+                memberId?: string;
+                /** @description Part of the customer's name, their mobile number in any common form, or the reference, with or without its hyphen. */
+                q?: string;
+                /** @description From 0. */
+                page?: string;
+                /** @description 1 to 100; 50 by default. */
+                size?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of bookings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingPage"];
+                };
+            };
+            /** @description `from` or `to` is missing or not `YYYY-MM-DD`, the range is longer than 31 days or ends before it starts, a `state` is not a booking state, or `memberId`, `q`, `page` or `size` is wrong: `bad_request`, with `errors` naming each. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `calendar.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    placeBookingHold: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the client makes for this request and sends again with any retry of it. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceBooking"];
+            };
+        };
+        responses: {
+            /** @description The hold, in state `held`. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description A field is missing or wrong (the name, the mobile number, the channel, the variant, the date or the time), the key is not a UUID, or the body is not the documented shape: `bad_request`, with `errors` naming each. Nothing is stored. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The professional, the service or the variant is not the salon's (removed, deleted or unknown), the hold this key placed is no longer shown, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Another live hold or booking of the professional overlaps it, or with "No preference" nobody eligible is free then: `slot_taken`. The time cannot be booked (the professional does not perform the service, not a five-minute step, past, more than a year ahead, outside the opening hours or the professional's working time; with "No preference", nobody on the team performs the service or works then): `slot_unavailable`, the `detail` saying which. The salon has never saved its booking rules: `rules_not_set`. Nothing is stored. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The key was already used with a different body: `request_rejected`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getBookingAvailability: {
+        parameters: {
+            query: {
+                /** @description The service. */
+                serviceId: string;
+                /** @description One of the service's variants; required when it has them. */
+                variantId?: string;
+                /** @description The salon's local date, `YYYY-MM-DD`: today to one year ahead. */
+                date: string;
+                /** @description The professional; leave it out for "No preference". */
+                memberId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The times, or none and why. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Availability"];
+                };
+            };
+            /** @description `serviceId` missing or not a UUID, `variantId` or `memberId` not a UUID, `date` not `YYYY-MM-DD` or before today or more than one year ahead, or the variant wrong for the service: `bad_request`, with `errors` naming each. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.manage` (a support session included): `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The service, the variant or the professional is not the salon's (removed, deleted or unknown), or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The professional does not perform the service: `slot_unavailable`. The salon has never saved its booking rules: `rules_not_set`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getBookingOpenDays: {
+        parameters: {
+            query: {
+                /** @description The first local date, `YYYY-MM-DD`: today or later. */
+                from: string;
+                /** @description The last local date, at most 399 days after `from`. */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open dates, in order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenDays"];
+                };
+            };
+            /** @description `from` or `to` missing or not `YYYY-MM-DD`, `from` before today, `to` before `from`, or more than 400 days: `bad_request`, with `errors` naming each. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.manage` (a support session included): `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The booking. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetail"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `calendar.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such booking of the salon, one the caller does not see (a Professional's colleague's, a hold that ended or ran out), or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    markBookingArrived: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The booking, now `arrived`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.attend`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such booking of the salon, another professional's for a Professional, a hold that ended or ran out, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not confirmed, or not the booking's date: `invalid_state`, the `detail` naming the rule. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelBooking"];
+            };
+        };
+        responses: {
+            /** @description The booking, now `cancelled`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description The reason is missing or not one of the four, the note is longer than 200 characters, or the body is not the documented shape: `bad_request`, with `errors` naming each. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such booking of the salon, a hold that ended or ran out, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not confirmed, or its start time has come: `invalid_state`, the `detail` naming the rule. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The booking, now `confirmed`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such booking of the salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description It is not a hold: `invalid_state`. The hold has run out, and its time is free for others: `hold_expired`. The `detail` names the rule. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    markBookingNoShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The booking, now `no_show`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such booking of the salon, a hold that ended or ran out, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not confirmed, or its start time has not come: `invalid_state`, the `detail` naming the rule. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    releaseBookingHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Released. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such booking of the salon, a hold already released or run out, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description It is not a hold: `invalid_state`, the `detail` naming the rule. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    startBookingService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The booking, now `in_service`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.attend`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such booking of the salon, another professional's for a Professional, a hold that ended or ran out, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The customer has not arrived: `invalid_state`, the `detail` naming the rule. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    undoBookingNoShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The booking, `confirmed` again. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Booking"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such booking of the salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not a no-show, not the booking's date, or the professional no longer performs the service: `invalid_state`, the `detail` naming the rule. The time has been booked since: `slot_taken`, and it stays a no-show. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */

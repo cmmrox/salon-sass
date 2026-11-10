@@ -144,7 +144,9 @@ and 1000. Focused local tests may override them explicitly, then must restore th
 SMS/WhatsApp adapters capture encrypted outbox delivery only; a nonlocal deployment has no real
 sender configured and returns `provider_unavailable` rather than claiming that a code was sent.
 The region phone numbers are checked against is `SALON_BRANDING_PHONE_REGION`, `LK` by default
-(decision 084); it is not a secret and every environment may leave it unset. Brand image limits
+(decision 084); it is not a secret and every environment may leave it unset. A customer's mobile on
+a booking is checked against `SALON_BOOKING_PHONE_REGION`, which defaults to the branding region;
+the API and the web server (New appointment's check) both read it (decisions 109, 111). Brand image limits
 are `SALON_BRANDING_IMAGE_MAX_BYTES` (5 MB per file), `SALON_BRANDING_IMAGE_MAX_PIXELS` (50M declared)
 and `SALON_BRANDING_IMAGE_CONCURRENT_DECODES` (2); the request limit for uploads is 10 MB.
 

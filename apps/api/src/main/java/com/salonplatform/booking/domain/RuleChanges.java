@@ -18,6 +18,8 @@ public final class RuleChanges {
             "slotIntervalMinutes",
             "minimumNoticeMinutes",
             "bookingHorizonDays",
+            "holdMinutes",
+            "noPreference",
             "deposit",
             "freeCancellationHours",
             "lateCancellation",
@@ -33,6 +35,8 @@ public final class RuleChanges {
         add(changed, "slotIntervalMinutes", before.slotIntervalMinutes(), after.slotIntervalMinutes());
         add(changed, "minimumNoticeMinutes", before.minimumNoticeMinutes(), after.minimumNoticeMinutes());
         add(changed, "bookingHorizonDays", before.bookingHorizonDays(), after.bookingHorizonDays());
+        add(changed, "holdMinutes", before.holdMinutes(), after.holdMinutes());
+        add(changed, "noPreference", before.noPreference(), after.noPreference());
         add(changed, "deposit", before.deposit(), after.deposit());
         add(changed, "freeCancellationHours", before.freeCancellationHours(), after.freeCancellationHours());
         add(changed, "lateCancellation", before.lateCancellation(), after.lateCancellation());

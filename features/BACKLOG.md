@@ -68,3 +68,5 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Repeating blocked time, such as a weekly training slot | SUG-F06-04 | F06 blocks are one date each; a repeat rule would expand into blocks within the 200 upcoming |
 | Week patterns that repeat every two to four weeks (rotas) | SUG-F06-05 | F06 has one weekly pattern per person plus date changes |
 | Focus the chosen day, or today, when a date control's calendar opens | SUG-F06-06 | Today focus lands on "Go to the Next Month"; the shared date control, so every date field gains |
+| Put the status and source badges side by side in the wide Bookings table, as the prototype does | SUG-F07-04 | Saves a line per row; wrap only when the column is too narrow |
+| Show an example mobile number in New appointment's empty field, and keep the Bookings search placeholder whole at 360px | SUG-F07-05 | The prototype shows "077 123 4567"; the placeholder is cut at "referen" today |

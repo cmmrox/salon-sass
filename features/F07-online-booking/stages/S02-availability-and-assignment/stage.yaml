@@ -1,0 +1,270 @@
+# One stage: a part of a feature the developer can build, show working and hand over on its own.
+id: F07-S02
+feature: F07
+title: "Availability and \"No preference\" assignment"
+sequence: 2
+surfaces: [api, web]                # api | web | mobile | infra | docs
+status: complete              # outlined | planned | in-progress | built | complete | released
+qa_status: not-run          # stays not-run: QA passes the feature. Set only by a stage pass the owner asked for
+blocked_reason: null        # QA: what stops a stage pass, when qa_status is blocked
+released_in: null
+reopened_by: null           # lead: the change request that reopened a closed stage, for example CR-004
+depends_on: [F07-S01]              # stage ids, of this or another feature
+requirements: [BKG-01, BKG-03]            # requirement ids of the feature that this stage delivers
+nfr_focus: [NFR-03]               # non-functional requirements of the feature that this stage proves
+
+# Written by the developer at handoff. The stage is closed on it, and QA starts the feature pass
+# from it. Facts; not how the code works.
+handoff:
+  run: |
+    Local, from the worktree /Users/cmmrox/Personal/Projects/salon-sass-f07-s02 (branch
+    charithm/feature/F07-S02-availability-and-assignment), in a plain (non-login) shell. The stage's own instance, beside
+    the owner's (API 8090, web 3100, database salon) and QA's (8190/3200/5540), neither touched:
+      database f07s02_walk on salon-postgres (5440), created with: docker exec salon-postgres psql -U salon -d postgres
+      -c "CREATE DATABASE f07s02_walk OWNER salon"; API on 8293; web on 3293; key files in a folder of its own.
+    Scripts (kept with the evidence, .local/logs/walk-f07s02-f04edff8/): start-api.sh sets SALON_DB_NAME=f07s02_walk
+      SALON_API_PORT=8293 SALON_WEB_PORT=3293, sources infra/scripts/lib/common.sh, calls load_settings, points
+      SALON_{IDENTITY,OPERATOR,BILLING,EXPORT,SUPPORT}_LOCAL_KEY_FILE at its own folder, JAVA_HOME=JDK 25
+      (~/.sdkman/candidates/java/25.0.1.0+8-amzn), and runs the jar ./mvnw verify built from f04edff8 (GET /api/v1/meta
+      answers that commit). start-web.sh does the same settings (the key files too: the web signs its client assertion
+      with them, so without them sign-in is 400 invalid_client_assertion) and runs apps/web's production build with
+      node scripts/serve.mjs --port 3293. Then SALON_DB_NAME=f07s02_walk SALON_API_PORT=8293 SALON_WEB_PORT=3293
+      infra/scripts/local-accounts.sh seeds the roster into that database only. Migrations V1 to V33 run at start;
+      V33 is this stage's.
+    Both servers were stopped after the walk by their PIDs; f07s02_walk was left for inspection. To remove it:
+      docker exec salon-postgres psql -U salon -d postgres -c "DROP DATABASE f07s02_walk".
+    Endpoints (salon host, alpha.localhost:8293): GET /api/v1/bookings/availability?serviceId=&variantId=&date=&memberId=;
+      GET /api/v1/bookings/open-days?from=&to=; POST /api/v1/bookings now takes "memberId": null; GET/PUT
+      /api/v1/salon/booking-rules/settings, GET /api/v1/salon/booking-rules and /history carry the new rules.
+    Screen: http://alpha.localhost:3293/workspace/settings/rules as an Owner or Manager, section "Holding and assigning".
+    The test clock (PUT/DELETE /local/clock on 127.0.0.1:8293) moves "now"; it keeps running from the instant set.
+  data: |
+    Local seed: unchanged. The booking rules version afterMigrate.sql writes for alpha, beta and gamma names neither new
+    column, so it reads holdMinutes 10 and noPreference least_booked (checked on the walk database).
+    Accounts: the fixed roster (infra/local/accounts.json, password 123456@321; Owners and operators with the roster's TOTP
+    seeds), seeded only into f07s02_walk; no roster account anywhere was changed. The walk signed in alpha's Owner
+    (Nadeesha), Manager (Kasun), Receptionist (Dilani), Professional (Tharindu) and Accountant, beta's five, and the
+    operator support account for a support session on alpha.
+    Walk data in f07s02_walk only, with the test clock at 15 June 2086 08:00 Colombo: per salon the services "Cut and
+    blow-dry" (45 + 15 minutes, Rs. 4,500) and "Head massage" (30 minutes, Rs. 2,000), team members Sanduni
+    Wickramasinghe and Ishara Fonseka (Cut and blow-dry), on alpha also Nethmi Bandara (Cut and blow-dry) and Kavindi
+    Herath (massage, then removed), opening hours 09:00 to 19:00 every day; on alpha a block for Sanduni on 16 June
+    13:00-14:00, her leave on 17 June, a closure on 20 June, holds and bookings on 16 and 18 June for the synthetic
+    customer Amaya Rajapaksa; on beta a closure on 18 June and a 30-minute interval. Alpha's rules end at version 11
+    (holdMinutes 15, most_booked, set through the screen).
+    Tests make their own salons (TestSalons) with random slugs in the test container; nothing is shared with any instance.
+  notes: |
+    Tested source: f04edff8 (commits cc794ed1 build, 741d41e1 tests, a0266fe5 screen, f04edff8 migration-list test) on the
+    stage branch. The handoff commit changes only this file and the generated documents. Logs in this worktree (keep it
+    until close): /Users/cmmrox/Personal/Projects/salon-sass-f07-s02/.local/logs/gates-f07s02-a0266fe5/ and
+    .../gates-f07s02-f04edff8/; walk: .../walk-f07s02-f04edff8/ (walk.py, walk_lib.py, screen.mjs, walk-2.log,
+    screen-4.log, api.log, web.log, shots/).
+
+    GATES, each on committed source with a clean tree:
+    | Command | Tested commit | Result | Log |
+    | cd apps/api && ./mvnw -q verify | f04edff8 | exit 0; 2119 test cases in 215 classes (counted as <testcase> in surefire-reports), 0 failures, 0 errors, 0 skipped; about 11 min | gates-f07s02-f04edff8/1-api-verify.log |
+    | pnpm -r lint | a0266fe5 | exit 0 | gates-f07s02-a0266fe5/lint.log |
+    | pnpm -r typecheck | a0266fe5 | exit 0 | gates-f07s02-a0266fe5/typecheck.log |
+    | pnpm -r test | a0266fe5 | exit 0; web 1306, api-contracts 25, format 18 | gates-f07s02-a0266fe5/test.log |
+    | pnpm --filter @salon/web test:a11y | a0266fe5 | exit 0; 369 tests in 12 files | gates-f07s02-a0266fe5/a11y.log |
+    | pnpm --filter @salon/web build | a0266fe5 | exit 0 | gates-f07s02-a0266fe5/web-build.log |
+    | pnpm contracts:check | f04edff8 | exit 0; document and client current | gates-f07s02-f04edff8/contracts-check.log |
+    f04edff8 differs from a0266fe5 only in apps/api/src/test/java/com/salonplatform/MigrationIntegrationTest.java, so the
+    pnpm gates stand (docs/operations/verification-evidence.md). Earlier runs, each diagnosed:
+    - verify on a0266fe5 failed 1 of 2119: MigrationIntegrationTest lists every migration and did not list V33 (my
+      omission; fixed in f04edff8). Log gates-f07s02-a0266fe5/1-api-verify-failed-migration-list.log.
+    - verify on f04edff8, first run, failed 1 of 2119 in branding's SalonEndpointDatabaseSilentIntegrationTest (it
+      freezes the database and expects 503; its requests were answered 200 in 6 ms, before the freeze took hold; machine
+      load about 7). The class passed 2 of 2 alone and nothing in branding changed: a timing flake, not this stage's.
+      Log .../1-api-verify-run1-branding-silent-db-flake.log. The rerun is the row above.
+    - test:a11y on a0266fe5, first run, failed 1 of 369 in BrandingSettings.a11y.test.tsx ("with the reset confirmation
+      open, brand #1F2937"): axe caught a Sonner "Draft saved" toast mid-fade (contrast 1.05). The file passed 3 of 3
+      alone and nothing in branding changed: a timing flake. Log gates-f07s02-a0266fe5/a11y-run1-branding-toast-flake.log.
+      Both flakes are worth a bug or a fix by whoever owns F04-S02/F04 tests; I left them alone (outside the stage).
+    python3 qa/scripts/guard.py --role dev --diff: every changed path is a developer path. pnpm knip fails, the same on
+    the base commit (unused exports in fixtures of earlier stages); it is not one of this stage's gates.
+
+    CRITERIA, each checked on the running product (API walk: 50 of 50, walk-2.log; screen: 15 of 15, screen-4.log) and
+    by the tests named:
+    AC-1 checked: Sanduni's day every quarter 09:00-18:00 (60 minutes in 09:00-19:00), +05:30, her name; a hold took
+      09:15-10:45 at once (buffer included) and release gave it back; a block 13:00-14:00 took 12:15-13:45; leave gave
+      not_working; a run-out hold's time free at once before the job; a cancelled booking's time free. Unit: FreeTimesTest
+      (window and break edges, buffer reaching a booking, touching, ending at closing, processing over another booking,
+      London clock changes); integration: AvailabilityIntegrationTest.
+    AC-2 checked: today at 08:10 first time 09:00, at 10:07 first 10:15 (strictly after now; the rules' 60-minute customer
+      notice not applied); 2086-06-14 400 on date, 2087-06-15 200, 2087-06-16 400, a malformed date 400. Customer notice
+      and horizon: FreeTimesTest.Audiences only (no endpoint, as the spec says).
+    AC-3 checked: with memberId only Ishara; a professional who does not do the service 409 slot_unavailable; beta's and a
+      removed one 404; No preference each time once, ties by the Team page's order, least_booked and most_booked picking
+      as described. Tests: FreeTimesTest.NoPreferenceStrategy, AvailabilityIntegrationTest.
+    AC-4 checked: closed (closure), nobody_performs (massage after Kavindi's removal), not_working (leave), fully_booked
+      (tests: today after the last start, a window too short, everyone booked).
+    AC-5 checked: offered to one professional, that time then taken by a named hold, the No preference hold went to the
+      other; assigned = true on it and false on a named one (database read); nobody free 409 slot_taken; six simultaneous
+      No preference holds at 18:00 with three free: three 201 with three different professionals, three slot_taken.
+      Concurrency integration test (NoPreferenceHoldsIntegrationTest): eight at once with three free, three succeed with
+      three different ones; it fails when the try-the-next fallback is removed (checked by mutating the source, then
+      restored).
+    AC-6 checked: 15-21 June lists six days without the closure; 400 days answer (399 open); 401 days 400 on to; a past
+      from 400 on from.
+    AC-7 checked: the seeded pre-V33 version reads 10 and least_booked; holdMinutes 5 saved, the next hold expires 5
+      minutes after placing, an earlier hold keeps its 10; history rows name noPreference and holdMinutes; public read has
+      holdMinutes and no noPreference; 7 and "even" are 400 naming rules.holdMinutes and rules.noPreference. Tests:
+      HoldAndAssignRulesIntegrationTest, NoPreferenceHoldsIntegrationTest, BookingRulesValidationTest, RuleChangesTest.
+    AC-8 checked in a browser (headless Chromium, production build): as Owner the section comes after Booking times and
+      before Deposit, labels, options (5/10/15/20/30 minutes; the two strategies) and help texts as the prototype words
+      them, each help tied to its Select (aria-describedby); chose 15 minutes by keyboard and "most booked", Save booking
+      rules showed its message, the public read then had 15, the newest history row said "Changed: how long a time is
+      held, “No preference” bookings"; a Manager sees the saved choices and may change them. Tests:
+      BookingRulesSettings.test.tsx (two new cases), settings.test.ts (BFF passes both on, leaves them out when absent).
+    AC-9 checked: Owner, Manager, Receptionist 200 on both reads; Professional, Accountant and a support session 403
+      permission_denied on both; no session 401. Tests: AvailabilityAccessIntegrationTest (and a bad query from a
+      Professional is still 403). The rules keep F04-S04's permissions (unchanged).
+    AC-10 checked: beta's holds, closure, leave and 30-minute interval changed nothing on alpha; beta saw its own interval
+      and hold; beta's service and professional on alpha 404; a No preference hold for beta's service 404; beta's closure
+      did not close alpha. Tests: AvailabilityAccessIntegrationTest. The occupied-time read is JPQL under the tenant
+      filter and row-level security (no direct SQL).
+    AC-11 measured by AvailabilityTimingIntegrationTest (20 eligible professionals, each with two breaks, a block and 15
+      bookings that day; 200 sequential No preference reads through the endpoint after 10 warm-up calls), on this
+      machine in the test container: in the gate run on f04edff8 p50 61 ms, p95 99 ms, p99 143 ms, max 206 ms. Earlier
+      runs: p95 85 ms (focused run) and 94 ms (verify run 1). The test asserts p95 under 500 ms. No load test was run.
+    AC-12 checked: every response of the new and changed endpoints in the integration tests, error statuses included, is
+      validated against the committed docs/api/openapi.json (BookingTestBase.send); contracts:check current. Screen:
+      BookingRules.a11y.test.tsx passes at every width with a dark and a light brand with the section in it (27 cases);
+      on the running product no horizontal scroll at 360 and 768, keyboard choice works; loading and error states are
+      the existing screen's, unchanged (BookingRulesSettings.test.tsx). Screenshots in walk-.../shots (1280, 768, 360,
+      history). Design: compared with the prototype's setRules F07 override; heading, labels, options, help text and order
+      match. The help text is ink, not muted (ui-ux-standards: small text on the warm canvas uses ink), as the screen's
+      existing "A service can ask for a different deposit" line does.
+
+    FINAL ENDPOINT SHAPES (salon host; booking module, OpenAPI tag booking)
+    GET /api/v1/bookings/availability?serviceId=&variantId=&date=&memberId= (booking.manage) -> 200 Availability
+      {date "YYYY-MM-DD", times: [AvailableTime {time "HH:MM", startsAt offset date-time +HH:MM, member: AvailableMember
+      {id, name}}], reason: "closed"|"nobody_performs"|"not_working"|"fully_booked"|null}. memberId left out or empty is
+      No preference. Refusals in order: 403 (permission first) -> 400 fields (serviceId required, variantId, memberId,
+      date: format, before today, more than a year ahead) -> 409 rules_not_set -> 404 service -> 400/404 variant (as a
+      hold) -> 404 member (unknown, another salon's, removed) -> 409 slot_unavailable (does not perform).
+    GET /api/v1/bookings/open-days?from=&to= (booking.manage) -> 200 OpenDays {days: [date]}; 400 on from (missing,
+      malformed, before today) and to (missing, malformed, before from, more than 400 days both included).
+    POST /api/v1/bookings: PlaceBooking.memberId is now optional and nullable (["string","null"]); null or left out is
+      No preference. The answer is the Booking as in S01, member being the one assigned. With No preference: 409
+      slot_unavailable with detail "The salon is closed on that date." / "...outside the salon's opening hours." /
+      "Nobody on the team performs this service." / "Nobody who performs this service works at that time."; 409
+      slot_taken when everyone who works then is taken (or the constraint refused each one tried).
+    Booking rules: BookingRulesInput gains holdMinutes (5, 10, 15, 20, 30) and noPreference ("least_booked" |
+      "most_booked"), both optional; BookingRules (settings) gains both, required; the public read's rules are a new
+      schema PublicBookingRuleTerms = the eight F04 rules + holdMinutes (no noPreference); BookingRulesHistoryEntry
+      changedFields may name holdMinutes and noPreference.
+    Provided interface booking.Availability (root package): freeTimes(Query{serviceId, variantId, date, memberId|null,
+      audience STAFF|CUSTOMER}) -> Answer{date, times: [FreeTime{time, startsAt, memberId, memberName}], reason Empty
+      (CLOSED, NOBODY_PERFORMS, NOT_WORKING, FULLY_BOOKED, OUTSIDE_BOOKING_WINDOW)}; openDays(from, to). Its Javadoc states
+      the audience rules for F09, F10 and F15. Root enum booking.NoPreference; BookingTerms gains holdMinutes and
+      noPreference.
+    Data: V33 adds booking_rules_version.hold_minutes (int, default 10, check 5/10/15/20/30) and no_preference (text,
+      default least_booked, check), and booking_appointment.assigned (boolean, default false, not in any response).
+
+    DIFFERENCES FROM docs/ AND CHOICES FOR THE LEAD TO RECORD
+    1. memberId left out of a hold is No preference, like null (the spec says null); the schema no longer requires it. A
+       client that forgets it now gets an assigned booking, not a 400.
+    2. holdMinutes and noPreference may be left out of a save, which keeps the current version's (10 and least_booked on
+       a first save), so a client written before them cannot reset them; a value sent is checked strictly.
+    3. The public booking rules read gains holdMinutes under a new schema name (PublicBookingRuleTerms) so that
+       noPreference stays out of it; the settings read keeps the BookingRules schema with both.
+    4. In the history and RuleChanges.FIELDS the two new names sit after bookingHorizonDays (the form's order), so a first
+       version's changedFields now lists ten names.
+    5. booking_appointment.assigned is added in V33, the same migration as the two rule columns (the spec says "one
+       migration adds the two rule columns"); it is not returned by any endpoint. F13 reads it.
+    6. Availability answers 409 rules_not_set for a salon that never saved rules (no interval or strategy to use); the
+       spec does not list it.
+    7. Staff times today are strictly after now; a hold (S01) still accepts a start equal to now.
+    8. A local start the clocks skip is not offered; in the repeated hour a start is offered once, at its earlier
+       instant (SalonTime's rule).
+    9. "Booked that day" is the minutes the professional's live bookings and unexpired holds occupy within that local
+       date (active and buffer, completed included, processing not); ties go to the Team page's order (name order,
+       TeamMembers.performing).
+    10. fully_booked also covers "someone works but no whole booking fits" (a window shorter than the service, or
+        today's remaining times past); not_working is only "no working window at all".
+    11. A No preference hold tries only those the calculation finds free at that start, in order, each in its own
+        transaction; a candidate who left the team or the service between the read and the lock is skipped. The
+        guard locks and the exclusion constraint are S01's, unchanged.
+    12. Customer audience: a date before today or beyond the horizon is Empty.OUTSIDE_BOOKING_WINDOW (domain only);
+        whether a professional is shown online is not considered (F15's to filter), as the Javadoc says.
+    13. Open days are bounded to 400 days from today on, with no one-year cap of their own (the spec gives none).
+    14. docs/engineering/backend.md ("Provided interfaces", "Booking integrity") could name booking.Availability, the
+        hold length from the rules version, and the assigned column.
+    15. RuleSelect (features/booking) gained an optional description rendered as FieldDescription and tied by
+        aria-describedby. New test ids: rules-hold, rules-hold-option-<5|10|15|20|30>, rules-hold-help,
+        rules-no-preference, rules-no-preference-option-<least_booked|most_booked>, rules-no-preference-help.
+    16. BookingTestBase.template keeps /bookings/availability and /bookings/open-days out of the /bookings/{id} template.
+    17. For QA (not changed by me, it is under qa/): the F04-S04 API tests compare whole rule objects with toEqual
+        (settings and public) and a first version's changedFields; they will now see holdMinutes (and noPreference in
+        settings) and the two new names. qa/shared/booking-rules.ts and the F05 public-rules expectations likewise.
+    18. Machine notes: the walk's sign-in in a browser needs the web started with the instance's key files; a TOTP
+        code is refused when reused within its 30-second step.
+
+    NOT DONE, AND WHY: no load test (AC-11 is the developer's measurement only). Customer availability is not exposed
+    (F15). No new dependency. Time, by the commit and log clocks: reading the spec and documents and planning until about
+    16:55; building the API about 15 min (first commit 17:06); tests about 10 min (17:11); screen about 5 min (17:15);
+    gates 17:15-18:07, mostly waiting on three verify runs of about 11 minutes, with about 10 minutes diagnosing the
+    migration-list failure and the two flakes; the walk and the screen walk 18:07-18:18, a few minutes of that fixing my
+    walk scripts (a fixed clock instant, TOTP reuse, Radix focus timing), none of them product defects.
+
+# Written by QA. A case is the test that proves it, titled with its id and the criteria it
+# covers before a colon: test('TC-F07-S02-001 AC-1, AC-2: a free slot is listed', ...), or a
+# '# TC-F07-S02-002 AC-3: ...' header comment in a k6 or shell script. The tooling reads the
+# cases from the registered files; there is no case list or cases.md to keep in step.
+verification:
+  commands:                 # developer gates, exact shell commands, run from the repository root
+    - cd apps/api && ./mvnw -q verify
+    - pnpm -r lint
+    - pnpm -r typecheck
+    - pnpm -r test
+    - pnpm --filter @salon/web test:a11y
+    - pnpm --filter @salon/web build
+    - pnpm contracts:check
+  automation:
+  - id: availability-api
+    tool: playwright
+    file: qa/api/F07/S02-availability.spec.ts
+    project: api
+    suites: [regression]
+  - id: no-preference-api
+    tool: playwright
+    file: qa/api/F07/S02-no-preference.spec.ts
+    project: api
+    suites: [regression]
+  - id: rules-api
+    tool: playwright
+    file: qa/api/F07/S02-rules.spec.ts
+    project: api
+    suites: [regression]
+  - id: rules-section-web
+    tool: playwright
+    file: qa/web/F07/S02-rules-section.spec.ts
+    project: web
+    suites: [regression]
+  #  - id: <short name>
+  #    tool: playwright      # playwright | maestro | k6 | script
+  #    file: <path under qa/, as laid out in docs/qa/test-plan.md>
+  #    project: <name>       # only for a tool that groups tests into projects
+  #    suites: [regression]  # smoke | regression | release; decided at feature-verify
+  manual: []
+  #  - case: TC-F07-S02-009
+  #    covers: [AC-4]
+  #    reason: <why it cannot be automated, and how it was checked>
+  #    performed_on: <YYYY-MM-DD>   # required: a manual case counts only once it was done
+  deferred:
+    - case: TC-F07-S02-018
+      covers: [AC-11]
+      reason: "load test; the release suite runs only when the owner asks (decision 068). The developer measured p95 99 ms on
+        200 sequential calls (F07-S02 handoff). The scenario is qa/api/F07/S02-availability-load.spec.ts with
+        qa/load/F07/S02-availability.js, unregistered (the lead's ruling)."
+      unblocked_by: release-prepare, where the lead adds it to the release manifest's gates
+  #  - case: TC-F07-S02-010
+  #    covers: [AC-5]
+  #    reason: <why it cannot be run yet>
+  #    unblocked_by: <a stage id, or the event the spec names>
+
+evidence:                   # only for a stage pass; a feature pass records its evidence in feature.yaml
+  last_run: null            # the run this status rests on, as a path: qa/reports/<folder>
+  last_result: null         # pass | fail
