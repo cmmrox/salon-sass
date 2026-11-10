@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { SALON_HEADER, encodeSalon } from '@/features/branding/server';
 import {
+  answersWithoutLookup,
   clearCookies,
+  suspendedSalon,
   cookieName,
   endSupportView,
   hasCredentials,
@@ -21,6 +23,7 @@ import {
   type OperatorEntry,
 } from '@/features/platform/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
+import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';
 import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from '@/lib/tenancy/console-host';
 import { platformDomainOf } from '@/lib/tenancy/hostname';
 
@@ -48,24 +51,22 @@ const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
 /** Staff sign-in, where a visitor without a usable session belongs. */
 const SIGN_IN = '/workspace/sign-in';
 
-/** The protected workspace pages, whose entry is decided here before anything renders (CR-013). */
-const PROTECTED = new Set([
-  '/workspace/account',
-  '/workspace/staff',
-  '/workspace/audit',
-  '/workspace/billing',
-  '/workspace/support-access',
-  '/workspace/settings',
-  '/workspace/settings/profile',
-  '/workspace/settings/hours',
-  '/workspace/settings/rules',
-  '/workspace/settings/tax',
-  '/workspace/settings/branding',
-  // The Services & pricing page and its Categories tab (F05-S01), and its Products tab (F05-S03).
-  '/workspace/services',
-  '/workspace/services/categories',
-  '/workspace/services/products',
-]);
+/**
+ * The protected workspace pages, whose entry is decided here before anything renders (CR-013): every page of the one
+ * route table, as each module declares it (web M5; `/workspace/bookings` and `/workspace/team` were missing).
+ */
+const PROTECTED = new Set(WORKSPACE_ROUTES.pages.map((page) => page.path));
+
+/**
+ * A salon's public photo (CR-030; BUG-F05-003): `/service-photos/<id>`, `/team-photos/<id>` and `/brand-images/<id>`.
+ * Their route handlers set the Cache-Control of every answer they give, the photo's own (`lib/http/photo-cache.ts`)
+ * or `no-store` for anything else (not found, a draft, an unavailable API). The proxy sets none on them, because
+ * Next.js sends the proxy's header over a handler's: `server/lib/router-server.js` sets the proxy's response headers
+ * first, and `server/send-response.js` adds a handler's header only when the response has none of that name. An
+ * unknown or suspended salon's hostname is still answered here, `no-store`, before any handler runs.
+ */
+const PUBLIC_PHOTO = /^\/(?:service-photos|team-photos|brand-images)\/[^/]+$/;
+const isPublicPhoto = (path: string) => PUBLIC_PHOTO.test(path);
 
 /** Settings, and the first of its tabs (F04-S01): Profile, the only one delivered so far. */
 const SETTINGS = '/workspace/settings';
@@ -142,9 +143,18 @@ export async function routeRequest(
   resolve: (hostHeader: string | null) => Promise<Site> = resolveSite,
   decide: DecideEntry = decideEntry,
   decideConsole: DecideConsoleEntry = decideConsoleEntry,
+  security?: { policy: string; nonce: string },
 ): Promise<NextResponse> {
   const headers = new Headers(request.headers);
   headers.delete(SALON_HEADER);
+  // The page's policy and nonce, handed on so that Next.js puts the nonce on the scripts it renders (web M7). Whatever
+  // the browser sent under these names is replaced.
+  headers.delete('content-security-policy');
+  headers.delete('x-nonce');
+  if (security) {
+    headers.set('content-security-policy', security.policy);
+    headers.set('x-nonce', security.nonce);
+  }
 
   const path = request.nextUrl.pathname;
   // The not-found target ends here, before anything that could rewrite it again or ask the API. A server
@@ -184,6 +194,13 @@ export async function routeRequest(
     return rewrite(request, NOWHERE, headers);
   }
 
+  // A module's BFF call is answered without the salon's lookup (web H3): the handler checks the host's form and the
+  // API resolves the salon by Host on the call. Nothing about a salon is handed on, and nothing is stored.
+  if (answersWithoutLookup(path)) {
+    const response = NextResponse.next({ request: { headers } });
+    response.headers.set('Cache-Control', NOT_STORED);
+    return response;
+  }
   const site = await resolve(request.headers.get('host'));
   // The Owner's export download page and its BFF (F03-S03) exist on the bare platform host only.
   const exportPath = isUnder(path, '/exports') || isUnder(path, '/platform-web');
@@ -196,6 +213,8 @@ export async function routeRequest(
     case 'not-found':
       return answer('salon-not-found');
     case 'suspended':
+      // The workspace BFF's own answer for a suspension, which the browser leaves the frame for (F03-S03 AC-1).
+      if (isUnder(path, '/identity-web')) return suspendedSalon();
       return answer('salon-unavailable');
     case 'unavailable':
       return answer('service-unavailable');
@@ -241,9 +260,10 @@ export async function routeRequest(
       // settings.read the page itself answers the workspace's "no access" state.
       if (path === SETTINGS && entry?.kind === 'signed-in' && entry.principal.permissions.includes('settings.read'))
         return redirect(request, SETTINGS_FIRST_TAB);
-      // Any other path on a salon's hostname is the application's, with the salon handed on.
+      // Any other path on a salon's hostname is the application's, with the salon handed on. Every answer is stored by
+      // no cache, except a public photo's, whose handler says how it may be kept (CR-030).
       const response = NextResponse.next({ request: { headers } });
-      response.headers.set('Cache-Control', NOT_STORED);
+      if (!isPublicPhoto(path)) response.headers.set('Cache-Control', NOT_STORED);
       return response;
     }
   }

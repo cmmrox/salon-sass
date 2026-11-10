@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts/platform';
@@ -14,13 +14,8 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
 import { formatCount, formatInstant, viewerTimeZone } from '@salon/format';
-import {
-  operatorRead,
-  operatorRequest,
-  OperatorFailure,
-  withOperatorLock,
-  principalInsideLock,
-} from '../client/operator-session';
+import { OperatorFailure } from '../client/operator-session';
+import { useConsoleChanges, useConsoleRead } from '../client/console-data';
 import { ConsoleFailure, ConsoleLoading, ConsoleTextField, consoleTestId, uncertain } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager, DirectorySearch } from './DirectoryControls';
@@ -142,6 +137,7 @@ function CreatePlan({ onCreated }: { onCreated: () => void }) {
       idempotency.reset();
     } else setCreated(null);
   }
+  const changes = useConsoleChanges();
   async function submit() {
     setBusy(true);
     setFailure(null);
@@ -156,10 +152,7 @@ function CreatePlan({ onCreated }: { onCreated: () => void }) {
     };
     const idempotencyKey = idempotency.keyFor(payload);
     try {
-      const plan = await withOperatorLock(async () => {
-        await principalInsideLock();
-        return operatorRequest<Plan>('plan-create', { ...payload, idempotencyKey });
-      });
+      const plan = await changes.run('plan-create', { ...payload, idempotencyKey });
       idempotency.reset();
       setCreated(plan);
       setOpen(false);
@@ -303,37 +296,7 @@ function CreatePlan({ onCreated }: { onCreated: () => void }) {
 /** One plan: its exact immutable limits and features. */
 export function PlanDetail({ id }: { id: string }) {
   const t = useTranslations('console');
-  const router = useRouter();
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
-  const [loading, setLoading] = useState(true);
-  async function load() {
-    setLoading(true);
-    setFailure(null);
-    try {
-      setPlan(await operatorRead<Plan>(`plan?id=${encodeURIComponent(id)}`));
-    } catch (error) {
-      const f = error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable');
-      if (f.code === 'invalid_session') {
-        router.replace('/console/sign-in');
-        router.refresh();
-        return;
-      }
-      setFailure(f);
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  const { data: plan, failure, loading, load } = useConsoleRead('plan', { id });
   return (
     <div className="flex min-w-0 flex-col gap-6" data-testid="console-plan-detail">
       <Button asChild variant="link" size="link" className="self-start">

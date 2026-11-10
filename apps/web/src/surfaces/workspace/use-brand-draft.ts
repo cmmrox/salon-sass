@@ -8,7 +8,6 @@ import {
   type BrandDraft,
   type BrandField,
   type BrandFormValues,
-  type UploadedBrandImage,
 } from '@/features/branding';
 import { IdentityFailure, type Kind } from '@/features/identity';
 import { useSettingsDraft, type SettingsDraftShape } from './use-settings-draft';
@@ -44,7 +43,7 @@ export function useBrandDraft(kind: Kind, notify: (event: 'saved' | 'published' 
     form.append('kind', image);
     form.append('file', file);
     try {
-      const kept = await brand.request<UploadedBrandImage>('brand-image', form);
+      const kept = await brand.request('brand-image', form);
       brand.setForm(
         (current) => current && { ...current, [image]: { id: kept.id, width: kept.width, height: kept.height } },
       );

@@ -91,8 +91,13 @@ beforeEach(async () => {
       };
       calls.push(call);
       const result = answer(call);
-      response.writeHead(result.status, { 'Content-Type': 'application/json', ...(result.headers ?? {}) });
-      response.end(JSON.stringify(result.data));
+      setTimeout(
+        () => {
+          response.writeHead(result.status, { 'Content-Type': 'application/json', ...(result.headers ?? {}) });
+          response.end(JSON.stringify(result.data));
+        },
+        call.path.endsWith('/export/archive') ? archiveDelay : 0,
+      );
     });
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
@@ -123,11 +128,13 @@ function request(
     ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
   });
 }
-function run(req: NextRequest, action: string) {
+/** How long the fake API takes to send an export archive, in milliseconds. */
+let archiveDelay = 0;
+function run(req: NextRequest, action: string, budget = 3000) {
   const context = {
     ...contextFromTraceparent(undefined),
     clientAddress: '127.0.0.9',
-    deadline: performance.now() + 3000,
+    deadline: performance.now() + budget,
   };
   return runInRequest(context, () => handleOperator(req, action));
 }
@@ -352,5 +359,80 @@ describe('the console BFF lifecycle actions (F03-S03)', () => {
     );
     expect(r.status).toBe(409);
     expect((await r.json()).code).toBe('invalid_state');
+  });
+});
+
+// Package 1's ruling, done in package 5: the operator's archive has the export's own stated limit too.
+describe('the operator’s export archive’s own time limit', () => {
+  it('waits for an archive that takes longer than the request’s ordinary budget to arrive', async () => {
+    archiveDelay = 400;
+    try {
+      answer = (call) =>
+        call.path === '/api/v1/operator/me'
+          ? { status: 200, data: principal }
+          : { status: 200, data: 'archive', headers: { 'Content-Disposition': 'attachment; filename="export.zip"' } };
+      const r = await run(
+        request('export-archive', {
+          method: 'GET',
+          cookies: 'salon_operator_access=private-operator-access',
+          query: `?id=${UUID}`,
+        }),
+        'export-archive',
+        250,
+      );
+      expect(r.status).toBe(200);
+    } finally {
+      archiveDelay = 0;
+    }
+  });
+});
+
+// BUG-F03-013: the console ends an operator's session only on the API's own evidence; an outage leaves it to go on.
+describe('the console’s renewal on the API’s evidence only', () => {
+  const lapsed = 'salon_operator_refresh=private-refresh; salon_operator_expires=2026-01-01T00:05:00Z';
+  const cleared = (response: Response) =>
+    response.headers
+      .getSetCookie()
+      .filter((cookie) => /Max-Age=0/i.test(cookie))
+      .map((cookie) => cookie.split('=')[0]);
+  const refresh = () => run(request('refresh', { cookies: lapsed }), 'refresh');
+
+  it('with the operator’s principal unreadable (an outage), answers 503 and clears nothing', async () => {
+    answer = () => ({ status: 503, data: { code: 'service_unavailable' } });
+    const response = await refresh();
+    expect(response.status).toBe(503);
+    expect(cleared(response)).toEqual([]);
+  });
+
+  it('with the API’s clock unreadable, answers 503 and clears nothing', async () => {
+    answer = (call) =>
+      call.path === '/api/v1/meta'
+        ? { status: 503, data: { code: 'service_unavailable' } }
+        : { status: 401, data: { code: 'invalid_session' } };
+    const response = await refresh();
+    expect(response.status).toBe(503);
+    expect(cleared(response)).toEqual([]);
+  });
+
+  it('with the rotation refused for an outage, answers 503 and clears nothing: nothing was rotated', async () => {
+    answer = (call) =>
+      call.path === '/api/v1/meta'
+        ? { status: 200, data: { time: '2026-01-01T00:10:00Z' } }
+        : call.path.endsWith('/sessions/refresh')
+          ? { status: 503, data: { code: 'service_unavailable' } }
+          : { status: 401, data: { code: 'invalid_session' } };
+    const response = await refresh();
+    expect(response.status).toBe(503);
+    expect(cleared(response)).toEqual([]);
+  });
+
+  it('with the refresh credential revoked, ends the session and clears it', async () => {
+    answer = (call) =>
+      call.path === '/api/v1/meta'
+        ? { status: 200, data: { time: '2026-01-01T00:10:00Z' } }
+        : { status: 401, data: { code: 'invalid_session' } };
+    const response = await refresh();
+    expect(response.status).toBe(401);
+    expect(cleared(response)).toEqual(expect.arrayContaining(['salon_operator_access', 'salon_operator_refresh']));
   });
 });

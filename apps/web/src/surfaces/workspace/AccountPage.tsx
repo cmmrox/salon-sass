@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { decodeSalon, SALON_HEADER } from '@/features/branding/server';
 import { AccountScreen, Denied, SignIn } from '@/features/identity';
 import { workspaceEntry, cookieName, requestHost, type Kind } from '@/features/identity/server';
+import { dataScope } from '@/lib/api-core/data-scope';
 import { BillingBanner } from '@/features/platform';
 import { readEntitlements } from '@/features/platform/server';
 import { AccountFrame } from './AccountFrame';
@@ -18,26 +19,10 @@ import { SupportAccessScreen } from './SupportAccessScreen';
 import { SupportBanner } from './SupportBanner';
 import { TaxSettingsScreen } from './TaxSettingsScreen';
 import { TeamFrame } from './TeamFrame';
+import { pageOf } from './pages';
 import { TeamScreen } from './TeamScreen';
 
-type View =
-  'account' | 'bookings' | 'team' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
-type PageProps = { kind: Kind; view?: View; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };
-
-const REQUIRED: Record<View, string> = {
-  account: 'session.manage',
-  // The Bookings page (F07-S03): the calendar's readers, each in their data scope; not the Accountant (decision 108).
-  bookings: 'calendar.read',
-  // The Team page (F06-S01): every role but the Accountant, and a support session (decisions 099, 100).
-  team: 'team.read',
-  staff: 'staff.list',
-  audit: 'audit.list',
-  billing: 'invoice.read',
-  'support-access': 'support.manage',
-  settings: 'settings.read',
-  // The Services & pricing page (F05-S01): every role and a support session read it (decision 093).
-  services: 'catalogue.read',
-};
+type PageProps = { kind: Kind; view?: string; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };
 
 /**
  * The region a typed mobile number is checked against (decision 084): the booking module's setting, else the branding
@@ -91,7 +76,8 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
     <SupportBanner expiresAt={principal?.expiresAt ?? null} timeZone={salon.timeZone} />
   ) : undefined;
   // The support view has no account of its own: its account page shows what it may read.
-  const required = view && !(support && view === 'account') ? REQUIRED[view] : null;
+  // Each view's permission is its page's in the one route table (web M5).
+  const required = view && !(support && view === 'account') ? (pageOf(view)?.permission ?? null) : null;
   if (principal && required && !principal.permissions.includes(required)) {
     return (
       <AccountFrame
@@ -101,6 +87,7 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
         banner={banner}
         supportBanner={supportBanner}
         support={support}
+        scope={dataScope(host.hostname, kind, store.get(cookieName(kind, 'session'))?.value)}
       >
         <Denied />
       </AccountFrame>
@@ -109,6 +96,9 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
   // Settings open their first tab the person may see (F04-S01); only Profile is delivered.
   if (principal && view === 'settings' && !tab) redirect('/workspace/settings/profile');
   const readOnly = support || entitlements?.subscription?.state === 'read_only';
+  // The account pages read and renew the principal themselves (AccountScreen); every other page is rendered again by
+  // the frame once the browser has renewed.
+  const screenRenews = !view || view === 'account' || view === 'staff' || view === 'audit';
   return (
     <AccountFrame
       salon={salon}
@@ -117,6 +107,8 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
       banner={banner}
       supportBanner={supportBanner}
       support={support}
+      renew={principal === null && !screenRenews ? kind : undefined}
+      scope={dataScope(host.hostname, kind, store.get(cookieName(kind, 'session'))?.value)}
     >
       {view === 'bookings' ? (
         <BookingsScreen
@@ -128,7 +120,6 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
           canSetRules={Boolean(principal?.permissions.includes('settings.manage')) && !support}
           readOnly={support ? 'support' : readOnly ? 'salon' : null}
           phoneRegion={phoneRegion()}
-          principalKnown={principal !== null}
         />
       ) : view === 'team' ? (
         <TeamScreen
@@ -196,7 +187,7 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
           kind={kind}
           initialPrincipal={principal}
           timeZone={salon.timeZone}
-          view={view}
+          view={view === 'audit' ? 'audit' : view === 'account' ? 'account' : undefined}
           readOnly={readOnly}
         />
       )}

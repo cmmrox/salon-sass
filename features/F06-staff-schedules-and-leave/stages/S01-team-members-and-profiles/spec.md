@@ -319,3 +319,13 @@ This replaces AC-1's "shows the message ... while it lasts" for a blank sheet, a
   typed in, or left, a name that breaks the rule shows "Name must be 2 to 40 characters." as today. **Add to team** stays
   disabled while the name is not valid, before and after the message shows. Editing an existing member is unchanged.
   (STF-01, CR-026)
+
+## CR-030 (follow-up after the merge of PR #23)
+
+Built and verified in the follow-up PR #31 (decision 098). Read
+`docs/changes/CR-030-public-photos-in-the-visitors-browser.md`.
+
+- AC-18: A team member's photo answered 200 on its salon's hostname carries `Cache-Control: private, max-age=3600,
+  immutable`, and never `public` or `s-maxage`: a person's photo that is removed stops being shown from a browser's
+  cache within the hour. Any answer that is not 200, and any answer on a suspended or unknown salon's hostname, is
+  `no-store`. The same photo path asked on another salon's hostname is 404 and `no-store`. (STF-01, CR-030)

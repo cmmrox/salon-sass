@@ -18,15 +18,21 @@ import {
   type AppointmentValues,
   type Availability,
   type Booking,
-  type BookingDetail,
   type NewAppointmentRefusal,
-  type OpenDays,
   type TimesState,
+  useBookingAsk,
+  useBookingChanges,
 } from '@/features/booking';
-import type { ServiceList } from '@/features/catalogue';
+import { useCatalogueAsk } from '@/features/catalogue';
 import type { Kind } from '@/features/identity';
-import type { TeamMemberList } from '@/features/staff';
-import { bookingChange, bookingRead, failureOf, releaseKept } from './booking-requests';
+import { useStaffAsk } from '@/features/staff';
+import { failureOf, releaseKept } from './booking-requests';
+
+/** The values of a request's query, as the typed reads take them. */
+/** A free time New appointment offers. */
+type AvailableTime = Availability['times'][number];
+
+const queryIn = (request: string) => Object.fromEntries(new URLSearchParams(request.slice(request.indexOf('?') + 1)));
 
 /** How long to wait before asking again whether a hold the countdown ended has run out by the API's clock. */
 const RECHECK_MS = 2000;
@@ -65,6 +71,11 @@ export function useNewAppointment(
   leave: (session: unknown) => void,
 ) {
   const t = useTranslations('bookings.newAppointment');
+  // What the sheet asks when something happens (it opens, a search, a hold's countdown ends), and its changes.
+  const ask = useBookingAsk(kind);
+  const askCatalogue = useCatalogueAsk(kind);
+  const askStaff = useStaffAsk(kind);
+  const changes = useBookingChanges(kind);
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(0);
   const [choices, setChoices] = useState<AppointmentChoices | null>(null);
@@ -103,7 +114,7 @@ export function useNewAppointment(
     const current = () => asked.form === form.current && asked.search === searches.current;
     setTimes({ state: 'searching' });
     try {
-      const answer = await bookingRead<Availability>(kind, availabilityRequest(next));
+      const answer = await ask('booking-availability', queryIn(availabilityRequest(next)));
       // Times for values the form no longer has are not shown (AC-5: changing any field clears the times).
       if (!current()) return;
       const professional =
@@ -150,7 +161,7 @@ export function useNewAppointment(
 
   /** Releases a hold by its id, as {@link releaseHold} does: kept alive through leaving the page, else the usual way. */
   async function release(id: string) {
-    if (!(await releaseKept(kind, id))) await bookingChange(kind, 'booking-release', { id }).catch(() => undefined);
+    if (!(await releaseKept(kind, id))) await changes.run('booking-release', { id }).catch(() => undefined);
   }
 
   // Leaving the page, or the page going away, releases the hold (design notes: "on leaving the page").
@@ -177,7 +188,7 @@ export function useNewAppointment(
   useEffect(() => {
     if (left !== 0 || !hold) return;
     let active = true;
-    bookingRead<BookingDetail>(kind, `booking?id=${encodeURIComponent(hold.id)}`)
+    ask('booking', { id: hold.id })
       .then((detail) => {
         if (!active) return;
         if (detail.booking.state === 'held') setTimeout(() => active && setChecks((n) => n + 1), RECHECK_MS);
@@ -214,9 +225,9 @@ export function useNewAppointment(
   async function loadChoices(day: string) {
     try {
       const [services, team, open] = await Promise.all([
-        bookingRead<ServiceList>(kind, 'catalogue-services'),
-        bookingRead<TeamMemberList>(kind, 'team-members'),
-        bookingRead<OpenDays>(kind, `booking-open-days?from=${day}&to=${aYearOn(day)}`),
+        askCatalogue('catalogue-services'),
+        askStaff('team-members'),
+        ask('booking-open-days', { from: day, to: aYearOn(day) }),
       ]);
       const next: AppointmentChoices = {
         services: services.items.map((service) => ({
@@ -306,19 +317,16 @@ export function useNewAppointment(
      * after the sheet closed or the form changed was placed for values the sheet no longer has: it is released, not
      * kept, and the attempt (its key and `busy`) is already the changed form's to start again (BUG-F07-003).
      */
-    holdTime: async (time: Availability['times'][number]) => {
+    holdTime: async (time: AvailableTime) => {
       if (busy) return;
       if (attempt.current?.startsAt !== time.startsAt)
         attempt.current = { startsAt: time.startsAt, key: crypto.randomUUID() };
+      const key = attempt.current.key;
       const asked = form.current;
       setBusy(true);
       setRefusal(null);
       try {
-        const held = await bookingChange<Booking>(
-          kind,
-          'booking-place',
-          holdRequest(values, time.time, attempt.current.key),
-        );
+        const held = await changes.run('booking-place', holdRequest(values, time.time, key));
         if (asked !== form.current) return void (await release(held.id));
         attempt.current = null;
         holdId.current = held.id;
@@ -340,7 +348,7 @@ export function useNewAppointment(
       setBusy(true);
       setRefusal(null);
       try {
-        const booking = await bookingChange<Booking>(kind, 'booking-confirm', { id: hold.id });
+        const booking = await changes.run('booking-confirm', { id: hold.id });
         holdId.current = null;
         setHold(null);
         setOpen(false);

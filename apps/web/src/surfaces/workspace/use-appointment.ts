@@ -1,8 +1,16 @@
 'use client';
-import { useEffect, useState } from 'react';
-import type { AppointmentRefusal, Booking, BookingDetail, CancelReason, SheetAction } from '@/features/booking';
+import { useState } from 'react';
+import {
+  useBookingChanges,
+  useBookingDetail,
+  type AppointmentRefusal,
+  type Booking,
+  type CancelReason,
+  type SheetAction,
+} from '@/features/booking';
 import type { Kind } from '@/features/identity';
-import { bookingChange, bookingRead, failureOf } from './booking-requests';
+import { useReadFailure } from '@/lib/api-core/data-layer';
+import { failureOf } from './booking-requests';
 
 /** The refusal each API code is said with on the appointment sheet (AC-9). */
 const REFUSALS: Record<string, AppointmentRefusal> = {
@@ -29,47 +37,27 @@ export function useAppointment(
   onStale: () => void,
   leave: (session: unknown) => void,
 ) {
-  const [detail, setDetail] = useState<BookingDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [unavailable, setUnavailable] = useState(false);
   const [refusal, setRefusal] = useState<AppointmentRefusal | null>(null);
   const [busy, setBusy] = useState<SheetAction | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelOpened, setCancelOpened] = useState(0);
-  const [reads, setReads] = useState(0);
   // The sheet keeps the booking it showed while it closes, so focus can go back to its row.
   const [shown, setShown] = useState<string | null>(id);
   if (id && id !== shown) {
     setShown(id);
-    setDetail(null);
     setRefusal(null);
-    setUnavailable(false);
   }
-
-  useEffect(() => {
-    if (!id) return;
-    let active = true;
-    Promise.resolve().then(() => active && setLoading(true));
-    bookingRead<BookingDetail>(kind, `booking?id=${encodeURIComponent(id)}`)
-      .then((answer) => {
-        if (!active) return;
-        setDetail(answer);
-        setUnavailable(false);
-      })
-      .catch((error) => {
-        if (!active) return;
-        const failure = failureOf(error);
-        if (failure.code === 'invalid_session') return leave(failure);
-        if (failure.code === 'not_found') {
-          setDetail(null);
-          setRefusal('gone');
-        } else setUnavailable(true);
-      })
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
-  }, [kind, id, reads, leave]);
+  const read = useBookingDetail(kind, shown, id !== null);
+  const changes = useBookingChanges(kind);
+  const gone = read.error?.code === 'not_found';
+  const detail = gone ? null : (read.data ?? null);
+  const loading = read.isFetching;
+  const unavailable = Boolean(read.error && !gone && read.error.code !== 'invalid_session');
+  useReadFailure([read], (failure) => {
+    if (failure.code === 'invalid_session') leave(failure);
+    else if (failure.code === 'not_found') setRefusal('gone');
+  });
+  const readAgain = () => void read.refetch();
 
   async function send(action: SheetAction, body: Record<string, unknown> = {}) {
     if (!detail || busy) return;
@@ -77,12 +65,9 @@ export function useAppointment(
     setBusy(action);
     setRefusal(null);
     try {
-      const answer = await bookingChange<Booking | { ok: true }>(kind, `booking-${action}`, {
-        id: booking.id,
-        ...body,
-      });
+      const answer: Booking | { ok: true } = await changes.run(`booking-${action}`, { id: booking.id, ...body });
       onDone(action, 'reference' in answer ? answer : null);
-      if (action !== 'release') setReads((n) => n + 1);
+      if (action !== 'release') readAgain();
     } catch (error) {
       const failure = failureOf(error);
       if (failure.code === 'invalid_session') leave(failure);
@@ -90,7 +75,7 @@ export function useAppointment(
         setRefusal(REFUSALS[failure.code] ?? 'failed');
         // The booking changed elsewhere, or went: show it as it is now, and the list with it.
         if (['invalid_state', 'not_found', 'hold_expired', 'slot_taken'].includes(failure.code)) {
-          setReads((n) => n + 1);
+          readAgain();
           onStale();
         }
       }
@@ -106,7 +91,7 @@ export function useAppointment(
     busy,
     cancelling,
     cancelOpened,
-    retry: () => setReads((n) => n + 1),
+    retry: readAgain,
     act: (action: SheetAction) => {
       if (action === 'cancel') {
         setCancelOpened((n) => n + 1);

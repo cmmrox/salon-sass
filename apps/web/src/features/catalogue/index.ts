@@ -10,9 +10,20 @@ export type {
   ProductList as ProductListAnswer,
   PublicTax,
   ServiceList,
-  TaxHistory,
   TaxSettings,
 } from './types';
+export {
+  useCatalogueAsk,
+  useCatalogueChanges,
+  useCategories,
+  usePopularSetting,
+  useProductList,
+  usePublicTax,
+  useServices,
+  useSetCatalogueAnswer,
+  useTaxHistory,
+  useTaxSettings,
+} from './client/catalogue-data';
 export { ProductList } from './components/ProductList';
 export { ProductSheet } from './components/ProductSheet';
 export { TaxSentence } from './components/TaxSentence';
@@ -62,3 +73,4 @@ export {
   type ServiceProblem,
   type ServiceValues,
 } from './client/service-form';
+export { cataloguePages } from './pages';

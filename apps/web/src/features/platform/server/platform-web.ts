@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { requestSignal } from '@/lib/api-core/client';
+import { EXPORT_DOWNLOAD_API_TIMEOUT_MS, requestSignal, restartRequestBudget } from '@/lib/api-core/client';
 import { readBoundedJson } from '@/lib/http/bounded-json';
 import { classifyHostname, platformDomainOf } from '@/lib/tenancy/hostname';
 import { platformClient } from './client';
@@ -67,6 +67,8 @@ export async function handlePlatform(request: NextRequest, action: string): Prom
         sha256: r.data.sha256,
       });
     }
+    // The archive's own stated limit, from the end of reading the request (docs/engineering/web.md, "Structure").
+    restartRequestBudget(EXPORT_DOWNLOAD_API_TIMEOUT_MS);
     const r = await client.GET('/api/v1/exports/{token}', { params, signal: requestSignal(), parseAs: 'arrayBuffer' });
     if (!r.data)
       return output(

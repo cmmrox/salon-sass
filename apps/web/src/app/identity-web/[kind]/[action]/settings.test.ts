@@ -4,23 +4,12 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
-import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
-import { salonBookingRulesFor, salonBookingsFor } from '@/features/booking/server';
-import { salonCatalogueFor } from '@/features/catalogue/server';
+import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';
 
 /** The settings actions of the workspace BFF (F04-S01), as the route wires them, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(
-  salonAccountFor,
-  salonSettingsFor,
-  salonHoursFor,
-  salonBookingRulesFor,
-  salonCatalogueFor,
-  salonTeamFor,
-  salonBookingsFor,
-);
+const handleIdentity = createIdentityWeb(salonAccountFor, WORKSPACE_ROUTES);
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };
@@ -215,6 +204,7 @@ describe('the settings user’s profile actions', () => {
     'refuses %s to a user without the settings permission before any API call',
     async (action) => {
       permissions = ['session.manage', 'calendar.read'];
+      refusedByTheApi('settings.read', '/api/v1/salon/profile/draft');
       const response =
         action === 'profile-draft'
           ? await run('GET', 'staff', action)
@@ -222,10 +212,26 @@ describe('the settings user’s profile actions', () => {
 
       expect(response.status).toBe(403);
       expect(await response.json()).toMatchObject({ code: 'permission_denied' });
-      expect(apiCalls()).toEqual([]);
+      // The read is refused as the API answers it (lead’s ruling on web H3); a change before any call.
+      expect(apiCalls().map((call) => call.path)).toEqual(
+        action === 'profile-draft' ? ['/api/v1/salon/profile/draft'] : [],
+      );
     },
   );
 });
+
+/**
+ * The API's own refusal of a read by a role without its permission (each use case's `principals.require`): since the
+ * lead’s ruling on web H3 the BFF no longer reads the principal before a module's read, so the refusal is the API's.
+ */
+const PERMISSION_DENIED = { status: 403, data: { code: 'permission_denied', status: 403, title: 'Forbidden' } };
+function refusedByTheApi(permission: string, ...paths: string[]) {
+  const before = answer;
+  answer = (method, path) =>
+    method === 'GET' && paths.includes(path.split('?')[0]!) && !permissions.includes(permission)
+      ? PERMISSION_DENIED
+      : before(method, path);
+}
 
 describe('a support session and the profile', () => {
   beforeEach(() => {
@@ -528,10 +534,16 @@ describe('the settings user’s hours, holidays and closures actions (F04-S03)',
     'refuses %s to a role without settings.read, before any upstream call',
     async (action) => {
       permissions = ['session.manage'];
+      const path =
+        { hours: '/api/v1/salon/opening-hours/settings', holidays: '/api/v1/salon/holidays' }[action] ??
+        '/api/v1/salon/closures';
+      refusedByTheApi('settings.read', path);
       const response = await run('GET', 'staff', action);
 
+      // Refused 403 permission_denied as the API answers it, with nothing else (lead’s ruling on web H3).
       expect(response.status).toBe(403);
-      expect(apiCalls()).toEqual([]);
+      expect(await response.json()).toEqual({ code: 'permission_denied' });
+      expect(apiCalls().map((call) => call.path)).toEqual([path]);
     },
   );
 
@@ -645,10 +657,15 @@ describe('the settings user’s booking rules actions (F04-S04)', () => {
     'refuses %s to a role without settings.read, before any upstream call',
     async (action) => {
       permissions = ['session.manage'];
+      const path =
+        action === 'booking-rules' ? '/api/v1/salon/booking-rules/settings' : '/api/v1/salon/booking-rules/history';
+      refusedByTheApi('settings.read', path);
       const response = await run('GET', 'staff', action);
 
+      // Refused 403 permission_denied as the API answers it, with nothing else (lead’s ruling on web H3).
       expect(response.status).toBe(403);
-      expect(apiCalls()).toEqual([]);
+      expect(await response.json()).toEqual({ code: 'permission_denied' });
+      expect(apiCalls().map((call) => call.path)).toEqual([path]);
     },
   );
 
@@ -688,4 +705,22 @@ describe('the settings user’s booking rules actions (F04-S04)', () => {
     expect(await refused.json()).toMatchObject({ code: 'support_read_only' });
     expect(calls).toEqual([]);
   });
+});
+
+describe('a read by a role without its permission (lead’s ruling on web H3)', () => {
+  it.each([
+    ['branding', 'brand-draft', 'settings.read', '/api/v1/salon/brand/draft'],
+    ['staff', 'closures', 'settings.read', '/api/v1/salon/closures'],
+    ['booking', 'booking-rules', 'settings.read', '/api/v1/salon/booking-rules/settings'],
+    ['platform', 'entitlements', 'entitlement.read', '/api/v1/salon/entitlements'],
+  ])(
+    '%s: is answered 403 from the API’s own answer, and never 200 with the data',
+    async (_module, action, permission, path) => {
+      permissions = ['session.manage'];
+      refusedByTheApi(permission, path);
+      const response = await run('GET', 'staff', action);
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ code: 'permission_denied' });
+    },
+  );
 });

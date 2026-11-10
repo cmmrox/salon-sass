@@ -77,6 +77,18 @@ function remainingBudget(): number {
 export const UPLOAD_API_TIMEOUT_MS = 10_000;
 
 /**
+ * How long the operator's holiday calendar import may take at the API (F04-S03), counted from when its file has been
+ * read: the API reads and checks every line of a year's CSV (up to 128 KB) and stores the year's days at once.
+ */
+export const HOLIDAY_IMPORT_API_TIMEOUT_MS = 10_000;
+
+/**
+ * How long a salon's export archive may take to arrive from the API (F03-S03), counted from when the request has been
+ * read: the archive is read whole, up to its last byte, before it is passed on (`forward-hostname.ts`).
+ */
+export const EXPORT_DOWNLOAD_API_TIMEOUT_MS = 30_000;
+
+/**
  * Starts the request's shared API budget again, from now, for `length` milliseconds (docs/engineering/web.md,
  * "Structure"): an upload's handler calls it with {@link UPLOAD_API_TIMEOUT_MS} once it has read the form, so that
  * the time a slow connection took to send the file is not taken from the API's budget (BUG-F04-001). Signals made by

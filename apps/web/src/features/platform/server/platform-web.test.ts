@@ -12,8 +12,11 @@ let calls: Call[];
 const TOKEN = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde';
 const ZIP = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0, 1, 2, 3, 255]);
 
+/** How long the fake API takes to send the archive, in milliseconds. */
+let slow: number;
 beforeEach(async () => {
   calls = [];
+  slow = 0;
   vi.stubEnv('SALON_PLATFORM_DOMAIN', 'localhost');
   vi.stubEnv('SALON_WEB_LOCAL_HTTP', 'true');
   server = createServer((request, response) => {
@@ -33,12 +36,14 @@ beforeEach(async () => {
         }),
       );
     } else {
-      response.writeHead(200, {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': 'attachment; filename="salon-export-alpha.zip"',
-        'X-Content-SHA256': 'ab'.repeat(32),
-      });
-      response.end(ZIP);
+      setTimeout(() => {
+        response.writeHead(200, {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': 'attachment; filename="salon-export-alpha.zip"',
+          'X-Content-SHA256': 'ab'.repeat(32),
+        });
+        response.end(ZIP);
+      }, slow);
     }
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
@@ -69,11 +74,11 @@ function request(
     ...(method === 'POST' ? { body: JSON.stringify({ token }) } : {}),
   });
 }
-function run(req: NextRequest, action: string) {
+function run(req: NextRequest, action: string, budget = 3000) {
   const context = {
     ...contextFromTraceparent(undefined),
     clientAddress: '127.0.0.9',
-    deadline: performance.now() + 3000,
+    deadline: performance.now() + budget,
   };
   return runInRequest(context, () => handlePlatform(req, action));
 }
@@ -152,5 +157,16 @@ describe('the platform host BFF (F03-S03)', () => {
     expect(req.headers.get('content-length')).toBeNull();
     expect((await run(req, 'export-info')).status).toBe(400);
     expect(calls).toEqual([]);
+  });
+});
+
+// Package 1's ruling, done in package 5: the archive has a stated limit of its own (EXPORT_DOWNLOAD_API_TIMEOUT_MS),
+// counted from the end of reading the request; the request's ordinary budget does not cut a large archive off.
+describe('the export download’s own time limit', () => {
+  it('waits for an archive that takes longer than the request’s ordinary budget to arrive', async () => {
+    slow = 400;
+    const r = await run(request('export-download'), 'export-download', 250);
+    expect(r.status).toBe(200);
+    expect(Buffer.from(await r.arrayBuffer())).toEqual(ZIP);
   });
 });

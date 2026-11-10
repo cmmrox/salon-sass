@@ -1,17 +1,39 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
 
-/** Launch-market formatting, centralized so screens share configuration. */
+/**
+ * Launch-market formatting, centralized so screens share configuration.
+ *
+ * No date or time formatter throws on a value it cannot read (web M3): a value that is not a date or time is shown as
+ * it came, and a missing one (null where a string was promised) as nothing, so that one malformed value from the API
+ * costs its own cell, never the page.
+ */
+function readable(value: unknown, date: () => Date, format: (date: Date) => string): string {
+  if (typeof value !== 'string') return '';
+  const read = date();
+  return Number.isNaN(read.getTime()) ? value : format(read);
+}
 export function formatInstant(value: string, timeZone: string, locale = 'en-LK'): string {
-  return new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  return readable(
+    value,
+    () => new Date(value),
+    (date) => new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium', timeStyle: 'short' }).format(date),
+  );
 }
 /** A calendar date in the zone (an invoice's period or due day). */
 export function formatDate(value: string, timeZone: string, locale = 'en-LK'): string {
-  return new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium' }).format(new Date(value));
+  return readable(
+    value,
+    () => new Date(value),
+    (date) => new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium' }).format(date),
+  );
 }
 /** A time of day in the zone, on the 24-hour clock (`14:05`): a support session's end. */
 export function formatTime(value: string, timeZone: string, locale = 'en-LK'): string {
-  return new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
-    new Date(value),
+  return readable(
+    value,
+    () => new Date(value),
+    (date) =>
+      new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date),
   );
 }
 /**
@@ -19,8 +41,14 @@ export function formatTime(value: string, timeZone: string, locale = 'en-LK'): s
  * time (F04-S03). No time zone applies: it is already the salon's own.
  */
 export function formatClock(value: string, locale = 'en-LK'): string {
-  const [hours, minutes] = value.split(':').map(Number);
-  return clockFormat(locale).format(new Date(Date.UTC(2000, 0, 1, hours, minutes)));
+  return readable(
+    value,
+    () => {
+      const [hours, minutes] = value.split(':').map(Number);
+      return new Date(Date.UTC(2000, 0, 1, hours, minutes));
+    },
+    (date) => clockFormat(locale).format(date),
+  );
 }
 /**
  * One clock formatter per locale, made once: building an `Intl.DateTimeFormat` costs far more than using one,
@@ -40,13 +68,18 @@ function clockFormat(locale: string): Intl.DateTimeFormat {
  * (F04-S03). No time zone applies: it is already the salon's own date.
  */
 export function formatDay(value: string, locale = 'en-LK'): string {
-  return new Intl.DateTimeFormat(locale, {
-    timeZone: 'UTC',
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(`${value}T00:00:00Z`));
+  return readable(
+    value,
+    () => new Date(`${value}T00:00:00Z`),
+    (date) =>
+      new Intl.DateTimeFormat(locale, {
+        timeZone: 'UTC',
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }).format(date),
+  );
 }
 /** One short-day formatter per locale and form, made once: a list formats every row's dates. */
 const shortDayFormats = new Map<string, Intl.DateTimeFormat>();
@@ -65,9 +98,13 @@ function shortDayFormat(locale: string, withYear: boolean): Intl.DateTimeFormat 
   }
   return format;
 }
-const yearOf = (value: string) => value.slice(0, 4);
+const yearOf = (value: string) => (typeof value === 'string' ? value.slice(0, 4) : '');
 const shortDay = (value: string, withYear: boolean, locale: string) =>
-  shortDayFormat(locale, withYear).format(new Date(`${value}T00:00:00Z`));
+  readable(
+    value,
+    () => new Date(`${value}T00:00:00Z`),
+    (date) => shortDayFormat(locale, withYear).format(date),
+  );
 /**
  * A salon's local date in the Team page's short form (decision 107): without the year when it falls in the year of the
  * salon's `today` (`Thu, Nov 12`), and otherwise with it, as `formatDay` writes it (`Tue, Jan 5, 2027`). Both are the

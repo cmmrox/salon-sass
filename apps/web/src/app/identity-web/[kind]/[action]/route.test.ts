@@ -3,6 +3,8 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const handleIdentity = vi.hoisted(() => vi.fn());
 vi.mock('@/features/identity/server', () => ({ createIdentityWeb: () => handleIdentity }));
+// The route table the route hands the BFF; this test is about the route's own boundary.
+vi.mock('@/surfaces/workspace/routes', () => ({ WORKSPACE_ROUTES: {} }));
 import { GET, POST } from './route';
 beforeEach(() => handleIdentity.mockReset());
 describe('staff-only web boundary', () => {

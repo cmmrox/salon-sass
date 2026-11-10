@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { focusManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
 import { chooseOption } from '@test/select';
@@ -104,7 +105,6 @@ const render = (props: Partial<React.ComponentProps<typeof BookingsScreen>> = {}
       canSetRules={false}
       readOnly={null}
       phoneRegion="LK"
-      principalKnown
       {...props}
     />,
   );
@@ -317,14 +317,6 @@ describe('the Bookings page (F07-S03 AC-2, AC-3)', () => {
 });
 
 describe('who sees what (F07-S03 AC-10)', () => {
-  it('rendered from an expired access credential, renews in the browser and renders again with the caller’s permissions', async () => {
-    const refresh = vi.spyOn((await import('./bookings-fixtures')).router, 'refresh');
-    answers.principal = () => Response.json({ kind: 'staff', permissions: ['calendar.read', 'booking.manage'] });
-    render({ principalKnown: false, canBook: false, scope: 'own' });
-    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
-    expect(sent('principal')).toHaveLength(1);
-  });
-
   it('a Professional with the own scope: no professional filter, no team read, no New appointment', async () => {
     render({ scope: 'own', canBook: false });
     await ready();
@@ -827,5 +819,108 @@ describe('the appointment sheet (F07-S03 AC-7 to AC-9)', () => {
     expect(await screen.findByText('Hold released. The time is open again.')).toBeInTheDocument();
     await waitFor(() => expect(window.location.search).toBe(''));
     await act(async () => undefined);
+  });
+});
+
+describe('a list other people change (web M2, decision 121)', () => {
+  /** The window comes back into view: the list is read again, as its poll would read it. */
+  const comeBack = () =>
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+  afterEach(() => focusManager.setFocused(undefined));
+
+  it('a failed re-read keeps the last good list and says it may be out of date, until a read succeeds', async () => {
+    render();
+    await ready();
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+    const good = answers.bookings!;
+    answers.bookings = problem('service_unavailable', 503);
+    comeBack();
+    expect(await screen.findByTestId('bookings-stale')).toHaveTextContent('These bookings may be out of date');
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+    expect(screen.queryByTestId('bookings-unavailable')).toBeNull();
+    answers.bookings = good;
+    fireEvent.click(screen.getByTestId('bookings-stale-retry'));
+    await waitFor(() => expect(screen.queryByTestId('bookings-stale')).toBeNull());
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+  });
+
+  it('a new question that fails says so: another question’s list is never shown as this one’s', async () => {
+    render();
+    await ready();
+    answers.bookings = problem('service_unavailable', 503);
+    await chooseOption(screen.getByTestId('bookings-status'), 'Held');
+    expect(await screen.findByTestId('bookings-unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('bookings-stale')).toBeNull();
+    expect(screen.queryAllByTestId('booking-row')).toHaveLength(0);
+  });
+
+  it('shows a booking someone else made once the list is read again, without anyone acting here', async () => {
+    answers.bookings = () => Response.json(page([AMAYA, KAVINDI]));
+    render();
+    await ready();
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(2);
+    answers.bookings = () => Response.json(page([AMAYA, KAVINDI, NETHMI]));
+    comeBack();
+    await waitFor(() => expect(screen.getAllByTestId('booking-row')).toHaveLength(3));
+  });
+});
+
+// F03-S03 AC-1: once the salon is suspended, its next request, a poll's included, shows "temporarily unavailable".
+describe('a salon suspended while Bookings is open', () => {
+  const comeBack = () =>
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+  afterEach(() => focusManager.setFocused(undefined));
+  const screenFor = (leave: () => void) =>
+    renderWithMessages(
+      <BookingsScreen
+        kind="staff"
+        timeZone="Asia/Colombo"
+        scope="salon"
+        canBook
+        canAct
+        canSetRules={false}
+        readOnly={null}
+        phoneRegion="LK"
+      />,
+      { onSuspended: leave, suspended: <p data-testid="salon-unavailable">{'Temporarily unavailable'}</p> },
+    );
+
+  it('leaves the list for the unavailable state on a re-read refused for the suspension, not a stale list', async () => {
+    const leave = vi.fn();
+    screenFor(leave);
+    await ready();
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+    answers.bookings = problem('salon_suspended', 503);
+    comeBack();
+    expect(await screen.findByTestId('salon-unavailable')).toBeInTheDocument();
+    expect(screen.queryAllByTestId('booking-row')).toHaveLength(0);
+    expect(screen.queryByTestId('bookings-stale')).toBeNull();
+    // The leave is made by an effect once the notice is on screen.
+    await waitFor(() => expect(leave).toHaveBeenCalledOnce());
+  });
+
+  it('lets the same session go on once the salon is reactivated: the next load reads as before', async () => {
+    const leave = vi.fn();
+    const suspended = screenFor(leave);
+    await ready();
+    const good = answers.bookings!;
+    answers.bookings = problem('salon_suspended', 503);
+    comeBack();
+    await screen.findByTestId('salon-unavailable');
+    suspended.unmount();
+    // Reactivated: the page loaded again, with the same cookies.
+    answers.bookings = good;
+    screenFor(vi.fn());
+    await ready();
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+    // Nothing of the session was ended or renewed on the way.
+    expect(sent('clear')).toHaveLength(0);
+    expect(sent('refresh')).toHaveLength(0);
   });
 });

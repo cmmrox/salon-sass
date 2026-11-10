@@ -133,8 +133,8 @@ product evidence; never claim a side-by-side preview occurred.
 | --- | --- |
 | Loading | A skeleton shaped like the content. No blank screen, no spinner covering a page that could show something |
 | Empty | Says what belongs here and offers the next action |
-| Error | Says what happened in plain words and what the person can do. Never a code or a stack trace |
-| Slow or offline | Says so, keeps what is already on screen, and retries safely |
+| Error | Says what happened in plain words and what the person can do. Never a code or a stack trace. A page that fails while rendering shows the error page, with Try again and Go to the start |
+| Slow or offline | Says so, keeps what is already on screen, and retries safely. A list that could not be read again keeps its last good copy and says it may be out of date |
 | Success | Confirms what was done, with the detail a person would want to check (date, time, amount) |
 
 ## Booking flow

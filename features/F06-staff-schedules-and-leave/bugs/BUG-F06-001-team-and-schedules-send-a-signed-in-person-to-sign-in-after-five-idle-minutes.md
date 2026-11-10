@@ -2,13 +2,13 @@
 id: BUG-F06-001
 title: "Team, the schedule sheet and leave send a signed-in person to the sign-in form once five minutes pass without a request, although the session can still be renewed"
 severity: major
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: "exploratory: the foundation review of 2026-11-10, by reading the code; not yet reproduced on the running product"
 breaks: "IAM-09 (short-lived access with renewal); F06-S01 to F06-S03 screens"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
+fixed_in: ebde9b336e7c4b70ae5f100aaffd217ffbfb653a
+fix_note: "Reproduced first by a unit test per screen in which the read answers 401 invalid_session renewable and the refresh succeeds (TeamScreen.test.tsx: the team; TeamSchedule.test.tsx: the schedule sheet; TeamTimeOff.test.tsx: the bookings leave would affect; each 'an idle session (BUG-F06-001)'): all three failed. Fixed at the cause: every read and change of Team, the schedule sheet and leave goes through apps/web/src/lib/api-core/request.ts, which renews an expired access credential once under the cross-tab lock and asks the same call again. Team rendered on the server without a principal is rendered again with the person's permissions by the workspace frame's SessionRenewal (commit 3e74b7a1). Needs the running product to show end to end: idle six minutes, then open or reload Team, open a schedule sheet, open the leave form."
 developer_note: null
 verified_on: null
 approved_by: null

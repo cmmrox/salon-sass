@@ -1,14 +1,14 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
-import { operatorRead, OperatorFailure } from '../client/operator-session';
+import type { OperatorFailure } from '../client/operator-session';
+import { useConsolePages } from '../client/console-data';
 import { ConsoleChoiceField, consoleTestId } from './ConsoleControls';
 import { DirectoryPager } from './DirectoryControls';
 import type { Plan } from './PlanScreens';
-import type { DirectoryPage } from '../hooks/use-directory';
 
 /** Plans per page of the picker: the Select lists one page, newest first, as the plan list does. */
 const PLAN_PICKER_SIZE = 100;
@@ -50,45 +50,23 @@ export function PlanPicker({
   const t = useTranslations('console');
   const id = consoleTestId(name);
   const [text, setText] = useState('');
-  const [query, setQuery] = useState('');
-  const [page, setPage] = useState(0);
-  const [data, setData] = useState<DirectoryPage<Plan> | null>(null);
-  const [loading, setLoading] = useState(true);
   const [chosen, setChosen] = useState<Plan | null>(null);
-  const load = useCallback(
-    async (nextPage: number, nextQuery: string) => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({ page: String(nextPage), size: String(PLAN_PICKER_SIZE) });
-        if (nextQuery) params.set('q', nextQuery);
-        const result = await operatorRead<DirectoryPage<Plan>>(`plans?${params.toString()}`);
-        setData(result);
-        setPage(nextPage);
-        setQuery(nextQuery);
-        if (!nextQuery && nextPage === 0) onAvailable?.(result.items.some((plan) => plan.id !== exclude));
-      } catch (failure) {
-        onFailure(failure instanceof OperatorFailure ? failure : new OperatorFailure('service_unavailable'));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [onFailure, onAvailable, exclude],
+  const picker = useConsolePages(
+    'plans',
+    (page, search) => ({ page, size: PLAN_PICKER_SIZE, ...(search ? { q: search } : {}) }),
+    { onFailure },
   );
+  const { data, page, search: query, loading, load } = picker;
+  // Whether any plan can be offered at all, said once the unfiltered first page has arrived.
   useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load(0, '');
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+    if (data && !query && page === 0) onAvailable?.(data.items.some((plan) => plan.id !== exclude));
+  }, [data, query, page, onAvailable, exclude]);
 
   const listed = (data?.items ?? []).filter((plan) => plan.id !== exclude);
   const offered =
     chosen && chosen.id === value && !listed.some((plan) => plan.id === chosen.id) ? [chosen, ...listed] : listed;
   const description = data && offered.length === 0 ? (query ? t('plansNoMatch') : emptyText) : undefined;
-  const search = () => void load(0, text.trim());
+  const search = () => load(0, text.trim());
   const searchId = `${id}-search`;
   return (
     <div className="flex min-w-0 flex-col gap-3" aria-busy={loading || undefined}>

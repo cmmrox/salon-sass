@@ -96,6 +96,69 @@ describe('routeRequest', () => {
     expect(await response.text()).toContain('data-testid="status-unavailable"');
   });
 
+  // Web H3: a module's BFF call costs no salon lookup; the handler reads the principal and the API resolves the salon by
+  // Host on the call. The session's own actions keep the lookup.
+  it.each([
+    '/identity-web/staff/bookings',
+    '/identity-web/staff/team-members',
+    '/identity-web/staff/catalogue-service-save',
+    '/identity-web/support/bookings',
+  ])(
+    'answers a module’s BFF call %s without the salon’s lookup, nothing handed on and nothing stored',
+    async (path) => {
+      const resolve = resolving({ kind: 'unavailable' });
+      const response = await routeRequest(request(path, { [SALON_HEADER]: 'forged' }), resolve);
+      expect(resolve).not.toHaveBeenCalled();
+      expect(response.headers.get('x-middleware-next')).toBe('1');
+      expect(handedOn(response)).toBeNull();
+      expect(response.headers.get('cache-control')).toContain('no-store');
+    },
+  );
+
+  it.each(['principal', 'refresh', 'sign-in', 'logout', 'sessions', 'staff', 'entry', 'end'])(
+    'keeps the salon’s lookup for the session’s own action %s',
+    async (action) => {
+      const resolve = resolving({ kind: 'unavailable' });
+      const response = await routeRequest(request(`/identity-web/staff/${action}`), resolve);
+      expect(resolve).toHaveBeenCalledOnce();
+      expect(response.status).toBe(503);
+    },
+  );
+
+  // Web M7: the page is rendered with this request's policy and nonce, never with ones the browser sent.
+  it('hands the page this request’s policy and nonce, replacing any the browser sent', async () => {
+    const resolve = resolving({ kind: 'salon', salon: alpha });
+    const security = { policy: "script-src 'self' 'nonce-ours' 'strict-dynamic'", nonce: 'ours' };
+    const response = await routeRequest(
+      request('/workspace/sign-in', { 'x-nonce': 'theirs', 'content-security-policy': 'script-src *' }),
+      resolve,
+      undefined,
+      undefined,
+      security,
+    );
+    expect(response.headers.get('x-middleware-request-x-nonce')).toBe('ours');
+    expect(response.headers.get('x-middleware-request-content-security-policy')).toBe(security.policy);
+  });
+
+  // F03-S03 AC-1: a session's own BFF call on a suspended salon's hostname is answered as the BFF answers a suspension.
+  it('answers a BFF call on a suspended salon’s hostname 503 salon_suspended, in JSON and stored by nothing', async () => {
+    const response = await routeRequest(request('/identity-web/staff/principal'), resolving({ kind: 'suspended' }));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ code: 'salon_suspended' });
+    expect(response.headers.get('cache-control')).toContain('no-store');
+  });
+
+  // Web M5: the Bookings and Team pages were missing from the protected pages; they are the route table's now.
+  it.each(['/workspace/bookings', '/workspace/team'])(
+    'sends a visitor without a session from %s to sign-in before anything renders',
+    async (path) => {
+      const resolve = resolving({ kind: 'salon', salon: alpha });
+      const response = await routeRequest(request(path), resolve);
+      expect(response.status).toBe(307);
+      expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/sign-in');
+    },
+  );
+
   it.each([
     ['/', '/workspace'],
     ['/sign-in', '/workspace/sign-in'],

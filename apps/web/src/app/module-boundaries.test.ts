@@ -143,3 +143,38 @@ describe("API calls through each module's client, from server code only (AC-3)",
     expect(await ruleIds(filePath, code)).toEqual([]);
   });
 });
+
+// Decision 121 (web H4): each module registers its own routes, in its own server/routes.ts.
+describe('routes are registered per module', () => {
+  const declare = (module: string) =>
+    "import 'server-only';\nimport { moduleRoutes } from '@/lib/api-core/routes';\n" +
+    `export const routes = moduleRoutes('${module}', {});\n`;
+
+  it.each([
+    ["another module's routes in a module's routes.ts", 'src/features/staff/server/routes.ts', 'catalogue'],
+    ["a module's routes outside its routes.ts", 'src/features/staff/server/salon-team.ts', 'staff'],
+    ["a module's routes from identity", 'src/features/identity/server/routes.ts', 'booking'],
+    ["a module's routes from a surface", 'src/surfaces/workspace/routes.ts', 'staff'],
+    ["a module's routes from the app", 'src/app/identity-web/[kind]/[action]/route.ts', 'staff'],
+  ])('refuses %s', async (_case, filePath, module) => {
+    expect(await ruleIds(filePath, declare(module))).toContain('local/own-routes');
+  });
+
+  it("refuses another module's pages in a module's pages.ts", async () => {
+    const pages =
+      "import { modulePages } from '@/lib/api-core/pages';\nexport const pages = modulePages('catalogue', []);\n";
+    expect(await ruleIds('src/features/staff/pages.ts', pages)).toContain('local/own-routes');
+    expect(await ruleIds('src/features/staff/components/Probe.tsx', pages)).toContain('local/own-routes');
+  });
+
+  it('allows a module its own routes in its routes.ts', async () => {
+    expect(await ruleIds('src/features/staff/server/routes.ts', declare('staff'))).toEqual([]);
+  });
+
+  it("allows the app the workspace's route table, and no other file of the surface", async () => {
+    const table = "import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';\n" + use('WORKSPACE_ROUTES');
+    expect(await ruleIds('src/app/_proxy/probe.ts', table)).toEqual([]);
+    const screen = "import { BookingsScreen } from '@/surfaces/workspace/BookingsScreen';\n" + use('BookingsScreen');
+    expect(await ruleIds('src/app/_proxy/probe.ts', screen)).toContain('boundaries/dependencies');
+  });
+});

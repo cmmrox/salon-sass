@@ -2,8 +2,13 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Salon } from '@/features/branding';
 import { BrandStyle } from '@/components/shared/BrandStyle';
+import { Notice } from '@/components/shared/Notice';
+import { DataLayer } from '@/lib/api-core/data-layer';
 import { WorkspaceShell, type WorkspaceView } from './WorkspaceShell';
+import { SessionRenewal } from './SessionRenewal';
+import { pageOf } from './pages';
 import { StaffSignInFrame } from './StaffSignInFrame';
+import type { Kind } from '@/features/identity';
 /** Every salon screen carries the salon's resolved identity and its brand accent. */
 export function AccountFrame({
   salon,
@@ -14,6 +19,8 @@ export function AccountFrame({
   banner,
   supportBanner,
   support = false,
+  renew,
+  scope = 'signed-out',
 }: {
   salon: Salon;
   children: ReactNode;
@@ -23,8 +30,16 @@ export function AccountFrame({
   banner?: ReactNode;
   supportBanner?: ReactNode;
   support?: boolean;
+  /** Rendered without a principal: the session the browser renews before rendering the page again. */
+  renew?: Kind;
+  /** The frame's data scope (`dataScope`): the browser's query cache is this frame's and this session's alone. */
+  scope?: string;
 }) {
   const t = useTranslations('account');
+  // The words of the "temporarily unavailable" page the proxy answers for a suspended salon.
+  const u = useTranslations('salon.unavailable');
+  // Each view's title is its page's in the one route table (web M5).
+  const title = (pageOf(view)?.title ?? 'account') as 'account';
   if (signIn)
     return (
       <>
@@ -33,8 +48,9 @@ export function AccountFrame({
       </>
     );
   return (
-    <>
+    <DataLayer scope={scope} suspended={<Notice testId="salon-unavailable" title={u('title')} body={u('body')} />}>
       <BrandStyle colour={salon.brandColour} />
+      {renew && <SessionRenewal kind={renew} />}
       <WorkspaceShell
         salon={salon}
         permissions={permissions}
@@ -48,29 +64,11 @@ export function AccountFrame({
             className="text-title leading-heading font-semibold wrap-anywhere rail:text-workspace-title"
             data-testid="account-title"
           >
-            {signIn
-              ? t('staffTitle')
-              : view === 'bookings'
-                ? t('bookings')
-                : view === 'team' || view === 'staff'
-                  ? t('team')
-                  : view === 'audit'
-                    ? t('audit')
-                    : view === 'billing'
-                      ? t('billing')
-                      : view === 'support-access'
-                        ? t('supportAccess')
-                        : view === 'settings'
-                          ? t('settings')
-                          : view === 'services'
-                            ? t('services')
-                            : support
-                              ? t('supportView')
-                              : t('account')}
+            {signIn ? t('staffTitle') : title === 'account' && support ? t('supportView') : t(title)}
           </h1>
           {children}
         </div>
       </WorkspaceShell>
-    </>
+    </DataLayer>
   );
 }

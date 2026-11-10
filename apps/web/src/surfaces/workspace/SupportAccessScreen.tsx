@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts/platform';
 import { Alert } from '@/components/ui/alert';
@@ -29,18 +29,12 @@ import {
 } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  ensurePrincipal,
-  IdentityFailure,
-  identityRequest,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-} from '@/features/identity';
+import { IdentityFailure } from '@/features/identity';
+import { useSalonAccountChanges, useSupportSessions } from '@/features/platform';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 import { formatInstant } from '@salon/format';
 
 type Session = components['schemas']['SalonSupportSession'];
-type Page = components['schemas']['SalonSupportSessionPage'];
 const SIZE = 10;
 
 /**
@@ -52,55 +46,35 @@ const SIZE = 10;
 export function SupportAccessScreen({ timeZone }: { timeZone: string }) {
   const t = useTranslations('support');
   const [page, setPage] = useState(0);
-  const [data, setData] = useState<Page | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<IdentityFailure | null>(null);
+  const read = useSupportSessions('staff', page);
+  const changes = useSalonAccountChanges('staff');
+  const data = read.data ?? null;
+  const loading = read.isFetching;
+  // A refused revoke is said until the next one is tried; a refused read until a read answers.
+  const [refused, setRefused] = useState<IdentityFailure | null>(null);
+  const readFailure = read.error && read.error.code !== 'invalid_session' ? read.error : null;
+  const failure = refused ?? readFailure;
   const [busy, setBusy] = useState<string | null>(null);
   const [revoked, setRevoked] = useState(false);
-  async function load(next = page) {
-    setLoading(true);
-    setFailure(null);
-    try {
-      await ensurePrincipal('staff');
-      setData(await identityRequest<Page>('staff', `support-sessions?page=${next}`));
-      setPage(next);
-    } catch (error) {
-      const f = error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable');
-      if (f.code === 'invalid_session') {
-        window.location.replace('/workspace/sign-in');
-        return;
-      }
-      setFailure(f);
-    } finally {
-      setLoading(false);
-    }
+  useReadFailure([read], (failed) => {
+    if (failed.code === 'invalid_session') window.location.replace('/workspace/sign-in');
+  });
+  /** Reads a page: the one on screen again, or another. */
+  function load(next = page) {
+    if (next === page) void read.refetch();
+    else setPage(next);
   }
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load(0);
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   async function revoke(session: Session) {
     setBusy(session.id);
-    setFailure(null);
+    setRefused(null);
     setRevoked(false);
     try {
-      if (!supportsLocks()) throw new IdentityFailure('browser_unsupported');
-      await withIdentityLock('staff', async () => {
-        await principalInsideLock('staff');
-        await identityRequest('staff', 'support-revoke', { id: session.id });
-      });
+      await changes.run('support-revoke', { id: session.id });
       setRevoked(true);
-      await load(page);
     } catch (error) {
-      setFailure(error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable'));
-      await load(page).catch(() => undefined);
+      setRefused(error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable'));
     } finally {
+      await read.refetch();
       setBusy(null);
     }
   }

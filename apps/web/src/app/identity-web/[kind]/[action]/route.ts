@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
-import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
-import { salonBookingRulesFor, salonBookingsFor } from '@/features/booking/server';
-import { salonCatalogueFor } from '@/features/catalogue/server';
+import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';
 
-const handleIdentity = createIdentityWeb(
-  salonAccountFor,
-  salonSettingsFor,
-  salonHoursFor,
-  salonBookingRulesFor,
-  salonCatalogueFor,
-  salonTeamFor,
-  salonBookingsFor,
-);
+const handleIdentity = createIdentityWeb(salonAccountFor, WORKSPACE_ROUTES);
 
 export async function GET(request: NextRequest, context: { params: Promise<{ kind: string; action: string }> }) {
   const { kind, action } = await context.params;

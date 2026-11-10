@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   choose as chooseRule,
   errorOfField,
@@ -10,23 +10,18 @@ import {
   saveOf,
   shownErrors,
   typeNumber,
-  type BookingRulesHistory,
+  useBookingChanges,
+  useBookingRulesHistory,
+  useBookingRulesRead,
+  useSetBookingAnswer,
   type BookingRulesSettings,
   type HistoryState,
   type NumberField,
   type RulesForm,
   type RulesValues,
 } from '@/features/booking';
-import {
-  ensurePrincipal,
-  IdentityFailure,
-  identityRequest,
-  leaveEndedSession,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-  type Kind,
-} from '@/features/identity';
+import { IdentityFailure, leaveEndedSession, usePrincipal, type Kind } from '@/features/identity';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 import type { SettingsNotice } from './use-settings-draft';
 
 /** What the tab says above the form: the shared settings notices, or that a save changed nothing. */
@@ -39,18 +34,38 @@ export type RulesNotice = SettingsNotice | 'unchanged';
  */
 export function useBookingRules(kind: Kind, notify: () => void) {
   const router = useRouter();
-  const [settings, setSettings] = useState<BookingRulesSettings | null>(null);
+  const reads = { principal: usePrincipal(kind), settings: useBookingRulesRead(kind) };
+  const change = useBookingChanges(kind).run;
+  const setAnswer = useSetBookingAnswer(kind);
+  const ready = Boolean(reads.principal.data && reads.settings.data);
+  const settings = ready ? (reads.settings.data ?? null) : null;
+  const viewer = reads.principal.data?.staffId ?? null;
+  // The form starts from each version of the rules read or saved, and keeps the person's edits in between.
   const [form, setForm] = useState<RulesForm | null>(null);
-  const [viewer, setViewer] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [formOfSettings, setFormOfSettings] = useState<BookingRulesSettings | null>(null);
+  if (settings && settings !== formOfSettings) {
+    setFormOfSettings(settings);
+    setForm(formOf(settings.rules));
+  }
+  const loading =
+    Object.values(reads).some((each) => each.isFetching) ||
+    (!ready && !Object.values(reads).some((each) => each.error));
   const [notice, setNotice] = useState<RulesNotice>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [history, setHistory] = useState<HistoryState>({ state: 'loading' });
+  const [historyPage, setHistoryPage] = useState(0);
+  const historyRead = useBookingRulesHistory(kind, historyPage, historyOpen);
+  const history: HistoryState =
+    historyRead.isFetching || (!historyRead.data && !historyRead.error)
+      ? { state: 'loading' }
+      : historyRead.error || !historyRead.data
+        ? { state: 'unavailable' }
+        : { state: 'ready', history: historyRead.data };
 
   function show(next: BookingRulesSettings) {
-    setSettings(next);
+    setAnswer('booking-rules', next);
+    setFormOfSettings(next);
     setForm(formOf(next.rules));
   }
 
@@ -78,61 +93,25 @@ export function useBookingRules(kind: Kind, notify: () => void) {
     return null;
   }
 
+  /** Reads the tab again after a conflict: what is on the server replaces what was edited. */
   async function load() {
-    setLoading(true);
-    try {
-      const principal = await ensurePrincipal(kind);
-      setViewer(principal.staffId ?? null);
-      show(await identityRequest<BookingRulesSettings>(kind, 'booking-rules'));
-      setNotice(null);
-    } catch (error) {
-      failed(error);
-    } finally {
-      setLoading(false);
-    }
+    const [principal, next] = await Promise.all([reads.principal.refetch(), reads.settings.refetch()]);
+    if (principal.error || next.error || !next.data) return;
+    setFormOfSettings(next.data);
+    setForm(formOf(next.data.rules));
+    setNotice(null);
   }
 
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // Loaded once when the tab opens; reload is the person's choice after a conflict.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function readHistory(page: number) {
-    setHistory({ state: 'loading' });
-    try {
-      setHistory({
-        state: 'ready',
-        history: await identityRequest<BookingRulesHistory>(kind, `booking-rules-history?page=${page}`),
-      });
-    } catch (error) {
-      const failure = error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable');
-      if (failure.code === 'invalid_session') leaveEndedSession(kind, router);
-      else setHistory({ state: 'unavailable' });
-    }
-  }
+  useReadFailure(Object.values(reads), (failure) => failed(failure));
+  useReadFailure([historyRead], (failure) => {
+    if (failure.code === 'invalid_session') leaveEndedSession(kind, router);
+  });
 
   async function save() {
     if (!settings || !form || Object.keys(shownErrors(form)).length > 0) return;
-    if (!supportsLocks()) {
-      setNotice('unavailable');
-      return;
-    }
     setSaving(true);
     try {
-      const saved = await withIdentityLock(kind, async () => {
-        await principalInsideLock(kind);
-        return identityRequest<BookingRulesSettings>(kind, 'booking-rules-save', {
-          version: settings.version,
-          rules: saveOf(form.values),
-        });
-      });
+      const saved = await change('booking-rules-save', { version: settings.version, rules: saveOf(form.values) });
       show(saved);
       setNotice(null);
       notify();
@@ -179,9 +158,10 @@ export function useBookingRules(kind: Kind, notify: () => void) {
     type: (field: NumberField, text: string) =>
       setForm((current) => (current ? typeNumber(current, field, text) : current)),
     setHistoryOpen: (open: boolean) => {
+      // Opening it reads its first page again.
       setHistoryOpen(open);
-      if (open) void readHistory(0);
+      if (open) setHistoryPage(0);
     },
-    historyPage: (page: number) => void readHistory(page),
+    historyPage: (page: number) => setHistoryPage(page),
   };
 }

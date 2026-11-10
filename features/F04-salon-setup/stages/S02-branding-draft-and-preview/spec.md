@@ -256,3 +256,14 @@ Recorded by the lead when the stage closed. No requirement changed:
 - **Logo placement.** The workspace header showed no initial before this stage. It now shows the
   published logo before the name when there is one, and nothing extra otherwise. On sign-in the
   logo replaces the initial.
+
+## CR-030 (follow-up after the merge of PR #18)
+
+This replaces the caching sentence of AC-7 and is built and verified in the follow-up PR #31 (decision 098). Read
+`docs/changes/CR-030-public-photos-in-the-visitors-browser.md` and `docs/engineering/web.md`, "Tenant routing".
+
+- AC-13: A published brand image answered 200 on its salon's hostname carries `Cache-Control: private, max-age=86400,
+  immutable` and `X-Content-Type-Options: nosniff`, and never `public` or `s-maxage`. An image used only by the draft,
+  any answer that is not 200, and any image answer on a suspended or unknown salon's hostname carry the salon
+  hostname's `no-store` caching. The same image path asked on another salon's hostname is 404 and `no-store`. A new
+  upload has a new id, so an address never shows a different picture. (BRD-01, CR-030)

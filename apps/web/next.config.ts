@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
+import { SECURITY_HEADERS } from './src/lib/http/security-headers';
 import { PROXY_BODY_LIMIT_BYTES } from './src/lib/http/upload-limits';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
@@ -28,6 +29,18 @@ const nextConfig: NextConfig = {
   // The workspace's packages (the generated API client, formatting) are shipped as TypeScript source.
   transpilePackages: ['@salon/api-contracts', '@salon/format'],
   poweredByHeader: false,
+  // Every response carries the security headers (web M7), including what the proxy skips. The platform's own
+  // static files, the same on every hostname and nothing of any salon's, may be kept by any cache for a day and
+  // used for a week while it is checked again (web M6); a salon's own data is never among them.
+  async headers() {
+    return [
+      { source: '/:path*', headers: Object.entries(SECURITY_HEADERS).map(([key, value]) => ({ key, value })) },
+      {
+        source: '/:folder(images|icons|brand|fonts)/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
+      },
+    ];
+  },
   experimental: {
     // The proxy buffers a request body only up to this size and passes the rest on truncated, without an
     // error. It is set above the BFF's upload limit, so an upload over that limit still arrives too long and

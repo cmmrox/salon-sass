@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts/platform';
@@ -15,11 +15,9 @@ import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/comp
 import { Spinner } from '@/components/ui/spinner';
 import { formatInstant, formatPhone, parseMinorUnits, viewerTimeZone } from '@salon/format';
 import {
-  operatorRead,
-  operatorRequest,
   OperatorFailure,
-  principalInsideLock,
-  withOperatorLock,
+  useConsoleChanges,
+  useConsoleRead,
   ConsoleChoiceField,
   ConsoleFailure,
   ConsoleLoading,
@@ -41,7 +39,6 @@ import { ExportCard, LifecycleCard, SalonStatusBadge } from './LifecycleScreens'
 import { SupportCard } from './SupportScreens';
 
 type Summary = components['schemas']['SalonSummary'];
-type Detail = components['schemas']['SalonDetail'];
 type Created = components['schemas']['SalonCreated'];
 
 /** The salon directory: search by name or web address, rows with status and plan, paging, Create salon. */
@@ -171,6 +168,7 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
   }
   const set = (name: keyof Values) => (event: { target: { value: string } }) =>
     setValues({ ...values, [name]: event.target.value });
+  const changes = useConsoleChanges();
   async function submit() {
     setBusy(true);
     setFailure(null);
@@ -190,10 +188,7 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
     };
     const idempotencyKey = idempotency.keyFor(payload);
     try {
-      const result = await withOperatorLock(async () => {
-        await principalInsideLock();
-        return operatorRequest<Created>('salon-create', { ...payload, idempotencyKey });
-      });
+      const result = await changes.run('salon-create', { ...payload, idempotencyKey });
       idempotency.reset();
       setCreated({ result, plan: plan?.id === result.planId ? plan.name : '' });
       setValues(EMPTY);
@@ -484,38 +479,8 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
 /** One salon's provisioning profile and plan. Read-only; no automatic workspace entry. */
 export function SalonDetail({ id, permissions = [] }: { id: string; permissions?: string[] }) {
   const t = useTranslations('console');
-  const router = useRouter();
-  const [salon, setSalon] = useState<Detail | null>(null);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: salon, failure, loading, load } = useConsoleRead('salon', { id });
   const [copied, setCopied] = useState(false);
-  async function load() {
-    setLoading(true);
-    setFailure(null);
-    try {
-      setSalon(await operatorRead<Detail>(`salon?id=${encodeURIComponent(id)}`));
-    } catch (error) {
-      const f = error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable');
-      if (f.code === 'invalid_session') {
-        router.replace('/console/sign-in');
-        router.refresh();
-        return;
-      }
-      setFailure(f);
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
   const value = (text: string | null | undefined, testId: string) => (
     <dd className="m-0 wrap-anywhere whitespace-pre-line" data-testid={testId}>
       {text ?? <span className="text-muted-foreground">{t('notConfigured')}</span>}

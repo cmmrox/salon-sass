@@ -5,7 +5,7 @@ import { CalendarIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -30,31 +30,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { dayButtonLabel } from '@/lib/dates/calendar-labels';
-import {
-  operatorRead,
-  operatorRequest,
-  OperatorFailure,
-  principalInsideLock,
-  withOperatorLock,
-} from '../client/operator-session';
+import { OperatorFailure } from '../client/operator-session';
+import { useConsoleChanges, useConsoleRead, useSetConsoleAnswer } from '../client/console-data';
 import { ConsoleFailure, ConsoleLoading } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { HolidayDays } from './HolidayDays';
 
-type YearList = components['schemas']['HolidayYearList'];
 type YearDetail = components['schemas']['HolidayYearDetail'];
 type DraftDay = components['schemas']['HolidayDraftDayView'];
 type Kind = DraftDay['kind'];
 
 const KINDS: Kind[] = ['poya', 'public', 'bank', 'mercantile'];
-
-/** One console change under the operator lock, as every credential-bearing change is. */
-async function change<T>(action: string, body: unknown): Promise<T> {
-  return withOperatorLock(async () => {
-    await principalInsideLock();
-    return operatorRequest<T>(action, body);
-  });
-}
 
 function StateBadge({ state, publishedAt }: { state: YearDetail['state']; publishedAt: string | null }) {
   const t = useTranslations('console.holidays');
@@ -81,31 +67,8 @@ function StateBadge({ state, publishedAt }: { state: YearDetail['state']; publis
 export function HolidayYears({ canManage }: { canManage: boolean }) {
   const t = useTranslations('console.holidays');
   const router = useRouter();
-  const [data, setData] = useState<YearList | null>(null);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, failure, loading, load } = useConsoleRead('holiday-years');
   const [start, setStart] = useState(String(new Date().getFullYear() + 1));
-
-  async function load() {
-    setLoading(true);
-    setFailure(null);
-    try {
-      setData(await operatorRead<YearList>('holiday-years'));
-    } catch (error) {
-      setFailure(error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable'));
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const validStart = /^\d{4}$/.test(start) && Number(start) >= 2000 && Number(start) <= 2100;
   return (
@@ -250,6 +213,7 @@ function DaySheet({
   trigger: ReactNode;
   onSaved: (detail: YearDetail) => void;
 }) {
+  const change = useConsoleChanges().run;
   const t = useTranslations('console.holidays');
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(day?.date ?? '');
@@ -270,7 +234,7 @@ function DaySheet({
     setBusy(true);
     setFailure(null);
     try {
-      const detail = await change<YearDetail>(day ? 'holiday-day-change' : 'holiday-day-add', {
+      const detail = await change(day ? 'holiday-day-change' : 'holiday-day-add', {
         year: String(year),
         date,
         name,
@@ -354,45 +318,29 @@ function DaySheet({
  * prototype's words. A refused import lists each bad line and why; nothing of it is kept.
  */
 export function HolidayYearScreen({ year, canManage }: { year: number; canManage: boolean }) {
+  const change = useConsoleChanges().run;
   const t = useTranslations('console.holidays');
-  const [detail, setDetail] = useState<YearDetail | null>(null);
-  const [missing, setMissing] = useState(false);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
+  const read = useConsoleRead('holiday-year', { year });
+  const setAnswer = useSetConsoleAnswer();
+  // A year with no calendar yet is answered not_found: the Admin may import one, which is not a failure.
+  const missing = read.error?.code === 'not_found';
+  const detail = missing ? null : read.data;
+  // A refused change is said until the next is tried or the year is read again.
+  const [refused, setFailure] = useState<OperatorFailure | null>(null);
+  const failure = refused ?? (read.failure && read.failure.code !== 'not_found' ? read.failure : null);
   const [refusedFile, setRefusedFile] = useState<OperatorFailure | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { loading } = read;
+  const load = () => {
+    setFailure(null);
+    read.load();
+  };
   const [busy, setBusy] = useState<'import' | 'publish' | 'remove' | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
 
-  async function load() {
-    setLoading(true);
-    setFailure(null);
-    try {
-      setDetail(await operatorRead<YearDetail>(`holiday-year?year=${year}`));
-      setMissing(false);
-    } catch (error) {
-      const refused = error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable');
-      if (refused.code === 'not_found') setMissing(true);
-      else setFailure(refused);
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // Loaded once for the year; a change answers the year as it now is.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year]);
-
+  /** A change's answer: the year as it now is, shown with what was done. */
   function show(next: YearDetail, message: string) {
-    setDetail(next);
-    setMissing(false);
+    setAnswer('holiday-year', { year }, next);
     setFailure(null);
     setDone(message);
   }
@@ -405,7 +353,7 @@ export function HolidayYearScreen({ year, canManage }: { year: number; canManage
     form.append('year', String(year));
     form.append('file', chosen);
     try {
-      const next = await change<YearDetail>('holiday-import', form);
+      const next = await change('holiday-import', form);
       show(next, t('imported', { days: next.days.length }));
     } catch (error) {
       const refused = error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable');
@@ -420,7 +368,7 @@ export function HolidayYearScreen({ year, canManage }: { year: number; canManage
     setBusy('remove');
     setDone(null);
     try {
-      show(await change<YearDetail>('holiday-day-remove', { year: String(year), date: day.date }), t('removed'));
+      show(await change('holiday-day-remove', { year: String(year), date: day.date }), t('removed'));
     } catch (error) {
       setFailure(error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable'));
     }
@@ -432,10 +380,7 @@ export function HolidayYearScreen({ year, canManage }: { year: number; canManage
     setBusy('publish');
     setDone(null);
     try {
-      show(
-        await change<YearDetail>('holiday-publish', { year: String(year), version: detail.version }),
-        t('published'),
-      );
+      show(await change('holiday-publish', { year: String(year), version: detail.version }), t('published'));
     } catch (error) {
       setFailure(error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable'));
     }

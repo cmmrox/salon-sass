@@ -4,6 +4,8 @@ import 'server-only';
 
 export { hasCredentials, workspaceEntry, type Entry } from './server/entry';
 export {
+  answersWithoutLookup,
+  suspendedSalon,
   clearCookies,
   cookieName,
   createIdentityWeb,
@@ -15,3 +17,4 @@ export {
   type Credentials,
 } from './server/identity-web';
 export type { Kind, Principal } from './types';
+export { identityRoutes } from './server/routes';

@@ -25,8 +25,10 @@ export {
   OperatorFailure,
   operatorRead,
   operatorRequest,
-  principalInsideLock,
   supportsLocks,
   withOperatorLock,
 } from './client/operator-session';
 export type { Entitlements } from './types';
+export { useEntitlements, useInvoices, useSalonAccountChanges, useSupportSessions } from './client/salon-account-data';
+export { useConsoleChanges, useConsolePages, useConsoleRead } from './client/console-data';
+export { platformPages } from './pages';

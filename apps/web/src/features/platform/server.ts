@@ -6,3 +6,4 @@ export { hasOperatorCredentials, operatorEntry, type OperatorEntry } from './ser
 export { clearOperatorCookies, credentialsOf, handleOperator, operatorCookie } from './server/operator-web';
 export { handlePlatform } from './server/platform-web';
 export { readEntitlements, salonAccountFor } from './server/salon-account';
+export { platformRoutes } from './server/routes';

@@ -3,11 +3,14 @@ import {
   currencyMark,
   formatClock,
   formatCount,
+  formatDate,
   formatDay,
+  formatInstant,
   formatMoney,
   formatPhoneNational,
   formatShortDay,
   formatShortPeriod,
+  formatTime,
   minorUnitsText,
   parseMinorUnits,
   todayInZone,
@@ -129,5 +132,31 @@ describe('phone numbers', () => {
   it('leaves anything that is not a valid E.164 number as it is', () => {
     expect(formatPhoneNational('077 123')).toBe('077 123');
     expect(formatPhoneNational('')).toBe('');
+  });
+});
+
+// Web M3: one malformed value from the API costs its own cell, never the page.
+describe('a value that is not a date or time', () => {
+  const bad = ['', 'not a date', '2026-13-45', 'xx:yy'];
+  it.each(bad)('is shown as it came, never thrown on: %j', (value) => {
+    expect(formatInstant(value, 'Asia/Colombo')).toBe(value);
+    expect(formatDate(value, 'Asia/Colombo')).toBe(value);
+    expect(formatTime(value, 'Asia/Colombo')).toBe(value);
+    expect(formatDay(value)).toBe(value);
+    expect(formatShortDay(value, '2026-11-12')).toBe(value);
+    expect(formatShortPeriod(value, value, '2026-11-12')).toEqual({ first: value, last: value });
+  });
+
+  it('a clock that is not one is shown as it came', () => {
+    expect(formatClock('xx:yy')).toBe('xx:yy');
+    expect(formatClock('')).toBe('');
+  });
+
+  it('a missing value (null where a string was promised) is shown as nothing', () => {
+    const missing = null as unknown as string;
+    expect(formatClock(missing)).toBe('');
+    expect(formatDay(missing)).toBe('');
+    expect(formatInstant(missing, 'Asia/Colombo')).toBe('');
+    expect(formatShortDay(missing, '2026-11-12')).toBe('');
   });
 });

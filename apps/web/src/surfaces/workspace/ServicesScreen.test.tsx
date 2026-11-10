@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
+import { expireAccessBefore } from '@test/renewal';
 import { chooseOption } from '@test/select';
 import {
   CATEGORIES,
@@ -1096,5 +1097,14 @@ describe('a service’s photo, and a change answered after its sheet closed (AC-
     expect(sent('catalogue-service-save')).toEqual([
       expect.objectContaining({ id: GEL.id, name: 'Gel polish and shape', version: GEL.version }),
     ]);
+  });
+});
+
+describe('an idle session (BUG-F05-002)', () => {
+  it('renews an access credential that lapsed and shows the services, not the sign-in form', async () => {
+    const renewals = expireAccessBefore(answers, 'catalogue-services');
+    render();
+    expect(await screen.findAllByTestId('service-card')).toHaveLength(3);
+    expect(renewals()).toBe(1);
   });
 });

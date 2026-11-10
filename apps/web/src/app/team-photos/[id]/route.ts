@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requestHost } from '@/features/identity/server';
 import { teamPhoto } from '@/features/staff/server';
 
-/** Nothing about a salon is stored by a cache (docs/engineering/web.md, "Tenant routing"). */
-const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
+import { TEAM_PHOTO_CACHE, NOT_STORED } from '@/lib/http/photo-cache';
+
+/** Every answer but the photo itself is stored by no cache (`lib/http/photo-cache.ts`). */
 const HEADERS = { 'Cache-Control': NOT_STORED, 'X-Content-Type-Options': 'nosniff' };
 
 /**
@@ -16,5 +17,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const { id } = await context.params;
   const answer = await teamPhoto(host.hostname, id);
   if (answer.kind === 'none') return new NextResponse(null, { status: answer.status, headers: HEADERS });
-  return new NextResponse(answer.bytes, { status: 200, headers: { ...HEADERS, 'Content-Type': 'image/jpeg' } });
+  return new NextResponse(answer.bytes, {
+    status: 200,
+    headers: { ...HEADERS, 'Cache-Control': TEAM_PHOTO_CACHE, 'Content-Type': 'image/jpeg' },
+  });
 }

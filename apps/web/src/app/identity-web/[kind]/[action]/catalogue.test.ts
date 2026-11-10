@@ -4,26 +4,15 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
-import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
-import { salonBookingRulesFor, salonBookingsFor } from '@/features/booking/server';
-import { salonCatalogueFor } from '@/features/catalogue/server';
+import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';
 
 /**
  * The catalogue actions of the workspace BFF (F05-S01 to F05-S03), as the route wires them, against a fake API on
  * loopback.
  */
-const handleIdentity = createIdentityWeb(
-  salonAccountFor,
-  salonSettingsFor,
-  salonHoursFor,
-  salonBookingRulesFor,
-  salonCatalogueFor,
-  salonTeamFor,
-  salonBookingsFor,
-);
+const handleIdentity = createIdentityWeb(salonAccountFor, WORKSPACE_ROUTES);
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };
@@ -123,6 +112,19 @@ function run(method: string, kind: 'staff' | 'support', action: string, body?: u
 }
 const apiCalls = () => calls.filter((call) => call.path !== '/api/v1/identity/me');
 
+/**
+ * The API's own refusal of a read by a role without its permission (each use case's `principals.require`): since the
+ * lead’s ruling on web H3 the BFF no longer reads the principal before a module's read, so the refusal is the API's.
+ */
+const PERMISSION_DENIED = { status: 403, data: { code: 'permission_denied', status: 403, title: 'Forbidden' } };
+function refusedByTheApi(permission: string, ...paths: string[]) {
+  const before = answer;
+  answer = (method, path) =>
+    method === 'GET' && paths.includes(path.split('?')[0]!) && !permissions.includes(permission)
+      ? PERMISSION_DENIED
+      : before(method, path);
+}
+
 describe('the catalogue actions (F05-S01)', () => {
   it('reads the categories and services for the salon’s hostname with the user’s credential', async () => {
     expect((await run('GET', 'staff', 'catalogue-categories')).status).toBe(200);
@@ -152,8 +154,12 @@ describe('the catalogue actions (F05-S01)', () => {
 
   it('refuses a role without catalogue.read the reads', async () => {
     permissions = ['session.manage'];
-    expect((await run('GET', 'staff', 'catalogue-categories')).status).toBe(403);
-    expect(apiCalls()).toEqual([]);
+    refusedByTheApi('catalogue.read', '/api/v1/catalogue/categories');
+    // Refused 403 permission_denied as the API answers it, with nothing else (lead’s ruling on web H3).
+    const response = await run('GET', 'staff', 'catalogue-categories');
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ code: 'permission_denied' });
+    expect(apiCalls().map((call) => call.path)).toEqual(['/api/v1/catalogue/categories']);
   });
 
   it('rebuilds a service from the contract’s own fields and drops anything else', async () => {
@@ -299,7 +305,10 @@ describe('the catalogue actions (F05-S01)', () => {
       ['GET', '/api/v1/salon/booking-rules'],
     ]);
     permissions = ['session.manage'];
-    expect((await run('GET', 'staff', 'catalogue-popular-setting')).status).toBe(403);
+    refusedByTheApi('catalogue.read', '/api/v1/catalogue/popular-setting');
+    const refused = await run('GET', 'staff', 'catalogue-popular-setting');
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({ code: 'permission_denied' });
   });
 
   it('rebuilds variants and a deposit from the contract’s own fields, and sends no price with variants', async () => {
@@ -366,9 +375,16 @@ describe('the tax settings and products actions (F05-S03)', () => {
     expect((await run('GET', 'staff', 'catalogue-tax-settings')).status).toBe(200);
     expect((await run('GET', 'staff', 'catalogue-tax-history')).status).toBe(200);
     permissions = ['session.manage', 'catalogue.read'];
-    expect((await run('GET', 'staff', 'catalogue-tax-settings')).status).toBe(403);
-    expect((await run('GET', 'staff', 'catalogue-tax-history')).status).toBe(403);
+    refusedByTheApi('settings.read', '/api/v1/catalogue/tax/settings', '/api/v1/catalogue/tax/history');
+    // Refused 403 permission_denied as the API answers them, with nothing else (lead’s ruling on web H3).
+    for (const action of ['catalogue-tax-settings', 'catalogue-tax-history']) {
+      const response = await run('GET', 'staff', action);
+      expect(response.status, action).toBe(403);
+      expect(await response.json(), action).toEqual({ code: 'permission_denied' });
+    }
     expect(apiCalls().map((call) => call.path)).toEqual([
+      '/api/v1/catalogue/tax/settings',
+      '/api/v1/catalogue/tax/history',
       '/api/v1/catalogue/tax/settings',
       '/api/v1/catalogue/tax/history',
     ]);
@@ -489,5 +505,15 @@ describe('the tax settings and products actions (F05-S03)', () => {
     expect(refused.status).toBe(403);
     expect(await refused.json()).toMatchObject({ code: 'support_read_only' });
     expect((await run('POST', 'support', 'catalogue-product-add', { name: 'Comb' })).status).toBe(403);
+  });
+});
+
+describe('a read by a role without its permission (lead’s ruling on web H3)', () => {
+  it('is answered 403 from the API’s own answer, and never 200 with the data', async () => {
+    permissions = ['session.manage'];
+    refusedByTheApi('catalogue.read', '/api/v1/catalogue/services');
+    const response = await run('GET', 'staff', 'catalogue-services');
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ code: 'permission_denied' });
   });
 });

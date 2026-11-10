@@ -1,27 +1,16 @@
 // The staff module's client-safe entry: the Hours & closures tab's parts (F04-S03) and the Team page's (F06-S01).
 export type {
   Closure,
-  ClosureImpact,
   HolidayYear,
   HoursSettings,
   SalonHolidays,
   TeamCategory,
   TeamMember,
-  TeamMemberList,
   TeamService,
   TeamSignInAccount,
-  TeamSignInAccountList,
 } from './types';
-export type {
-  AddedDateChange,
-  MemberDateChange,
-  MemberSchedule,
-  SalonOpeningWeek,
-  SavedMemberWeek,
-  TeamAffectedBooking,
-  Weekday,
-} from './types';
-export type { AddedBlock, AddedLeave, MemberBlock, MemberLeave, PeriodImpact } from './types';
+export type { MemberDateChange, MemberSchedule, TeamAffectedBooking, Weekday } from './types';
+export type { MemberBlock, MemberLeave, PeriodImpact } from './types';
 export { BlockedTimeTab } from './components/BlockedTimeTab';
 export { ConfirmRemoveLeave } from './components/ConfirmRemoveLeave';
 export { LeaveTab } from './components/LeaveTab';
@@ -100,3 +89,15 @@ export {
   type DayForm,
   type WeekdayName,
 } from './client/hours-form';
+export {
+  useClosures,
+  useHolidays,
+  useOpeningHours,
+  useSetStaffAnswer,
+  useSignInAccounts,
+  useStaffAsk,
+  useStaffChanges,
+  useTeamMembers,
+  type StaffChange,
+} from './client/staff-data';
+export { staffPages } from './pages';

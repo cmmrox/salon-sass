@@ -4,23 +4,12 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
-import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
-import { salonBookingRulesFor, salonBookingsFor } from '@/features/booking/server';
-import { salonCatalogueFor } from '@/features/catalogue/server';
+import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';
 
 /** The team actions of the workspace BFF (F06-S01), as the route wires them, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(
-  salonAccountFor,
-  salonSettingsFor,
-  salonHoursFor,
-  salonBookingRulesFor,
-  salonCatalogueFor,
-  salonTeamFor,
-  salonBookingsFor,
-);
+const handleIdentity = createIdentityWeb(salonAccountFor, WORKSPACE_ROUTES);
 let server: Server;
 let calls: { method: string; path: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };
@@ -50,6 +39,11 @@ beforeEach(async () => {
     request.on('data', (chunk) => chunks.push(chunk));
     request.on('end', () => {
       const path = request.url ?? '';
+      if (principalKind === 'suspended') {
+        response.writeHead(403, { 'Content-Type': 'application/problem+json' });
+        response.end(JSON.stringify({ code: 'salon_suspended', status: 403, title: 'Forbidden' }));
+        return;
+      }
       if (path === '/api/v1/identity/me') {
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(
@@ -117,6 +111,19 @@ const send = (action: string, body?: unknown, kind: 'staff' | 'support' = 'staff
     () => handleIdentity(request(kind, action, body), kind, action.split('?')[0]!),
   );
 
+/**
+ * The API's own refusal of a read by a role without its permission (each use case's `principals.require`): since the
+ * lead’s ruling on web H3 the BFF no longer reads the principal before a module's read, so the refusal is the API's.
+ */
+const PERMISSION_DENIED = { status: 403, data: { code: 'permission_denied', status: 403, title: 'Forbidden' } };
+function refusedByTheApi(permission: string, ...paths: string[]) {
+  const before = answer;
+  answer = (method, path) =>
+    method === 'GET' && paths.includes(path.split('?')[0]!) && !permissions.includes(permission)
+      ? PERMISSION_DENIED
+      : before(method, path);
+}
+
 describe('the team actions of the BFF (F06-S01)', () => {
   it('reads the team with team.read, and the accounts with team.manage', async () => {
     answer = () => ({ status: 200, data: { items: [] } });
@@ -133,10 +140,15 @@ describe('the team actions of the BFF (F06-S01)', () => {
 
   it('refuses before any call without the permission', async () => {
     permissions = [];
+    refusedByTheApi('team.read', '/api/v1/team/members');
 
-    expect((await send('team-members')).status).toBe(403);
+    // The read is refused 403 permission_denied as the API answers it, with nothing else (lead’s ruling on web H3);
+    // the change before any call.
+    const read = await send('team-members');
+    expect(read.status).toBe(403);
+    expect(await read.json()).toEqual({ code: 'permission_denied' });
     expect((await send('team-member-add', person)).status).toBe(403);
-    expect(calls).toEqual([]);
+    expect(calls.map((call) => [call.method, call.path])).toEqual([['GET', '/api/v1/team/members']]);
   });
 
   it('rebuilds a new person from the contract’s fields: nothing else of the browser’s goes on', async () => {
@@ -181,12 +193,16 @@ describe('the team actions of the BFF (F06-S01)', () => {
 
   it('refuses the schedule without team.read, and its changes without team.manage, before any call', async () => {
     permissions = [];
-    expect((await send(`team-schedule?memberId=${MEMBER}`)).status).toBe(403);
+    refusedByTheApi('team.read', `/api/v1/team/members/${MEMBER}/schedule`);
+    // The read is refused as the API answers it (lead’s ruling on web H3); the changes before any call.
+    const read = await send(`team-schedule?memberId=${MEMBER}`);
+    expect(read.status).toBe(403);
+    expect(await read.json()).toEqual({ code: 'permission_denied' });
     permissions = ['team.read'];
     expect((await send('team-week-save', { id: MEMBER, version: 1, weekly: [] })).status).toBe(403);
     expect((await send('team-date-change-add', { id: MEMBER })).status).toBe(403);
     expect((await send('team-date-change-remove', { id: MEMBER, changeId: MEMBER })).status).toBe(403);
-    expect(calls).toEqual([]);
+    expect(calls.map((call) => [call.method, call.path])).toEqual([['GET', `/api/v1/team/members/${MEMBER}/schedule`]]);
   });
 
   it('rebuilds a saved week from the contract’s fields', async () => {
@@ -369,6 +385,8 @@ describe('leave and blocked time through the BFF (F06-S03)', () => {
   });
 
   it('holds each to its own permission, before any call', async () => {
+    refusedByTheApi('team.manage', `/api/v1/team/members/${MEMBER}/schedule/leave/affected`);
+    refusedByTheApi('team.block', `/api/v1/team/members/${MEMBER}/schedule/blocked-time/affected`);
     permissions = ['team.read', 'team.block'];
     expect((await send('team-leave-add', leaveBody)).status).toBe(403);
     expect((await send('team-leave-remove', { id: MEMBER, leaveId: MEMBER })).status).toBe(403);
@@ -383,7 +401,11 @@ describe('leave and blocked time through the BFF (F06-S03)', () => {
       (await send(`team-block-affected?memberId=${MEMBER}&date=2026-11-12&starts=10:00&finishes=11:00`)).status,
     ).toBe(403);
 
-    expect(calls).toEqual([]);
+    // The two reads are refused as the API answers them (lead’s ruling on web H3); every change before any call.
+    expect(calls.map((call) => [call.method, call.path.split('?')[0]])).toEqual([
+      ['GET', `/api/v1/team/members/${MEMBER}/schedule/leave/affected`],
+      ['GET', `/api/v1/team/members/${MEMBER}/schedule/blocked-time/affected`],
+    ]);
   });
 
   it('refuses a support session every change and both impact reads, with no call', async () => {
@@ -403,6 +425,50 @@ describe('leave and blocked time through the BFF (F06-S03)', () => {
     const impact = await send(`team-block-affected?memberId=${MEMBER}&date=2026-11-12`, undefined, 'support');
     expect(impact.status).toBe(403);
     expect(await impact.json()).toMatchObject({ code: 'permission_denied' });
+    expect(calls).toEqual([]);
+  });
+});
+
+// Web H3 and F03-S03 AC-1: the proxy no longer looks the salon up for a module's call, so the BFF says a suspension as
+// one (503 salon_suspended, nothing more than the unavailable page says), never as an ended session or an outage.
+describe('a suspended salon', () => {
+  it('answers a module’s read 503 salon_suspended, and nothing else', async () => {
+    principalKind = 'suspended';
+    const response = await send('team-members');
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ code: 'salon_suspended' });
+    expect(calls).toEqual([]);
+  });
+});
+
+describe('a read by a role without its permission (lead’s ruling on web H3)', () => {
+  it('is answered 403 from the API’s own answer, and never 200 with the data', async () => {
+    permissions = [];
+    refusedByTheApi('team.read', '/api/v1/team/members');
+    const response = await send('team-members');
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ code: 'permission_denied' });
+  });
+});
+
+// Web H3: a module's read reaches the API without a principal read first, so the API's own refusal of the credential
+// is answered as the principal read answered it: invalid_session, with whether the browser may renew.
+describe('a read the API refuses for its session', () => {
+  it('is invalid_session, not renewable without a refresh credential, and carries nothing of the data', async () => {
+    answer = () => ({ status: 401, data: { code: 'invalid_session', status: 401, title: 'Unauthorized' } });
+    const response = await send('team-members');
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ code: 'invalid_session', renewable: false });
+    expect(calls.map((call) => call.path)).toEqual(['/api/v1/team/members']);
+  });
+});
+
+describe('a suspended salon’s change', () => {
+  it('is answered 503 salon_suspended from the session check, before any call', async () => {
+    principalKind = 'suspended';
+    const response = await send('team-member-add', person);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ code: 'salon_suspended' });
     expect(calls).toEqual([]);
   });
 });

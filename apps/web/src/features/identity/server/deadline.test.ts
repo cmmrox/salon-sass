@@ -8,12 +8,6 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createIdentityWeb } from './identity-web';
 import type { SalonAccount, SalonAccountFor } from './salon-account';
-import type { SalonSettings, SalonSettingsFor } from './salon-settings';
-import type { SalonHours, SalonHoursFor } from './salon-hours';
-import type { SalonBookingRules, SalonBookingRulesFor } from './salon-booking-rules';
-import type { SalonCatalogue, SalonCatalogueFor } from './salon-catalogue';
-import type { SalonTeam, SalonTeamFor } from './salon-team';
-import type { SalonBookings, SalonBookingsFor } from './salon-bookings';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 
@@ -23,41 +17,9 @@ const unreached: SalonAccountFor = () =>
     get: () => () => Promise.reject(new Error('the platform module is not reached here')),
   });
 /** Nor the branding module's settings paths (F04-S01). */
-const unreachedSettings: SalonSettingsFor = () =>
-  new Proxy({} as SalonSettings, {
-    get: () => () => Promise.reject(new Error('the branding module is not reached here')),
-  });
 /** Nor the staff module's hours paths (F04-S03). */
-const unreachedHours: SalonHoursFor = () =>
-  new Proxy({} as SalonHours, {
-    get: () => () => Promise.reject(new Error('the staff module is not reached here')),
-  });
 /** Nor the booking module's rules paths (F04-S04). */
-const unreachedRules: SalonBookingRulesFor = () =>
-  new Proxy({} as SalonBookingRules, {
-    get: () => () => Promise.reject(new Error('the booking module is not reached here')),
-  });
-const unreachedCatalogue: SalonCatalogueFor = () =>
-  new Proxy({} as SalonCatalogue, {
-    get: () => () => Promise.reject(new Error('the catalogue module is not reached here')),
-  });
-const unreachedBookings: SalonBookingsFor = () =>
-  new Proxy({} as SalonBookings, {
-    get: () => () => Promise.reject(new Error('the booking paths are not reached here')),
-  });
-const unreachedTeam: SalonTeamFor = () =>
-  new Proxy({} as SalonTeam, {
-    get: () => () => Promise.reject(new Error('the team paths are not reached here')),
-  });
-const handleIdentity = createIdentityWeb(
-  unreached,
-  unreachedSettings,
-  unreachedHours,
-  unreachedRules,
-  unreachedCatalogue,
-  unreachedTeam,
-  unreachedBookings,
-);
+const handleIdentity = createIdentityWeb(unreached, { pages: [], reads: {}, changes: {}, uploads: {} });
 
 /**
  * BUG-F02-012: every server call to the API ends within the request's shared budget, whatever

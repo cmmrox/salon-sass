@@ -1,16 +1,9 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import {
-  ensurePrincipal,
-  IdentityFailure,
-  identityRequest,
-  leaveEndedSession,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-  type Kind,
-} from '@/features/identity';
+import { useState } from 'react';
+import { useBrandingChanges, useDraft, useSetBrandingAnswer } from '@/features/branding';
+import { IdentityFailure, leaveEndedSession, usePrincipal, type Kind } from '@/features/identity';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 
 /** What a settings tab tells the person beside its form: a conflict, an outage, a refusal or fields to fix. */
 export type SettingsNotice = 'conflict' | 'unavailable' | 'fix' | 'refused' | null;
@@ -43,19 +36,32 @@ export function useSettingsDraft<D extends Draft, F, Field extends string>(
   notify: (event: Event) => void,
 ) {
   const router = useRouter();
-  const [draft, setDraft] = useState<D | null>(null);
+  const reads = { principal: usePrincipal(kind), draft: useDraft(kind, shape.subject) };
+  const changes = useBrandingChanges(kind);
+  const setAnswer = useSetBrandingAnswer(kind);
+  const ready = Boolean(reads.principal.data && reads.draft.data);
+  const draft = ready ? ((reads.draft.data ?? null) as D | null) : null;
   const [form, setForm] = useState<F | null>(null);
+  // The form starts from each version of the draft read or saved, and keeps the person's edits in between.
+  const [formOfDraft, setFormOfDraft] = useState<D | null>(null);
   const [errors, setErrors] = useState<Partial<Record<Field, boolean>>>({});
   const [notice, setNotice] = useState<SettingsNotice>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<Busy>(null);
+  const loading =
+    Object.values(reads).some((each) => each.isFetching) ||
+    (!ready && !Object.values(reads).some((each) => each.error));
 
   function show(next: D) {
-    setDraft(next);
+    setAnswer(`${shape.subject}-draft`, next as never);
+    setFormOfDraft(next);
     setForm(shape.formOf(next));
     setErrors({});
     setNotice(null);
+  }
+  if (draft && draft !== formOfDraft) {
+    setFormOfDraft(draft);
+    setForm(shape.formOf(draft));
   }
 
   function failed(error: unknown) {
@@ -76,38 +82,17 @@ export function useSettingsDraft<D extends Draft, F, Field extends string>(
     setNotice('refused');
   }
 
+  /** Reads the tab again after a conflict: what is on the server replaces what was edited. */
   async function load() {
-    setLoading(true);
-    try {
-      await ensurePrincipal(kind);
-      show(await identityRequest<D>(kind, `${shape.subject}-draft`));
-    } catch (error) {
-      failed(error);
-    } finally {
-      setLoading(false);
-    }
+    const [principal, next] = await Promise.all([reads.principal.refetch(), reads.draft.refetch()]);
+    if (principal.error || next.error || !next.data) return;
+    show(next.data as unknown as D);
   }
 
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // Loaded once when the tab opens; reload is the person's choice after a conflict.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useReadFailure(Object.values(reads), (failure) => failed(failure));
 
-  /** One BFF call under the session's cross-tab lock, as every credential-bearing change is. */
-  async function request<T>(action: string, body: unknown): Promise<T> {
-    if (!supportsLocks()) throw new IdentityFailure('browser_unsupported');
-    return withIdentityLock(kind, async () => {
-      await principalInsideLock(kind);
-      return identityRequest<T>(kind, action, body);
-    });
-  }
+  /** One change of the draft, made once; the tab shows what it answers. */
+  const request = changes.run;
 
   async function saveDraft(current: D, values: F): Promise<D | null> {
     const save = shape.saveOf(values, current);
@@ -117,7 +102,7 @@ export function useSettingsDraft<D extends Draft, F, Field extends string>(
       return null;
     }
     try {
-      const saved = await request<D>(`${shape.subject}-save`, save.save);
+      const saved = (await request(`${shape.subject}-save`, save.save as Record<string, unknown>)) as unknown as D;
       show(saved);
       return saved;
     } catch (error) {
@@ -126,10 +111,15 @@ export function useSettingsDraft<D extends Draft, F, Field extends string>(
     }
   }
 
-  async function change(state: Busy, action: string, event: Event, version: number) {
+  async function change(
+    state: Busy,
+    action: `${'profile' | 'brand'}-${'publish' | 'discard'}` | 'brand-reset',
+    event: Event,
+    version: number,
+  ) {
     setBusy(state);
     try {
-      show(await request<D>(action, { version }));
+      show((await request(action, { version })) as unknown as D);
       notify(event);
     } catch (error) {
       failed(error);
@@ -170,7 +160,8 @@ export function useSettingsDraft<D extends Draft, F, Field extends string>(
       if (draft) await change('discarding', `${shape.subject}-discard`, 'discarded', draft.version);
     },
     reset: async () => {
-      if (draft) await change('resetting', `${shape.subject}-reset`, 'reset', draft.version);
+      // Only the brand has a reset (F04-S02).
+      if (draft && shape.subject === 'brand') await change('resetting', 'brand-reset', 'reset', draft.version);
     },
   };
 }
