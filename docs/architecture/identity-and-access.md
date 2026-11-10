@@ -75,7 +75,9 @@ attempts, consumption, limits and security audit entries commit even when the HT
 error; throwing inside a transaction must not undo these controls.
 Staff rate windows start on the first attempt and last fifteen minutes; a denied request returns
 `Retry-After: 900`. The `identity-security-cleanup` job runs every fifteen minutes to remove expired
-staff rate/MFA challenges and consumed TOTP steps outside the accepted tolerance. Disabled staff
+staff rate/MFA challenges and consumed TOTP steps outside the accepted tolerance, and sessions
+that expired or were revoked more than seven days ago, with their refresh history (at most 1,000 per
+salon per run; one a pending second-step challenge still names is kept). Disabled staff
 accounts retain their identifiers; removal does not invent reactivation or recovery behavior.
 
 The current common-password list rejects `passwordpassword`, `password123456789`,
