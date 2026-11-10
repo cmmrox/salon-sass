@@ -5,9 +5,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * The staff sign-in's limit per address across every salon ({@code salon.identity.sign-in.address-limit-across-salons},
- * decision 120): attempts in the same fifteen-minute window as the salon's own limits. By default twice the salon's
- * own limit per address (30), so one address signing in to a few salons is not refused, while one trying many
- * salons is.
+ * decision 120): attempts in the same fifteen-minute window as the salon's own limits, 300 by default. It is not
+ * tighter because many salons' staff share one carrier-grade NAT address on mobile data and every attempt counts;
+ * it only stops one address spending the salon's own thirty attempts at every salon.
  */
 @Component
 class SignInLimits {

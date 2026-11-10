@@ -219,14 +219,26 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void theApplicationsRoleReachesTheCountersOnlyThroughTheirFunctions() throws SQLException {
-        try (Connection connection = database.connectAsApplication();
-                Statement statement = connection.createStatement()) {
-            for (String sql : new String[] {
-                "SELECT * FROM shared_address_attempt",
-                "DELETE FROM shared_address_attempt",
-                "INSERT INTO shared_address_attempt VALUES ('x', 'y', now(), now() + interval '1 minute', 1, now(), now())"
-            }) {
+    void neitherRuntimeRoleReachesTheCountersButThroughItsOwnFunction() throws SQLException {
+        String[] table = {
+            "SELECT * FROM shared_address_attempt",
+            "DELETE FROM shared_address_attempt",
+            "INSERT INTO shared_address_attempt VALUES ('x', 'y', now(), now() + interval '1 minute', 1, now(), now())"
+        };
+        String count = "SELECT shared_count_address_attempt('staff-sign-in', 'h', now(), interval '15 minutes')";
+        String cleanup = "SELECT shared_remove_spent_address_attempts(now(), 10)";
+        try (Connection application = database.connectAsApplication();
+                Connection platformRole = database.connectAsPlatform()) {
+            refused(application, table);
+            refused(application, cleanup);
+            refused(platformRole, table);
+            refused(platformRole, count);
+        }
+    }
+
+    private static void refused(Connection connection, String... statements) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            for (String sql : statements) {
                 assertThatExceptionOfType(SQLException.class)
                         .as(sql)
                         .isThrownBy(() -> statement.execute(sql))
@@ -243,8 +255,11 @@ class StaffSignInHardeningIntegrationTest extends IntegrationTest {
                         + " now() - interval '5 minutes', 3, now(), now())",
                 "a".repeat(64));
 
-        Integer removed =
-                owner.queryForObject("SELECT shared_remove_spent_address_attempts(now(), 1000)", Integer.class);
+        // As the platform job calls it: on the platform connection.
+        Integer removed = platform.inTransaction(status -> platform.jdbc()
+                .sql("SELECT shared_remove_spent_address_attempts(now(), 1000)")
+                .query(Integer.class)
+                .single());
 
         assertThat(removed).isEqualTo(1);
         assertThat(owner.queryForObject("SELECT count(*) FROM shared_address_attempt", Integer.class))

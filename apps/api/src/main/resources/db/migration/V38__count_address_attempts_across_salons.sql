@@ -2,8 +2,9 @@
 -- table, so one address had 30 attempts in 15 minutes on each salon, and with many salons nearly no limit at all.
 -- This counts an address's attempts across every salon: a platform-level table with no tenant_id, owned by
 -- shared, holding a purpose, an opaque hash of the address (the caller's keyed hash; never the address), and a
--- count in a window. The application's role reaches it only through the two functions below, which pin their
--- search path, cannot be run by everyone, and return a count and nothing of any salon.
+-- count in a window. Neither runtime role has a grant on it: the application's role counts through the first
+-- function below, and the platform role's job removes spent counters through the second. Both pin their search
+-- path, cannot be run by everyone, and return a count and nothing of any salon.
 
 CREATE TABLE shared_address_attempt (
     purpose        text        NOT NULL,
@@ -53,8 +54,8 @@ $$;
 REVOKE ALL ON FUNCTION shared_count_address_attempt(text, text, timestamptz, interval) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION shared_count_address_attempt(text, text, timestamptz, interval) TO "${application_role}";
 
--- The counter's cleanup: removes at most max_rows counters whose window ended before at_time, and returns how
--- many. Called in bounded batches until it returns fewer than max_rows.
+-- The counter's cleanup, for the platform role's job: removes at most max_rows counters whose window ended before
+-- at_time, and returns how many. Called in bounded batches until it returns fewer than max_rows.
 CREATE FUNCTION shared_remove_spent_address_attempts(at_time timestamptz, max_rows integer)
     RETURNS integer
     LANGUAGE plpgsql
@@ -76,4 +77,4 @@ END
 $$;
 
 REVOKE ALL ON FUNCTION shared_remove_spent_address_attempts(timestamptz, integer) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION shared_remove_spent_address_attempts(timestamptz, integer) TO "${application_role}";
+GRANT EXECUTE ON FUNCTION shared_remove_spent_address_attempts(timestamptz, integer) TO "${platform_role}";

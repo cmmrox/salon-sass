@@ -249,10 +249,12 @@ salon.identity:
   # SALON_IDENTITY_PASSWORD_CHECKS_CONCURRENT.
   # password-checks.concurrent:
   # Staff sign-in attempts one address may make across every salon in fifteen minutes, beside each salon's own 30
-  # (decision 120). Twice a salon's own limit by default; set it with
-  # SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS.
+  # (decision 120); set it with SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS. Not tighter, because many
+  # salons' staff reach us through one carrier-grade NAT address on mobile data and every attempt counts, successful
+  # ones too; guessing one account's password is already bounded by its identifier limit, and the CPU by the checks
+  # in flight. This only stops one address spending its thirty attempts at every salon.
   sign-in:
-    address-limit-across-salons: ${SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS:60}
+    address-limit-across-salons: ${SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS:300}
   codes:
     number-limit: ${SALON_IDENTITY_CODE_NUMBER_LIMIT:3}
     device-limit: ${SALON_IDENTITY_CODE_DEVICE_LIMIT:10}

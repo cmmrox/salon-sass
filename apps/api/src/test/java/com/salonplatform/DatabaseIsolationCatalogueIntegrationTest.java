@@ -354,9 +354,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "holiday_calendar_published",
                 // F04-S04: the current salon's currency, the tenant role's only path to that registry column.
                 "salon_currency",
-                // Decision 120: an address's sign-in attempts counted across every salon, and their cleanup.
-                "shared_count_address_attempt",
-                "shared_remove_spent_address_attempts");
+                // Decision 120: an address's sign-in attempts counted across every salon.
+                "shared_count_address_attempt");
         // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
         // staff-seat usage count and billing's outbox write.
         // F03-S03: closure's session revocation and message cancellation, and each module's guarded eraser,
@@ -383,7 +382,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "catalogue_add_default_categories",
                 "catalogue_erase_salon_rows",
                 // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
-                "audit_record_support");
+                "audit_record_support",
+                // Decision 120: the platform job's cleanup of the address counters across salons.
+                "shared_remove_spent_address_attempts");
         // Platform review M3: the trigger that keeps the outbox's index of waiting messages. No role may call it.
         List<String> triggers = List.of("shared_outbox_due_track");
         assertThat(functions)
