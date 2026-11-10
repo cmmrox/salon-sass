@@ -226,7 +226,8 @@ class BookingContractsIntegrationTest extends BookingTestBase {
         // Tomorrow at 15:00: every one of them has started, so each counts by its state alone.
         moveClock(Duration.ofHours(31));
 
-        assertThat(mostBooked()).containsExactly(massage.toString(), alpha.service().toString());
+        assertThat(mostBooked())
+                .containsExactly(massage.toString(), alpha.service().toString());
     }
 
     @Test
@@ -257,8 +258,8 @@ class BookingContractsIntegrationTest extends BookingTestBase {
         status(switched, 200);
         Http.Exchange menu = settings.call(alpha.salon(), "GET", "/api/v1/catalogue/menu", null, null);
         status(menu, 200);
-        return ((List<?>) body(menu).get("popular"))
-                .stream()
+        List<?> popular = (List<?>) body(menu).get("popular");
+        return popular.stream()
                 .map(service -> service instanceof Map<?, ?> each ? each.get("id") : service)
                 .toList();
     }

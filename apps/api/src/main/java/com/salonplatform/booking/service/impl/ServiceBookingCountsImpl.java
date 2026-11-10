@@ -32,7 +32,9 @@ class ServiceBookingCountsImpl implements ServiceBookingCounts {
         return reads.read(() -> {
             Map<UUID, Long> counts = new HashMap<>();
             for (Object[] row : bookings.countByService(
-                    from, now, BookingState.BOOKED.stream().map(BookingState::value).toList())) {
+                    from,
+                    now,
+                    BookingState.BOOKED.stream().map(BookingState::value).toList())) {
                 counts.put((UUID) row[0], (Long) row[1]);
             }
             return Map.copyOf(counts);
