@@ -369,7 +369,8 @@ because the owner set one standard for all Next.js work in this product.
    theme (`theme.css`) and the Tailwind entry (`globals.css`).
 10. `src/styles/styling-rules.test.ts` enforces rules 4, 5 and 9. It fails on any `*.module.css`,
     any hand-written style sheet other than `globals.css` and `theme.css`, any style sheet import
-    outside the root layout and the generated plain-page CSS, an arbitrary colour in a class name,
+    outside the root layout, `global-error.tsx` (which stands in for the root layout when it fails, and
+    so renders its own document) and the generated plain-page CSS, an arbitrary colour in a class name,
     or a colour value (hex, `rgb()`, `hsl()`, `oklch()`, `color-mix()` and the like) in any `.tsx`
     file or any code under `src/components`, `src/surfaces`, `src/features` and `src/app`. `src/styles/brand.ts`, which computes
     brand colours, is the one code file that holds colour values. ESLint (`eslint.config.mjs`) refuses raw
