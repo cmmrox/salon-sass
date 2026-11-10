@@ -310,7 +310,11 @@ tables added by later features are part of those features' definition of done.
 **Retention.** Tenant data is deleted 30 days after closure by an idempotent platform job: every
 tenant row of the salon through each owning module's registered eraser, its brand, outbox messages,
 jobs, audit entries and the export archive. The tenant registry row remains as a `deleted`
-tombstone with its retired slug and timestamps; platform audit, invoices and payments remain.
+tombstone: its id, retired slug, status, lifecycle instants, plan, country, currency, time zone,
+default language and access state. The registry's guard clears the salon's name, contact email,
+contact phone, address and the Owner's email as the row becomes `deleted`, and a check constraint
+holds every tombstone to that (V34, BUG-F03-009), so the console shows no name for a deleted salon.
+Platform audit, invoices and payments remain.
 Deletion that fails part-way resumes on the next run and never deletes another salon's rows.
 
 | Permission | `OPERATOR_ADMIN` | `OPERATOR_SUPPORT` |

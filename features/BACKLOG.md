@@ -79,3 +79,4 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Self-serve salon sign-up with a trial | Foundation review 2026-11-10 | PLT-01 is operator-only; Fresha, Booksy and Vagaro offer trials |
 | Split CR-020 by feature, or give a change request a per-feature status, before F17 merges | Decision 124 | An `approved` change request holds the dependants of a merged feature it names; CR-020 spans F17 to F22 |
 | Shard the regression suite across QA instances (`qa-1` to `qa-N`, one build, `--shard k/N`, merged summaries); three instances is the ceiling on a 16 GB machine | Foundation review, package 3 | The suite took 78 minutes on one worker; a test clock per salon is the longer fix |
+| Send `Retry-After` on the staff sign-in's 429, as `docs/architecture/identity-and-access.md` says | Developer, BUG-F02-016 | The staff 429 sets none today; fix with the platform hardening (package 4) |

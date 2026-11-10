@@ -183,7 +183,8 @@ signature:
   root package for that one module to implement, so dependencies still point one way (decision 087):
   `staff.BookingsOnDate`, `staff.UpcomingMemberBookings`, `staff.MemberBookingsAffected`,
   `catalogue.UpcomingServiceBookings` and `catalogue.ServiceBookingCounts` are implemented by
-  `booking`. `booking.Availability` gives the free times for a service on a date, with a STAFF or
+  `booking`, and `catalogue.ServiceMoveBookings` by `staff` (who would lose a service they are
+  booked for if it moved category; BUG-F06-002). `booking.Availability` gives the free times for a service on a date, with a STAFF or
   CUSTOMER audience (its Javadoc states each audience's rules), for F09, F10 and F15 (F07-S02). The architecture rule names each such interface with the one module allowed to
   implement it; any other module's interface implemented by a `@Service` is still refused
   (decision 109).
@@ -455,7 +456,8 @@ this section when they close:
   `UpcomingMemberBookings.GUARD_LOCK` (keyed by member) and `UpcomingServiceBookings.GUARD_LOCK`
   (keyed by service). Placing a hold, and undoing a no-show, lock the member, then the service, and
   check again inside the transaction that the service is listed and the member is on the team and
-  performs it. Removing a member, a team save that takes services away, and deleting a service take
+  performs it. Removing a member, a team save that takes services away, deleting a service and moving a
+  service to another category take
   the same lock after their own checks and ask the booking contract again inside their transaction.
   Whichever goes second sees the first. The re-ask opens its own read transaction, so it holds a
   second connection while the lock is held; these are rare admin actions.
@@ -636,6 +638,12 @@ test uses them is in `docs/qa/test-plan.md`.
 
 - Staff: password plus two-step verification (required for the Owner role). Customers: one-time
   code, no passwords.
+- A password is never hashed or checked inside a database transaction or while a lock is held
+  (decision 120). Staff sign-in and password change go through `identity`'s `PasswordChecks`, which
+  refuses to run inside a transaction and allows `salon.identity.password-checks.concurrent` checks
+  at once (the number of processors by default), then waits two seconds and answers 503. Two rare,
+  signed-in paths still hash inside a transaction (creating a staff account, provisioning an Owner)
+  and move to it with the platform hardening.
 - Permission checks are in the use case and are based on the role's permissions, not on the role's
   name.
 - One-time-code requests are rate limited per number, device and address, with a tenant ceiling.

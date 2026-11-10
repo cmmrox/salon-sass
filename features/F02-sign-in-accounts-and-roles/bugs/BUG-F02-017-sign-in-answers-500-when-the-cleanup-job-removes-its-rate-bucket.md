@@ -2,14 +2,14 @@
 id: BUG-F02-017
 title: "A staff sign-in with the right password answers 500 when the security cleanup job removes its rate bucket while the sign-in is counting the attempt"
 severity: minor
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: "TC-F04-S03-032 (one HTTP 500 on a staff sign-in after a clock move, 2026-11-08, qa/reports/20261108-042854-F04-48ddffe0465d); root cause reproduced on 2026-11-10 by holding the job's own DELETE open"
 breaks: "F02-S01 AC-1 (valid staff credentials issue a session); IAM-01"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 0b4562c70d9f59f915c399698dc6907d93f7114a
+fix_note: "The staff rate bucket is read for update, so the cleanup job's removal is waited for and the attempt then opens a new window instead of answering 500; the operator counter (atomic upsert) has no such gap."
+developer_note: "Reproduced by StaffRateBucketCleanupIntegrationTest holding the job's DELETE open; the fix is independent of the identity lock, so BUG-F02-016's new counting step keeps it. Recorded by the lead from the developer's report: the bug file was on QA's branch when the fix was made."
 verified_on: null
 approved_by: null
 found_in_release: null
