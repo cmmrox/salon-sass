@@ -407,7 +407,7 @@ test(`${id(29)} One card charge is in flight for an invoice at a time: an attemp
     await operator.providerOutcome(created.id, 'failure');
     await operatorJson(await operator.reactivate(admin, created.id, await operator.version(admin, created.id)), 'salon');
     await expect.poll(occasions, { message: 'the provider\'s failure settles the attempt', timeout: 30_000, intervals: [250, 500, 1000] }).toEqual(['issue:failed']);
-    expect(chargeRequests(created.id), 'one charge reached the provider').toEqual(['delivered']);
+    expect(chargeRequests(created.id), 'one charge reached the provider').toEqual(['sent']);
   });
 
   await test.step('after the failure: a pass on no reminder day retries nothing; the next reminder day retries once', async () => {
@@ -419,6 +419,6 @@ test(`${id(29)} One card charge is in flight for an invoice at a time: an attemp
     expect(attempts(invoice.id).length, 'one retry on the next reminder day, ten days after due').toBe(2);
     await settled(operator, admin, invoice.id, 'paid', 2);
     expect(occasions().map(o => o.split(':')[1]), 'the failed attempt and the accepted retry').toEqual(['failed', 'succeeded']);
-    expect(chargeRequests(created.id), 'two charges in all reached the provider, one after the other').toEqual(['delivered', 'delivered']);
+    expect(chargeRequests(created.id), 'two charges in all reached the provider, one after the other').toEqual(['sent', 'sent']);
   });
 });

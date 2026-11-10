@@ -25,7 +25,10 @@ import { localService } from '../../shared/identity-runtime';
 
 const id = (n: number) => `TC-F02-S01-${String(n).padStart(3, '0')}`;
 const ATTEMPTS_PER_ADDRESS = 30; // F02-S01: 30 sign-in attempts per address per salon in 15 minutes
-const POOL_WAIT_MS = 2_000; // the connection pool's and the password-check cap's wait before 503
+// A read of another salon that waits this long is waiting behind the burst. Measured on this machine with this burst: before
+// BUG-F02-016's fix the slowest read of beta took 1,452 ms (qa/reports/20261110-114836-F02-S01-0559e0156b39), after it 188 ms
+// (qa/reports/20261110-115357-F02-S01-d6efa279ebc8); the pool's own wait before a 503 is two seconds.
+const STALLED_MS = 1_000;
 
 /** The API restarted with these settings for `work`, then on its defaults again. */
 async function apiWith<T>(identity: Identity, settings: Record<string, string>, work: () => Promise<T>): Promise<T> {
@@ -97,10 +100,10 @@ test(`${id(31)} AC-1: a burst of staff sign-ins on two salons leaves a third sal
     const summary = JSON.stringify({ tally, reads: reads.length, slowestReadMs: Math.max(...reads.map(r => r.ms)), readsNot200: reads.filter(r => r.status !== 200).length });
     test.info().annotations.push({ type: 'burst', description: summary });
     console.log(`burst: ${summary}`);
-    // Beta never noticed: every read answered 200, none waited for a connection (that wait is two seconds, then 503).
+    // Beta never noticed: every read answered 200, and none waited behind the burst.
     expect(reads.length, 'beta was read while the burst was in flight').toBeGreaterThan(3);
     expect(reads.filter(r => r.status !== 200), 'every read of beta answered 200').toEqual([]);
-    expect(Math.max(...reads.map(r => r.ms)), 'no read of beta waited for a connection').toBeLessThan(POOL_WAIT_MS);
+    expect(Math.max(...reads.map(r => r.ms)), 'no read of beta waited behind the burst').toBeLessThan(STALLED_MS);
 
     expect(answers.filter(a => a.status >= 500 && a.status !== 503), 'no answer is a 500 or another server error').toEqual([]);
     for (const [n, a] of answers.entries()) {
