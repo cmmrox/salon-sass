@@ -214,11 +214,13 @@ export const PLAN_KEYS = ['branches', 'createdAt', 'customDomain', 'dedicatedApp
 export const PRINCIPAL_KEYS = ['id', 'kind', 'mfaEnabled', 'permissions', 'role'];
 
 /** Permissions of the finished feature (operator-console.md permission tables, S01 to S04). */
+// F04-S03 added the holiday calendar: Admins import, edit and publish it, Admins and Support read it
+// (docs/architecture/operator-console.md, "Roles"; F04-S03 AC-3).
 export const OPERATOR_PERMISSIONS: Record<OperatorRole, string[]> = {
   OPERATOR_ADMIN: ['operator.session.manage', 'operator.salon.read', 'operator.salon.create', 'operator.plan.read', 'operator.plan.create',
     'operator.billing.read', 'operator.billing.manage', 'operator.salon.suspend', 'operator.salon.close', 'operator.export.read',
-    'operator.support.read', 'operator.support.revoke'],
-  OPERATOR_SUPPORT: ['operator.session.manage', 'operator.salon.read', 'operator.support.start'],
+    'operator.support.read', 'operator.support.revoke', 'operator.holiday.read', 'operator.holiday.manage'],
+  OPERATOR_SUPPORT: ['operator.session.manage', 'operator.salon.read', 'operator.support.start', 'operator.holiday.read'],
 };
 
 /** Hosts that must never reach operator authority (S01 AC-2). The console host itself is the control. */
@@ -487,16 +489,32 @@ export function expectNoStore(response: APIResponse, label: string) {
 }
 
 /** Every mutating route a salon host serves, from the committed contract (identity and salon APIs). */
+const TENANT_PREFIXES = ['/api/v1/identity', '/api/v1/salon', '/api/v1/catalogue', '/api/v1/team', '/api/v1/bookings'];
 export function tenantMutationRoutes(): { method: string; path: string }[] {
   const out: { method: string; path: string }[] = [];
   for (const [route, ops] of Object.entries(committedContract().paths)) {
-    if (!route.startsWith('/api/v1/identity') && !route.startsWith('/api/v1/salon')) continue;
+    // Tenant data: identity and salon (F01 to F04), then the catalogue (F05), the team (F06) and bookings (F07),
+    // which F03-S02 AC-8 and F03-S04's support rule cover as "every other tenant mutation" too.
+    if (!TENANT_PREFIXES.some(prefix => route === prefix || route.startsWith(`${prefix}/`))) continue;
     for (const method of Object.keys(ops as object)) {
       if (['post', 'put', 'patch', 'delete'].includes(method)) out.push({ method: method.toUpperCase(), path: route });
     }
   }
   expect(out.length, 'the contract has mutating tenant routes').toBeGreaterThan(0);
   return out;
+}
+
+/**
+ * A contract route with every path parameter filled with a value of its type, so the request reaches
+ * the rule under test rather than a 400 for a malformed path: `{id}` (and F06's `{blockId}`, `{changeId}`
+ * and `{leaveId}`) with the given id, the holiday
+ * routes' `{year}` and `{date}` (F04-S03) with a year and a day in it. A parameter this does not know
+ * fails here, so a route a later feature adds is never sent with its braces in it.
+ */
+export function concreteRoute(path: string, id: string, year = 2027): string {
+  const route = path.replace(/\{(id|blockId|changeId|leaveId)\}/g, id).replace(/\{year\}/g, String(year)).replace(/\{date\}/g, `${year}-01-14`);
+  expect(route, `${path}: every path parameter is filled`).not.toMatch(/[{}]/);
+  return route;
 }
 
 /** A request on a salon host by full API path, with an optional bearer. */

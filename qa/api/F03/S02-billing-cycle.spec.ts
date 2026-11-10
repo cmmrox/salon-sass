@@ -11,8 +11,8 @@
 import { randomUUID } from 'node:crypto';
 
 import {
-  BOUNDARY, attempts, auditsNaming, billAt, chargeAttemptsOfSalon, crossBoundary, firstInvoice, invoiceNumber, lastInvoiceNumber, numbersAfter,
-  paymentRows, providerEventRows, settled,
+  BOUNDARY, attempts, auditsNaming, billAt, chargeAttemptsOfSalon, crossBoundary, expectNothingIssuedBy, firstInvoice, invoiceNumber, invoicesIssuedBefore,
+  lastInvoiceNumber, numbersAfter, passFor, paymentRows, providerEventRows, settled,
 } from '../../shared/billing';
 import { syntheticAccount } from '../../shared/identity';
 import { identitySql } from '../../shared/identity-storage';
@@ -40,9 +40,9 @@ function eventBody(invoiceId: string, attemptKey: string, outcome: 'success' | '
 test(`${id(4)} Crossing trial end issues exactly one correct first invoice`, async ({ operator, clock }) => {
   const { admin, plan, created, subscription } = await billed(operator, clock, '2026-11-02T08:15:30Z');
   const trialEnd = subscription.trialEndsAt;
-  await billAt(operator, clock, plusMs(trialEnd, -SECOND));
-  await operator.renew(admin);
-  expect((await operator.invoices(admin, created.id)).total, 'nothing one second before trial end').toBe(0);
+  // The test clock runs on from where it is set: the pass one second before is the observation, and no
+  // invoice may have been issued before the trial end by any pass, the scheduler's included.
+  expectNothingIssuedBy(await billAt(operator, clock, plusMs(trialEnd, -SECOND)), created.id, trialEnd, 'one second before trial end');
   const before = lastInvoiceNumber();
   await billAt(operator, clock, trialEnd);
   await operator.runBilling();
@@ -50,6 +50,7 @@ test(`${id(4)} Crossing trial end issues exactly one correct first invoice`, asy
   await operator.renew(admin);
   const page = await operator.invoices(admin, created.id);
   expect(page.total, 'exactly one invoice despite three passes').toBe(1);
+  expect(invoicesIssuedBefore(created.id, trialEnd), 'nothing issued before trial end').toBe(0);
   const invoice = await operator.invoice(admin, page.items[0].id);
   expect(invoice).toMatchObject({
     number: invoiceNumber(before + 1), salonId: created.id, planKey: plan.key, planName: plan.name, amount: 250000, currency: 'LKR',
@@ -90,9 +91,10 @@ test(`${id(6)} Monthly invoices follow the anchor day, including a 31st anchor i
       const trialEnd = subscription.trialEndsAt;
       const issues = [trialEnd, ...row.offsets.map(o => plusExact(trialEnd, o))];
       for (const [n, instant] of issues.entries()) {
-        await billAt(operator, clock, plusMs(instant, -SECOND));
-        await operator.renew(admin);
-        expect((await operator.invoices(admin, created.id)).total, `${row.label}: nothing one second before issue ${n + 1}`).toBe(n);
+        // The test clock runs on from where it is set, so a read seconds after this pass may see an invoice a
+        // later pass issued at the anchor. The pass itself, and the application's own issue instants, are the observation.
+        expectNothingIssuedBy(await billAt(operator, clock, plusMs(instant, -SECOND)), created.id, instant, `${row.label}: one second before issue ${n + 1}`);
+        expect(invoicesIssuedBefore(created.id, instant), `${row.label}: nothing issued before issue ${n + 1}'s anchor`).toBe(n);
         await billAt(operator, clock, instant);
         await operator.runBilling();
         await operator.renew(admin);
@@ -277,17 +279,24 @@ test(`${id(13)} Due, reminder and read-only boundaries change state and send eac
   const kinds = async () => (await operator.emails(owner)).map(e => e.kind).filter(k => k.startsWith('billing.')).sort();
   for (const step of expectations) {
     await test.step(step.boundary, async () => {
-      await crossBoundary(operator, clock, admin, invoice, step.boundary, -SECOND);
-      const before = await operator.subscription(admin, created.id);
-      const emailsBefore = await kinds();
-      expect(emailsBefore, `nothing for ${step.kind} one second before`).not.toContain(step.kind);
-      if (step.boundary === 'due') expect(before.state, 'not past due before the due instant').not.toBe('past_due');
-      if (step.boundary === 'read_only') expect(before.state, 'not read-only one second before').toBe('past_due');
+      // The test clock runs on from where it is set, so state and mail read seconds after this pass may already
+      // show a later pass at the boundary. The pass one second before is the observation (as in TC-F03-S02-006).
+      const boundaryAt = plusMs(invoice.dueAt, BOUNDARY[step.boundary]);
+      const early = await crossBoundary(operator, clock, admin, invoice, step.boundary, -SECOND);
+      expect(Date.parse(early.at), `${step.boundary}: the pass ran before the boundary (at ${early.at})`).toBeLessThan(Date.parse(boundaryAt));
+      expect(passFor(early, created.id).reminders, `nothing for ${step.kind} one second before`).toEqual([]);
+      expect(passFor(early, created.id).states, `no state change one second before ${step.boundary}`).toEqual([]);
       await crossBoundary(operator, clock, admin, invoice, step.boundary);
       await operator.runBilling();
       const after = await operator.subscription(admin, created.id);
       expect(after.state).toBe(step.state);
       await operator.emailsOfKind(owner, step.kind, 1);
+      if (step.boundary === 'due' || step.boundary === 'read_only') {
+        // Whichever pass made the change, the application's own instant for it is not before the boundary.
+        const changes = auditsNaming('subscription.state_changed', created.id).filter(a => JSON.parse(a.details).to === step.state);
+        expect(changes.length, `one change to ${step.state}`).toBe(1);
+        expect(Date.parse(changes[0].at), `the change to ${step.state} is not before the boundary (at ${changes[0].at})`).toBeGreaterThanOrEqual(Date.parse(boundaryAt));
+      }
     });
   }
   const final = await operator.subscription(admin, created.id);

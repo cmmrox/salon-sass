@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto';
 
 import { ROLES, json, syntheticAccount, type Identity, type Role, type Tokens } from '../../shared/identity';
 import {
-  test, expect, CONSOLE_HOST, PLATFORM_HOST, SUPPORT, fieldsOf, onSalonHost, operatorProblem, ownerSession, platformAudit,
+  test, expect, CONSOLE_HOST, PLATFORM_HOST, SUPPORT, concreteRoute, fieldsOf, onSalonHost, operatorProblem, ownerSession, platformAudit,
   supportJson, tenantMutationRoutes,
   type Operator, type OperatorActor, type SupportSession, type SupportStart,
 } from '../../shared/operator';
@@ -130,7 +130,7 @@ test(`${id(7)} Every mutation in the support view answers support_read_only and 
   for (const m of tenantMutationRoutes()) {
     await test.step(`${m.method} ${m.path}`, async () => {
       const body = m.path.endsWith('/staff') ? syntheticAccount('MANAGER') : {};
-      await operatorProblem(await onSalonHost(identity, target.salon, m.method, m.path.replace('{id}', victim), tokens, body), 403, 'support_read_only');
+      await operatorProblem(await onSalonHost(identity, target.salon, m.method, concreteRoute(m.path, victim), tokens, body), 403, 'support_read_only');
     });
   }
   expect(await json<unknown>(await onSalonHost(identity, target.salon, 'GET', '/api/v1/identity/staff?size=100', owner.tokens), 'PageStaffView'), 'nothing changed').toEqual(staffBefore);
