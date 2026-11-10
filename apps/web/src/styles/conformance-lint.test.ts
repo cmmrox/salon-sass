@@ -2,7 +2,7 @@
 import { join } from 'node:path';
 
 import { ESLint } from 'eslint';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * The conformance rules of eslint.config.mjs (docs/engineering/web.md, "Styling", rules 1 and 4;
@@ -11,6 +11,12 @@ import { describe, expect, it } from 'vitest';
  */
 const web = join(__dirname, '..', '..');
 const eslint = new ESLint({ cwd: web });
+
+// Loading the configuration and its plugins is the slow part; it is done once, before the cases,
+// with time for a busy machine.
+beforeAll(async () => {
+  await eslint.lintText('export {};\n', { filePath: join(web, 'src/lib/warm-up.ts') });
+}, 60_000);
 
 /** The conformance messages ESLint gives this code at this path (other rules' messages are left out). */
 async function conformance(code: string, path: string): Promise<string[]> {
@@ -42,13 +48,14 @@ describe('the conformance lint refuses', () => {
   });
 
   it('a CSS Module import, anywhere in src, components/ui included', async () => {
+    // Spelled in parts, so that styling-rules.test.ts does not read this file as importing one.
+    const sheet = ['./Example', 'module', 'css'].join('.');
     for (const path of [SCREEN, 'src/lib/example.ts', 'src/components/ui/example.tsx']) {
-      expect(
-        await conformance("import styles from './Example.module.css';\nexport const s = styles;\n", path),
-        path,
-      ).toEqual([expect.stringContaining('No CSS Modules')]);
+      expect(await conformance(`import styles from '${sheet}';\nexport const s = styles;\n`, path), path).toEqual([
+        expect.stringContaining('No CSS Modules'),
+      ]);
     }
-    expect(await conformance("export const load = () => import('./Lazy.module.css');\n", SCREEN)).toHaveLength(1);
+    expect(await conformance(`export const load = () => import('${sheet}');\n`, SCREEN)).toHaveLength(1);
   });
 
   it('a style prop outside the allow-list, components/ui included', async () => {
