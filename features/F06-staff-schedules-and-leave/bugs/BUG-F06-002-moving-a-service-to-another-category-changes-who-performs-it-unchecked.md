@@ -2,7 +2,7 @@
 id: BUG-F06-002
 title: "Moving a service to another category silently stops a professional performing a service they are booked for, or makes everyone who performs the new category eligible for it"
 severity: major
-status: fixed
+status: verified
 found_after_merge: 2026-11-10
 found_by: "exploratory: the foundation review of 2026-11-10, by reading the code; not yet reproduced on the running product"
 breaks: "F06-S01 AC-8 (a save may not stop a person performing a service with an upcoming booking for them); STF-01"
@@ -10,7 +10,7 @@ found_on: 2026-11-10
 fixed_in: 62b0279a3409a8645a411843894cd7e1fa058ed1
 fix_note: "A service save that moves it to another category asks staff, through catalogue.ServiceMoveBookings (implemented by staff, named in the architecture rule), who would stop performing it while booked for it, before its transaction and again under UpcomingServiceBookings.GUARD_LOCK, and refuses 409 in_use with one errors item per person (field categoryId, detail the name). The Services sheet shows services.notices.inUseMove, kept open: '{members} has upcoming bookings for this service and does not perform {category}. Add {category} to their services on the Team page first.' (several: 'have ... do not perform'), names joined with ', '. Telling the user that a move makes more people eligible is out of scope and not built."
 developer_note: "Reproduced by ServiceCategoryMoveIntegrationTest (real bookings): moving the service while a whole-category performer had a confirmed booking was saved 200. A person who holds the service singly, or performs the target category whole, is not counted. ServicesScreen.test.tsx covers the sheet's refusal for one and for two people."
-verified_on: null
+verified_on: 2026-11-10
 approved_by: null
 found_in_release: null
 ---
@@ -44,4 +44,12 @@ By reading: `SalonServicesImpl.update` changes the category with no question to 
 
 ## Re-verification
 
-Not yet verified.
+Verified on 2026-11-10 on `148bf6af` (fix `62b0279a`), QA instance.
+
+- **The bug's own steps, as a case:** TC-F06-S01-058 (new, `qa/web/F06/S01-team-with-bookings.spec.ts`, regression). Two people perform the service's category whole and a third holds the service on its own, each with a confirmed booking. On Services the service is moved to Treatments, which none of them performs.
+  - The move is refused 409 `in_use` with one item `{field: "categoryId", detail: <name>}` for each of the two. The third person is not named.
+  - The sheet stays open with Treatments chosen and says "<a>, <b> have upcoming bookings for this service and do not perform Treatments. Add Treatments to their services on the Team page first."
+  - Once one of them performs Treatments, the move is refused for the other alone, in the singular. Once both do, it is saved, and the third person still holds the service.
+  - Passed in `qa/reports/20261110-120258-F06-S01-42fef310c2ca`.
+- The case fails without the fix (the move is saved at once, 200) on a temporary local build with the eight fix commits reverted (commit d99b85b5 on a throwaway branch, deleted afterwards; the QA database was still at V33): `qa/reports/20261110-114908-F06-S01-7da4d59b8ec9`.
+- **Neighbours, for the service save and the staff guard:** F05-S01 `catalogue-api` and `services-screens` in `qa/reports/20261110-120109-F05-S01-bdac16acec42`; F06-S01 `team-screens`, `team-with-bookings-web` and `booked-people-api` in `qa/reports/20261110-120258-F06-S01-42fef310c2ca`. All passed. Telling a user that a move makes more people eligible is out of scope, by the lead's ruling.

@@ -42,8 +42,10 @@ test(`${id(4)} Crossing trial end issues exactly one correct first invoice`, asy
   const trialEnd = subscription.trialEndsAt;
   // The test clock runs on from where it is set: the pass one second before is the observation, and no
   // invoice may have been issued before the trial end by any pass, the scheduler's included.
-  expectNothingIssuedBy(await billAt(operator, clock, plusMs(trialEnd, -SECOND)), created.id, trialEnd, 'one second before trial end');
+  // The counter is read first: a pass the scheduler runs once the running clock has passed trial end may issue the invoice
+  // before the test's own pass at trial end does.
   const before = lastInvoiceNumber();
+  expectNothingIssuedBy(await billAt(operator, clock, plusMs(trialEnd, -SECOND)), created.id, trialEnd, 'one second before trial end');
   await billAt(operator, clock, trialEnd);
   await operator.runBilling();
   await operator.runBilling();

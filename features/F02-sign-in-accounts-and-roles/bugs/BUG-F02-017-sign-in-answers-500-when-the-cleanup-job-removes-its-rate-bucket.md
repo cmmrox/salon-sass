@@ -2,7 +2,7 @@
 id: BUG-F02-017
 title: "A staff sign-in with the right password answers 500 when the security cleanup job removes its rate bucket while the sign-in is counting the attempt"
 severity: minor
-status: fixed
+status: verified
 found_after_merge: 2026-11-10
 found_by: "TC-F04-S03-032 (one HTTP 500 on a staff sign-in after a clock move, 2026-11-08, qa/reports/20261108-042854-F04-48ddffe0465d); root cause reproduced on 2026-11-10 by holding the job's own DELETE open"
 breaks: "F02-S01 AC-1 (valid staff credentials issue a session); IAM-01"
@@ -10,7 +10,7 @@ found_on: 2026-11-10
 fixed_in: 0b4562c70d9f59f915c399698dc6907d93f7114a
 fix_note: "The staff rate bucket is read for update, so the cleanup job's removal is waited for and the attempt then opens a new window instead of answering 500; the operator counter (atomic upsert) has no such gap."
 developer_note: "Reproduced by StaffRateBucketCleanupIntegrationTest holding the job's DELETE open; the fix is independent of the identity lock, so BUG-F02-016's new counting step keeps it. Recorded by the lead from the developer's report: the bug file was on QA's branch when the fix was made."
-verified_on: null
+verified_on: 2026-11-10
 approved_by: null
 found_in_release: null
 ---
@@ -74,4 +74,8 @@ transaction); the fix for this one is in the same lines, so one change can close
 
 ## Re-verification
 
-Not yet verified.
+Verified on 2026-11-10 on `148bf6af` (fix `0b4562c7`), QA instance.
+
+- **The bug's own reproduction, as a case:** TC-F02-S01-032 (new, `qa/api/F02/S01-sign-in-pressure.spec.ts`, regression). The cleanup job's DELETE of alpha's staff buckets is held open for two seconds in a database session of its own, and a sign-in with the right password is sent 400 ms in. The held DELETE removed both buckets, and the sign-in answered 200 `authenticated`. The next sign-in succeeds and a wrong password is a plain 401. Passed in `qa/reports/20261110-115357-F02-S01-d6efa279ebc8` and `qa/reports/20261110-121103-F02-S01-399b5c500c42`.
+- The case fails without the fix, with 500 `internal_error`, on a temporary local build with the eight fix commits reverted (commit d99b85b5 on a throwaway branch, deleted afterwards; the QA database was still at V33) (`qa/reports/20261110-113755-F02-S01-3fd27b0eaacf`, `qa/reports/20261110-114836-F02-S01-0559e0156b39`).
+- **The case that found it:** TC-F04-S03-032, in F04-S03 `hours-screens`, passed in `qa/reports/20261110-120021-F04-S03-d073195efc33`. The neighbours of the sign-in path passed as for BUG-F02-016.
