@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Salon } from '@/features/branding';
 import { BrandStyle } from '@/components/shared/BrandStyle';
+import { Notice } from '@/components/shared/Notice';
 import { DataLayer } from '@/lib/api-core/data-layer';
 import { WorkspaceShell, type WorkspaceView } from './WorkspaceShell';
 import { SessionRenewal } from './SessionRenewal';
@@ -35,6 +36,8 @@ export function AccountFrame({
   scope?: string;
 }) {
   const t = useTranslations('account');
+  // The words of the "temporarily unavailable" page the proxy answers for a suspended salon.
+  const u = useTranslations('salon.unavailable');
   // Each view's title is its page's in the one route table (web M5).
   const title = (pageOf(view)?.title ?? 'account') as 'account';
   if (signIn)
@@ -45,7 +48,7 @@ export function AccountFrame({
       </>
     );
   return (
-    <DataLayer scope={scope}>
+    <DataLayer scope={scope} suspended={<Notice testId="salon-unavailable" title={u('title')} body={u('body')} />}>
       <BrandStyle colour={salon.brandColour} />
       {renew && <SessionRenewal kind={renew} />}
       <WorkspaceShell

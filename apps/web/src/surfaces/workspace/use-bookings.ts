@@ -14,6 +14,7 @@ import {
 import type { Kind } from '@/features/identity';
 import { useTeamMembers } from '@/features/staff';
 import { useReadFailure } from '@/lib/api-core/data-layer';
+import { reasonOf } from '@/lib/api-core/request';
 
 /** How long to wait before asking again whether a hold the API still lists has run out by its clock. */
 const RECHECK_MS = 2000;
@@ -99,8 +100,9 @@ export function useBookings(
     if (failed.code === 'invalid_session') leave(failed);
   });
   // A read that fails while this question's last good list is on screen keeps it and says it may be out of date (web
-  // M2); one that fails with nothing of it to show says why instead of the list.
-  const stale = Boolean(failure && list.data && !list.isPlaceholderData);
+  // M2), when the API could not be reached; one that fails with nothing of it to show says why instead of the list. A
+  // suspended salon leaves the frame (the data layer), keeping nothing.
+  const stale = Boolean(failure && reasonOf(failure) === 'unavailable' && list.data && !list.isPlaceholderData);
   const problem: ListProblem =
     !failure || stale || failure.code === 'invalid_session'
       ? null

@@ -867,3 +867,59 @@ describe('a list other people change (web M2, decision 121)', () => {
     await waitFor(() => expect(screen.getAllByTestId('booking-row')).toHaveLength(3));
   });
 });
+
+// F03-S03 AC-1: once the salon is suspended, its next request, a poll's included, shows "temporarily unavailable".
+describe('a salon suspended while Bookings is open', () => {
+  const comeBack = () =>
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+  afterEach(() => focusManager.setFocused(undefined));
+  const screenFor = (leave: () => void) =>
+    renderWithMessages(
+      <BookingsScreen
+        kind="staff"
+        timeZone="Asia/Colombo"
+        scope="salon"
+        canBook
+        canAct
+        canSetRules={false}
+        readOnly={null}
+        phoneRegion="LK"
+      />,
+      { onSuspended: leave, suspended: <p data-testid="salon-unavailable">{'Temporarily unavailable'}</p> },
+    );
+
+  it('leaves the list for the unavailable state on a re-read refused for the suspension, not a stale list', async () => {
+    const leave = vi.fn();
+    screenFor(leave);
+    await ready();
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+    answers.bookings = problem('salon_suspended', 503);
+    comeBack();
+    expect(await screen.findByTestId('salon-unavailable')).toBeInTheDocument();
+    expect(screen.queryAllByTestId('booking-row')).toHaveLength(0);
+    expect(screen.queryByTestId('bookings-stale')).toBeNull();
+    expect(leave).toHaveBeenCalledOnce();
+  });
+
+  it('lets the same session go on once the salon is reactivated: the next load reads as before', async () => {
+    const leave = vi.fn();
+    const suspended = screenFor(leave);
+    await ready();
+    const good = answers.bookings!;
+    answers.bookings = problem('salon_suspended', 503);
+    comeBack();
+    await screen.findByTestId('salon-unavailable');
+    suspended.unmount();
+    // Reactivated: the page loaded again, with the same cookies.
+    answers.bookings = good;
+    screenFor(vi.fn());
+    await ready();
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(3);
+    // Nothing of the session was ended or renewed on the way.
+    expect(sent('clear')).toHaveLength(0);
+    expect(sent('refresh')).toHaveLength(0);
+  });
+});

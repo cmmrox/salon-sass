@@ -429,14 +429,14 @@ describe('leave and blocked time through the BFF (F06-S03)', () => {
   });
 });
 
-// Web H3: the proxy no longer looks the salon up for a module's call, so a suspended salon is answered here as the
-// lookup answered it, unavailable, rather than as an ended session that would send the person to sign-in.
+// Web H3 and F03-S03 AC-1: the proxy no longer looks the salon up for a module's call, so the BFF says a suspension as
+// one (503 salon_suspended, nothing more than the unavailable page says), never as an ended session or an outage.
 describe('a suspended salon', () => {
-  it('answers a module’s read service_unavailable, not as an ended session', async () => {
+  it('answers a module’s read 503 salon_suspended, and nothing else', async () => {
     principalKind = 'suspended';
     const response = await send('team-members');
     expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({ code: 'service_unavailable' });
+    expect(await response.json()).toEqual({ code: 'salon_suspended' });
     expect(calls).toEqual([]);
   });
 });
@@ -460,5 +460,15 @@ describe('a read the API refuses for its session', () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ code: 'invalid_session', renewable: false });
     expect(calls.map((call) => call.path)).toEqual(['/api/v1/team/members']);
+  });
+});
+
+describe('a suspended salon’s change', () => {
+  it('is answered 503 salon_suspended from the session check, before any call', async () => {
+    principalKind = 'suspended';
+    const response = await send('team-member-add', person);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ code: 'salon_suspended' });
+    expect(calls).toEqual([]);
   });
 });

@@ -73,15 +73,17 @@ export class RequestFailure extends Error {
  * - `invalid`: a field was refused; say so next to the field.
  * - `refused`: this person or salon may not do it (a permission, a read-only salon, a support view).
  * - `rule`: a business rule refused it; the screen says which in its own words.
+ * - `suspended`: the salon is suspended, a deliberate cut of its access and not an outage: the workspace leaves for
+ *   the "temporarily unavailable" page a fresh load gets, keeping nothing of the salon on screen (F03-S03 AC-1).
  */
-export type FailureReason = 'ended' | 'conflict' | 'gone' | 'unavailable' | 'invalid' | 'refused' | 'rule';
+export type FailureReason =
+  'ended' | 'conflict' | 'gone' | 'unavailable' | 'invalid' | 'refused' | 'rule' | 'suspended';
 
 const REFUSALS = new Set<FailureCode>([
   'permission_denied',
   'salon_read_only',
   'support_read_only',
   'request_rejected',
-  'salon_suspended',
   'method_not_allowed',
 ]);
 
@@ -99,6 +101,8 @@ export function reasonOf(failure: RequestFailure): FailureReason {
       return 'unavailable';
     case 'bad_request':
       return 'invalid';
+    case 'salon_suspended':
+      return 'suspended';
     default:
       return REFUSALS.has(failure.code) ? 'refused' : 'rule';
   }

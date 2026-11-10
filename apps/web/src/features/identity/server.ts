@@ -5,6 +5,7 @@ import 'server-only';
 export { hasCredentials, workspaceEntry, type Entry } from './server/entry';
 export {
   answersWithoutLookup,
+  suspendedSalon,
   clearCookies,
   cookieName,
   createIdentityWeb,

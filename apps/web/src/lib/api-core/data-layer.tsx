@@ -1,5 +1,7 @@
 'use client';
 import {
+  MutationCache,
+  QueryCache,
   QueryClient,
   QueryClientProvider,
   notifyManager,
@@ -9,7 +11,16 @@ import {
   type QueryKey,
 } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { change, read, type ChangeMap, type Query, type ReadMap, type RequestFailure, type Session } from './request';
+import {
+  change,
+  read,
+  reasonOf,
+  RequestFailure,
+  type ChangeMap,
+  type Query,
+  type ReadMap,
+  type Session,
+} from './request';
 
 /**
  * The client data layer (decision 121): TanStack Query over the one request module. One client per data scope (the
@@ -24,9 +35,17 @@ const ScopeContext = createContext<string | null>(null);
 // longer and a person can act on what is about to change.
 notifyManager.setScheduler(queueMicrotask);
 
-/** Reads are not retried by the layer: a screen says at once that the API could not be reached, as it always has. */
-function newQueryClient(): QueryClient {
+/**
+ * Reads are not retried by the layer: a screen says at once that the API could not be reached, as it always has. Any
+ * read or change refused because the salon is suspended, a poll's included, is told to `suspended`.
+ */
+function newQueryClient(suspended: () => void): QueryClient {
+  const watch = (error: unknown) => {
+    if (error instanceof RequestFailure && reasonOf(error) === 'suspended') suspended();
+  };
   return new QueryClient({
+    queryCache: new QueryCache({ onError: watch }),
+    mutationCache: new MutationCache({ onError: watch }),
     defaultOptions: {
       queries: { retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false },
       mutations: { retry: false },
@@ -34,20 +53,46 @@ function newQueryClient(): QueryClient {
   });
 }
 
-function ScopedClient({ scope, children }: { scope: string; children: ReactNode }) {
-  const [client] = useState(newQueryClient);
+/** What a frame shows and does when its salon is suspended. */
+type Suspension = {
+  /** Shown in place of everything the frame held: the "temporarily unavailable" notice. */
+  suspended?: ReactNode;
+  /** Leaves for the page a fresh load gets, which the proxy answers for a suspended salon; a reload by default. */
+  onSuspended?: () => void;
+};
+
+const reload = () => globalThis.location?.reload();
+
+function ScopedClient({
+  scope,
+  children,
+  suspended: notice = null,
+  onSuspended = reload,
+}: { scope: string; children: ReactNode } & Suspension) {
+  const [suspended, setSuspended] = useState(false);
+  const [client] = useState(() => newQueryClient(() => setSuspended(true)));
   useEffect(() => () => client.clear(), [client]);
+  useEffect(() => {
+    if (!suspended) return;
+    // Nothing read for the salon stays, in the cache or on screen.
+    client.clear();
+    onSuspended();
+  }, [suspended, client, onSuspended]);
   return (
     <ScopeContext.Provider value={scope}>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      <QueryClientProvider client={client}>{suspended ? notice : children}</QueryClientProvider>
     </ScopeContext.Provider>
   );
 }
 
-/** The data layer of one frame: a new, empty client whenever the scope changes. */
-export function DataLayer({ scope, children }: { scope: string; children: ReactNode }) {
+/**
+ * The data layer of one frame: a new, empty client whenever the scope changes. A read or change refused because the
+ * salon is suspended (F03-S03 AC-1) replaces the frame's content with `suspended` and leaves for the page a fresh load
+ * gets; an API that could not be reached is not a suspension, and each screen says it as it does.
+ */
+export function DataLayer({ scope, children, ...suspension }: { scope: string; children: ReactNode } & Suspension) {
   return (
-    <ScopedClient key={scope} scope={scope}>
+    <ScopedClient key={scope} scope={scope} {...suspension}>
       {children}
     </ScopedClient>
   );

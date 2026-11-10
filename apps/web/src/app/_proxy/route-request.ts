@@ -4,6 +4,7 @@ import { SALON_HEADER, encodeSalon } from '@/features/branding/server';
 import {
   answersWithoutLookup,
   clearCookies,
+  suspendedSalon,
   cookieName,
   endSupportView,
   hasCredentials,
@@ -212,6 +213,8 @@ export async function routeRequest(
     case 'not-found':
       return answer('salon-not-found');
     case 'suspended':
+      // The workspace BFF's own answer for a suspension, which the browser leaves the frame for (F03-S03 AC-1).
+      if (isUnder(path, '/identity-web')) return suspendedSalon();
       return answer('salon-unavailable');
     case 'unavailable':
       return answer('service-unavailable');

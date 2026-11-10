@@ -68,3 +68,33 @@ describe('the data scope', () => {
     expect(asked).toBe(2);
   });
 });
+
+// F03-S03 AC-1: a suspension is a deliberate cut of access, not an outage.
+describe('a suspended salon', () => {
+  it('replaces the frame with its notice and leaves, from any read refused for it', async () => {
+    vi.stubGlobal('fetch', async () => Response.json({ code: 'salon_suspended' }, { status: 503 }));
+    const leave = vi.fn();
+    render(
+      <DataLayer scope="staff:a" onSuspended={leave} suspended={<p data-testid="frame-suspended" />}>
+        <Members />
+      </DataLayer>,
+    );
+    expect(await screen.findByTestId('frame-suspended')).toBeInTheDocument();
+    expect(screen.queryByTestId('members')).toBeNull();
+    expect(leave).toHaveBeenCalledOnce();
+  });
+
+  it('is not an API that could not be reached: that one leaves nothing', async () => {
+    vi.stubGlobal('fetch', async () => Response.json({ code: 'service_unavailable' }, { status: 503 }));
+    const leave = vi.fn();
+    render(
+      <DataLayer scope="staff:a" onSuspended={leave} suspended={<p data-testid="frame-suspended" />}>
+        <Members />
+      </DataLayer>,
+    );
+    await waitFor(() => expect(screen.getByTestId('members')).toHaveTextContent('loading'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.queryByTestId('frame-suspended')).toBeNull();
+    expect(leave).not.toHaveBeenCalled();
+  });
+});

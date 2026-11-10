@@ -140,6 +140,14 @@ describe('routeRequest', () => {
     expect(response.headers.get('x-middleware-request-content-security-policy')).toBe(security.policy);
   });
 
+  // F03-S03 AC-1: a session's own BFF call on a suspended salon's hostname is answered as the BFF answers a suspension.
+  it('answers a BFF call on a suspended salon’s hostname 503 salon_suspended, in JSON and stored by nothing', async () => {
+    const response = await routeRequest(request('/identity-web/staff/principal'), resolving({ kind: 'suspended' }));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ code: 'salon_suspended' });
+    expect(response.headers.get('cache-control')).toContain('no-store');
+  });
+
   // Web M5: the Bookings and Team pages were missing from the protected pages; they are the route table's now.
   it.each(['/workspace/bookings', '/workspace/team'])(
     'sends a visitor without a session from %s to sign-in before anything renders',

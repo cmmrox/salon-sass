@@ -83,6 +83,14 @@ function output(data: unknown, status = 200) {
 function problem(code: string, status: number, extra: Record<string, unknown> = {}) {
   return output({ code, ...extra }, status);
 }
+/**
+ * A salon suspended (F03-S03 AC-1): `503 salon_suspended`, so that the browser leaves for the "temporarily
+ * unavailable" page rather than keeping what is on screen as for an outage. It says no more than that page does to
+ * anyone on the salon's hostname.
+ */
+export function suspendedSalon() {
+  return problem('salon_suspended', 503);
+}
 function setCookie(response: NextResponse, kind: Kind, name: string, value: string, maxAge: number) {
   response.cookies.set(cookieName(kind, name), value, {
     httpOnly: true,
@@ -309,13 +317,13 @@ async function answeredForSession(
   handle: () => Promise<NextResponse>,
 ): Promise<NextResponse> {
   const response = await handle();
-  if (kind !== 'staff' || principalFirst(request.method, action)) return response;
-  if (response.status !== 401 && response.status !== 403) return response;
+  if (kind !== 'staff' || (response.status !== 401 && response.status !== 403)) return response;
   const body = (await response
     .clone()
     .json()
     .catch(() => ({}))) as { code?: string; renewable?: boolean };
-  if (response.status === 403 && body.code === 'salon_suspended') return problem('service_unavailable', 503);
+  if (response.status === 403 && body.code === 'salon_suspended') return suspendedSalon();
+  if (principalFirst(request.method, action)) return response;
   if (response.status !== 401 || body.code !== 'invalid_session' || body.renewable !== undefined) return response;
   const host = requestHost(request.headers.get('host'));
   if (!host) return response;
@@ -412,8 +420,8 @@ async function handleIdentity(
           return response;
         }
         if (answer.response.status === 503) return problem('service_unavailable', 503);
-        // A suspended salon, which the proxy's lookup no longer answers for a module's call: unavailable, as before.
-        if (answer.error?.code === 'salon_suspended') return problem('service_unavailable', 503);
+        // A suspended salon, which the proxy's lookup no longer answers for a module's call (F03-S03 AC-1).
+        if (answer.error?.code === 'salon_suspended') return suspendedSalon();
         return problem('invalid_session', 401, { renewable });
       }
     }

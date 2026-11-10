@@ -209,6 +209,7 @@ describe('one mapping of codes to what a screen does', () => {
     ['permission_denied', 'refused'],
     ['salon_read_only', 'refused'],
     ['support_read_only', 'refused'],
+    ['salon_suspended', 'suspended'],
     ['limit_reached', 'rule'],
     ['in_use', 'rule'],
     ['slot_taken', 'rule'],
