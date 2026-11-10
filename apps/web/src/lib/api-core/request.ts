@@ -227,17 +227,23 @@ export async function ensurePrincipal<P>(session: Session): Promise<P> {
 }
 
 /**
- * A call that renews once: refused for its session, the principal is read again and, when only the access credential
- * had expired, renewed under the session's lock (another tab may have done it already, which the principal read inside
- * the lock finds); then the call is made once more. A session that cannot be renewed is cleared and its refusal stands.
- * A call refused for its session was not acted on (the API authenticates before anything else), so asking again
- * cannot make a change twice.
+ * A call that renews once. It is asked again only after the one answer that says nothing was done: 401
+ * `invalid_session` with `renewable`, the access credential refused before the API acted (the BFF and the API
+ * authenticate before anything else). The session is renewed under its cross-tab lock first; another tab may have
+ * done it already, which the principal read inside the lock finds, and then nothing is rotated again. The call is
+ * asked again once, with the same body (and so the same `Idempotency-Key` where the action has one). A lost or
+ * timed-out answer is never asked again here: its outcome is unknown, and the caller's idempotency rules apply
+ * (BUG-F07-006). A session that cannot be renewed is cleared and its refusal stands.
  */
 async function renewingOnce<T>(session: Session, call: () => Promise<T>): Promise<T> {
   try {
     return await call();
   } catch (error) {
     if (!(error instanceof RequestFailure) || error.code !== 'invalid_session') throw error;
+    if (!error.renewable) {
+      await send(session, 'clear', { body: {} }).catch(() => undefined);
+      throw error;
+    }
     await ensurePrincipal(session);
     return call();
   }

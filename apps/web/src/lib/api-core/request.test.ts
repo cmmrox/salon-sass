@@ -74,16 +74,66 @@ describe('renewal (web H1, decision 121)', () => {
     expect(asked().filter((action) => action === 'team-members')).toHaveLength(2);
   });
 
-  it('clears a session that cannot be renewed and keeps its refusal', async () => {
+  it('clears a session that cannot be renewed, keeps its refusal and asks nothing again', async () => {
     answers['team-members'] = () => Response.json({ code: 'invalid_session', renewable: false }, { status: 401 });
-    answers.principal = answers['team-members'];
     answers.clear = () => Response.json({ ok: true });
     await expect(read(workspaceSession('staff'), 'team-members')).rejects.toMatchObject({
       code: 'invalid_session',
       renewable: false,
     });
-    expect(asked()).not.toContain('refresh');
-    expect(asked()).toContain('clear');
+    expect(asked()).toEqual(['team-members', 'clear']);
+  });
+
+  it('never asks a change again after a lost or timed-out answer, whose outcome is unknown (lead, condition 1)', async () => {
+    answers['booking-place'] = () => Response.json({ code: 'service_unavailable' }, { status: 503 });
+    await expect(change(workspaceSession('staff'), 'booking-place', { idempotencyKey: 'k-1' })).rejects.toMatchObject({
+      code: 'service_unavailable',
+    });
+    vi.stubGlobal('fetch', async (url: string) => {
+      calls.push({ url, method: 'POST', body: undefined });
+      throw new TypeError('connection reset');
+    });
+    await expect(change(workspaceSession('staff'), 'booking-place', { idempotencyKey: 'k-1' })).rejects.toMatchObject({
+      code: 'service_unavailable',
+    });
+    expect(asked()).toEqual(['booking-place', 'booking-place']);
+  });
+
+  it('asks a refused change again once, with the same body and Idempotency-Key (lead, condition 2)', async () => {
+    expiredUntilRenewed('booking-place', () => Response.json({ id: 'hold' }, { status: 201 }));
+    const body = { idempotencyKey: 'k-7', memberId: 'm', starts: '2026-11-12T10:00:00+05:30' };
+    await change(workspaceSession('staff'), 'booking-place', body);
+    const places = calls.filter((call) => call.url.endsWith('/booking-place'));
+    expect(places).toHaveLength(2);
+    expect(places.map((call) => call.body)).toEqual([body, body]);
+  });
+
+  it('renews under the cross-tab lock, and a second tab that finds it renewed rotates nothing (lead, condition 3)', async () => {
+    let queue = Promise.resolve();
+    const held: string[] = [];
+    vi.stubGlobal('navigator', {
+      locks: {
+        request: (name: string, work: () => Promise<unknown>) => {
+          const result = queue.then(() => {
+            held.push(name);
+            return work();
+          });
+          queue = result.then(
+            () => undefined,
+            () => undefined,
+          );
+          return result;
+        },
+      },
+    });
+    expiredUntilRenewed('team-member-save', () => Response.json({ ok: true }));
+    await Promise.all([
+      change(workspaceSession('staff'), 'team-member-save', { id: 'a', version: 1 }),
+      change(workspaceSession('staff'), 'team-member-save', { id: 'b', version: 4 }),
+    ]);
+    expect(asked().filter((action) => action === 'refresh')).toHaveLength(1);
+    expect(held).toEqual(['salon:identity:staff', 'salon:identity:staff']);
+    expect(calls.filter((call) => call.url.endsWith('/team-member-save'))).toHaveLength(4);
   });
 
   it('does not renew for any other refusal', async () => {
