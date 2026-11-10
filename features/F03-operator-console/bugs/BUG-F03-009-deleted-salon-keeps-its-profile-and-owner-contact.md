@@ -2,14 +2,14 @@
 id: BUG-F03-009
 title: "A deleted salon's registry row keeps its name, contact email and phone, address and owner email for ever, and the operator's salon detail still returns them"
 severity: major
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: "exploratory: the foundation review of 2026-11-10, by reading the code; not yet reproduced on the running product"
 breaks: "PLT-06 (the data is deleted after the agreed retention period); NFR-09"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 167d3640679e57f81cd8ebf3bfc0082507cd9c2a
+fix_note: "V34: the registry's lifecycle guard sets name, contact_email, contact_phone, address and owner_email to null whenever a tenant row is or becomes deleted, a check (tenant_tombstone_holds_no_profile) holds every tombstone to it, and existing tombstones are cleared; kept are id, slug, status, created_at, updated_at, closed_at, delete_at, deleted_at, plan_id, country, currency, time_zone, default_language, access_state and version. The operator's salon detail returns null for the cleared fields (already nullable in the contract)."
+developer_note: "Reproduced by SalonLifecycleIntegrationTest.aDeletedSalonsTombstoneKeepsNoProfileOrOwnerContactAndTheConsoleReturnsNone: after the deletion job the row and the console detail still held all five values. Every cleared column was nullable, so no placeholder was needed. Invoices keep their own plan snapshot and never copied the salon's name; console lists that join tenant.name (invoices, support sessions) now show no name for a deleted salon."
 verified_on: null
 approved_by: null
 found_in_release: null

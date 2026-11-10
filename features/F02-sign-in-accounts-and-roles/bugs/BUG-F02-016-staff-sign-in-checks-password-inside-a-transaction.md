@@ -2,14 +2,14 @@
 id: BUG-F02-016
 title: "Staff sign-in checks the password while holding a pooled database connection and a salon-wide lock, so about ten sign-ins in flight stall every salon"
 severity: major
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: "exploratory: the foundation review of 2026-11-10, by reading the code; not yet reproduced on the running product"
 breaks: "NFR-02 (booking, calendar and checkout stay available); docs/engineering/backend.md, Transactions, outbox and external calls"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 92601fd513040074aee2a56cfd6b3d531c06d42b
+fix_note: "Staff sign-in counts, reads the account and records the outcome in three short identity transactions with the password check between them, and a password change checks and hashes outside its two; PasswordChecks refuses a check inside a transaction and allows salon.identity.password-checks.concurrent (default: the processors) at once, then 503 after 2 s. The platform-wide per-address limit across salons is left to Package 4 (decision 120)."
+developer_note: "Reproduced by StaffPasswordCheckIntegrationTest: while one sign-in's password check was held open, another sign-in of the same salon waited on the identity lock and was answered 503, and the password-change check ran with a transaction open. Both pass after the fix."
 verified_on: null
 approved_by: null
 found_in_release: null

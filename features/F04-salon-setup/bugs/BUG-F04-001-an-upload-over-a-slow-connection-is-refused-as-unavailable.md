@@ -2,14 +2,14 @@
 id: BUG-F04-001
 title: "A logo, cover or photo uploaded over a slow connection is answered 503 because the 3-second limit is counted from the first byte of the request, not from the end of the upload"
 severity: major
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: "exploratory: the foundation review of 2026-11-10, by reading the code; not yet reproduced on the running product"
 breaks: "BRD-01 (logo and cover photo); also STF-01 (member photo) and CAT-01 (service image), which use the same path"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 199d2bd5499fd21265b301b4de0e78975eacd6a8
+fix_note: "The request log starts the request's 3-second API budget again when the request's body has arrived (Next.js buffers the whole body before a route handler runs), and the workspace BFF reads a brand image, service photo or team photo form before its session check and gives the rest of that request its own stated limit, UPLOAD_API_TIMEOUT_MS (10 s), from the end of the read."
+developer_note: "Reproduced by unit tests only, as briefed (no local instance started): upload-deadline.test.ts (a team photo whose body arrives over 750 ms against a 300 ms budget reached the upload call with its signal already aborted) and request-log.test.ts (a body sent over 1.2 s left 1.8 s of the 3 s budget). A real slow-uplink check needs the running product (QA instance, throttled browser). Not changed: the operator console's holiday CSV import and the export download (platform-web.ts) still use the request's budget; the export is the 'long read' web.md says needs its own limit."
 verified_on: null
 approved_by: null
 found_in_release: null
