@@ -121,8 +121,7 @@ def narrow(entries, names=(), rerun_report=None):
 def time_limit_seconds(entry):
     """How long an entry may run: its own timeout_minutes, or the runner's default."""
     minutes = entry.get("timeout_minutes")
-    valid = isinstance(minutes, (int, float)) and not isinstance(minutes, bool) and minutes > 0
-    return (minutes if valid else S.ENTRY_TIME_LIMIT_MINUTES) * 60
+    return (minutes if S.valid_time_limit(minutes) else S.ENTRY_TIME_LIMIT_MINUTES) * 60
 
 
 def budget_check(suite, elapsed_seconds, partial=False):

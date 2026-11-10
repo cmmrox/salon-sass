@@ -3,6 +3,7 @@ runner cannot disagree about what a status or a test type is called.
 
 The skills document these values for people; this file is what is enforced.
 """
+import math
 import re
 
 FEATURE_STATUSES = ("backlog", "planned", "in-progress", "in-qa", "complete", "released")
@@ -40,6 +41,12 @@ SUITE_BUDGET_MINUTES = {"smoke": 5, "regression": 20}
 # How long one automation entry may run before the runner stops it and records it as timed out.
 # An entry may set its own limit with timeout_minutes; one that needs longer says so in its yaml.
 ENTRY_TIME_LIMIT_MINUTES = 30
+
+
+def valid_time_limit(minutes):
+    """An entry's own timeout_minutes is a finite positive number: .inf or nan would disable the limit."""
+    return (isinstance(minutes, (int, float)) and not isinstance(minutes, bool)
+            and math.isfinite(minutes) and minutes > 0)
 CASE_TYPES = (
     "functional", "api", "tenant-isolation", "permissions", "concurrency", "load",
     "payment-integrity", "accessibility", "responsive", "branding", "security",

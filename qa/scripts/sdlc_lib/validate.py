@@ -146,8 +146,8 @@ def check_cases(scope, scope_id, cover_targets, target_name):
                 _add(findings, scope, f"automation {eid} is in suite '{suite}', expected one of {S.SUITES}")
         if "timeout_minutes" in entry:
             limit = entry["timeout_minutes"]
-            if isinstance(limit, bool) or not isinstance(limit, (int, float)) or limit <= 0:
-                _add(findings, scope, f"automation {eid} has timeout_minutes '{limit}', expected a positive number "
+            if not S.valid_time_limit(limit):
+                _add(findings, scope, f"automation {eid} has timeout_minutes '{limit}', expected a finite positive number "
                                       f"(the default is {S.ENTRY_TIME_LIMIT_MINUTES})")
     for eid in sorted({e for e in entry_ids if entry_ids.count(e) > 1}):
         _add(findings, scope, f"automation id {eid} is used more than once")

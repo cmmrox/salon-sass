@@ -171,7 +171,7 @@ class TimeLimitTest(Workspace):
     def test_the_default_limit_and_an_entry_of_its_own(self):
         self.assertEqual(runner.time_limit_seconds({}), S.ENTRY_TIME_LIMIT_MINUTES * 60)
         self.assertEqual(runner.time_limit_seconds({"timeout_minutes": 45}), 45 * 60)
-        for bad in (0, -1, "10", True):
+        for bad in (0, -1, "10", True, float("inf"), float("-inf"), float("nan")):
             self.assertEqual(runner.time_limit_seconds({"timeout_minutes": bad}), S.ENTRY_TIME_LIMIT_MINUTES * 60)
 
     @unittest.skipUnless(os.name == "posix", "POSIX child process groups")
@@ -195,8 +195,10 @@ class TimeLimitTest(Workspace):
         state = subprocess.run(["ps", "-p", str(grandchild), "-o", "stat="], capture_output=True, text=True)
         self.assertTrue(not state.stdout.strip() or state.stdout.strip().startswith("Z"))
 
-    def test_validate_accepts_only_a_positive_limit(self):
-        for limit, ok in ((10, True), (2.5, True), (0, False), ("10", False), (True, False)):
+    def test_validate_accepts_only_a_finite_positive_limit(self):
+        written = yaml.safe_load("a: .inf\nb: .nan\n")  # what a stage.yaml can say
+        for limit, ok in ((10, True), (2.5, True), (0, False), ("10", False), (True, False),
+                          (written["a"], False), (written["b"], False), (float("-inf"), False)):
             stage = fx.stage()
             stage["verification"]["automation"][0]["timeout_minutes"] = limit
             found = [f for f in validate.validate(fx.bundle(stages=[stage])) if "timeout_minutes" in f]
