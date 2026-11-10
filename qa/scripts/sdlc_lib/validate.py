@@ -372,6 +372,13 @@ def check_integration(scope, shared_branch=None):
             _add(findings, scope, "passing feature QA needs integration.qa_revision")
         if not integration.get("branch"):
             _add(findings, scope, "passing feature QA needs its integration.branch")
+    # feature-review comes before feature-verify, so a pass rests on a recorded review. A feature
+    # with a merge record (merged_commit and merged_at) is exempt: its pass and merge are already
+    # history, and F01 to F07 merged before the review step existed.
+    merge_record = integration.get("merged_commit") and integration.get("merged_at")
+    if scope.get("qa_status") == "pass" and not merge_record and not integration.get("reviewed_revision"):
+        _add(findings, scope, "passing feature QA needs integration.reviewed_revision, the commit the lead "
+                              "read at feature-review")
     if integration.get("merged_commit") or integration.get("merged_at"):
         if not all(integration.get(k) for k in ("branch", "pull_request", "qa_revision", "merged_commit", "merged_at")):
             _add(findings, scope, "merge evidence needs branch, pull_request, qa_revision, merged_commit and merged_at")
