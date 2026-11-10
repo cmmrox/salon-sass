@@ -22,6 +22,11 @@ salon:
   # would race the others. The tests that need them start an application of their own with them on.
   outbox:
     enabled: false
+  # Every test signs in from this machine, and the test contexts share one identity key, so the limit across
+  # salons (decision 120) would count the whole suite's sign-ins together; the test that proves it sets its own.
+  identity:
+    sign-in:
+      address-limit-across-salons: 100000
   jobs:
     enabled: false
 

@@ -145,6 +145,7 @@ modules:
       - audit_entry
       - outbox_message
       - scheduled_job
+      - shared_address_attempt
       - shared_outbox_due
       - shared_processed_event
     paths:

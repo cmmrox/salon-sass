@@ -6,7 +6,7 @@ import com.salonplatform.shared.web.ErrorCode;
 import java.time.Duration;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -17,6 +17,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * transaction each check would hold a pooled connection and the salon's identity lock for its whole length, so a few
  * sign-ins in flight stalled every salon. A check beyond the limit waits up to the pool's own two seconds and is then
  * refused 503 {@code service_unavailable}, which a client may try again.
+ *
+ * <p>A sign-in {@link #reserve reserves} its check before it counts the attempt, so a sign-in refused 503 because
+ * the checks were at their limit has counted nothing: a client retrying through an overload does not use up its
+ * own attempts.
  */
 @Component
 class PasswordChecks {
@@ -38,21 +42,41 @@ class PasswordChecks {
         this.permits = new Semaphore(concurrent, true);
     }
 
-    /** Whether the password matches the stored hash; an absent hash is checked against a dummy one, as slowly. */
-    boolean matches(String password, String hash) {
-        return limited(() -> crypto.matchesPassword(password, hash));
-    }
+    /** One check's place among the checks at once, held until it is closed. */
+    final class Reserved implements AutoCloseable {
 
-    /** The stored form of a new password. */
-    String encode(String password) {
-        return limited(() -> crypto.encodePassword(password));
-    }
+        private boolean closed;
 
-    private <T> T limited(Supplier<T> work) {
-        if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalStateException(
-                    "A password is never hashed or checked inside a transaction (decision 120)");
+        private Reserved() {}
+
+        /** Whether the password matches the stored hash; an absent hash is checked against a dummy one, as slowly. */
+        boolean matches(String password, String hash) {
+            outsideAnyTransaction();
+            return crypto.matchesPassword(password, hash);
         }
+
+        /** The stored form of a new password. */
+        String encode(String password) {
+            outsideAnyTransaction();
+            return crypto.encodePassword(password);
+        }
+
+        @Override
+        public void close() {
+            if (!closed) {
+                closed = true;
+                permits.release();
+            }
+        }
+    }
+
+    /**
+     * Reserves a check, waiting up to {@link #WAIT} for one of the checks at once to finish.
+     *
+     * @throws ApplicationProblemException 503 {@code service_unavailable} when none finished in time
+     */
+    Reserved reserve() {
+        outsideAnyTransaction();
         boolean permitted;
         try {
             permitted = permits.tryAcquire(WAIT.toMillis(), TimeUnit.MILLISECONDS);
@@ -63,10 +87,29 @@ class PasswordChecks {
         if (!permitted) {
             throw new ApplicationProblemException(503, ErrorCode.SERVICE_UNAVAILABLE);
         }
-        try {
-            return work.get();
-        } finally {
-            permits.release();
+        return new Reserved();
+    }
+
+    /** Whether the password matches the stored hash; an absent hash is checked against a dummy one, as slowly. */
+    boolean matches(String password, String hash) {
+        return reserved(check -> check.matches(password, hash));
+    }
+
+    /** The stored form of a new password. */
+    String encode(String password) {
+        return reserved(check -> check.encode(password));
+    }
+
+    private <T> T reserved(Function<Reserved, T> work) {
+        try (Reserved check = reserve()) {
+            return work.apply(check);
+        }
+    }
+
+    private static void outsideAnyTransaction() {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException(
+                    "A password is never hashed or checked inside a transaction (decision 120)");
         }
     }
 }

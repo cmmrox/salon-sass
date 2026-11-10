@@ -44,14 +44,25 @@ class StaffAccountServiceImpl implements StaffAccountService {
     private final ObjectProvider<TeamMemberSeats> teamMembers;
     private final SyntheticIdentityReset syntheticReset;
     private final IdentityCrypto crypto;
+    private final PasswordChecks passwords;
     private final Clock clock;
     private final AuditTrail audit;
 
+    /**
+     * The caller's permission and the fields are checked first, as before; then the password is hashed through
+     * {@link PasswordChecks}, holding no transaction and no lock (decision 120); then the account is created in the
+     * salon's identity transaction, where the permission is checked again and the identifiers and the seat.
+     */
     @Override
     public StaffView create(StaffInput input) {
+        NewAccount checked = work.read(() -> {
+            authority.permitted("staff.manage");
+            return validated(input, null);
+        });
+        String passwordHash = passwords.encode(checked.password());
         return work.run(() -> {
             StaffAuthority.SignedIn current = authority.permitted("staff.manage");
-            StaffAccount account = createAccount(input, true, null);
+            StaffAccount account = persist(checked, passwordHash, true);
             record(current.account(), "staff_created", account, null, accessValues(account));
             accounts.flush();
             return view(account);
@@ -123,15 +134,17 @@ class StaffAccountServiceImpl implements StaffAccountService {
                 StaffAccount account =
                         accounts.findHolding(email, mobile).stream().findFirst().orElse(null);
                 if (account == null) {
-                    account = createAccount(
+                    // The local seed (decision 105) hashes in its transaction: a loopback-only hook, never a
+                    // product path, seeding a handful of synthetic accounts.
+                    NewAccount checked = validated(
                             new StaffInput(
                                     input.email(),
                                     input.mobile(),
                                     input.password(),
                                     input.role(),
                                     input.professionalGrant()),
-                            false,
                             developmentPassword);
+                    account = persist(checked, crypto.encodePassword(checked.password()), false);
                     if (input.totpSecret() != null) {
                         seedSecret(account, input.totpSecret());
                     }
@@ -154,11 +167,14 @@ class StaffAccountServiceImpl implements StaffAccountService {
         });
     }
 
+    /** A new account's fields, checked. */
+    private record NewAccount(String email, String mobile, StaffRole role, boolean grant, String password) {}
+
     /**
      * @param developmentPassword the one password below the policy that the local seed also accepts (decision
      *     105); {@code null} on every product path
      */
-    private StaffAccount createAccount(StaffInput input, boolean enforceSeats, String developmentPassword) {
+    private static NewAccount validated(StaffInput input, String developmentPassword) {
         String email = StaffValidation.email(input.email());
         String mobile = StaffValidation.mobile(input.mobile());
         if (email == null && mobile == null) {
@@ -170,6 +186,13 @@ class StaffAccountServiceImpl implements StaffAccountService {
         if (developmentPassword == null || !developmentPassword.equals(input.password())) {
             StaffValidation.requireAcceptablePassword(input.password(), "password");
         }
+        return new NewAccount(email, mobile, role, grant, input.password());
+    }
+
+    /** Creates the checked account under the salon's identity lock, refusing an identifier already held. */
+    private StaffAccount persist(NewAccount account, String passwordHash, boolean enforceSeats) {
+        String email = account.email();
+        String mobile = account.mobile();
         if (accounts.countHolding(email, mobile) > 0) {
             throw IdentityProblems.conflict();
         }
@@ -178,8 +201,8 @@ class StaffAccountServiceImpl implements StaffAccountService {
             // last seat, whether creating an account or adding a team member, exactly one succeeds.
             seats.requireFreeSeat();
         }
-        return accounts.persist(StaffAccount.create(
-                email, mobile, crypto.encodePassword(input.password()), role, grant, clock.instant()));
+        return accounts.persist(
+                StaffAccount.create(email, mobile, passwordHash, account.role(), account.grant(), clock.instant()));
     }
 
     /** A seeded authenticator is part of the account as it is created. */

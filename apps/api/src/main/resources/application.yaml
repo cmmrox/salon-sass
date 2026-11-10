@@ -248,6 +248,11 @@ salon.identity:
   # waits up to two seconds, then is refused 503. Unset, it is the number of processors the JVM sees; set it with
   # SALON_IDENTITY_PASSWORD_CHECKS_CONCURRENT.
   # password-checks.concurrent:
+  # Staff sign-in attempts one address may make across every salon in fifteen minutes, beside each salon's own 30
+  # (decision 120). Twice a salon's own limit by default; set it with
+  # SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS.
+  sign-in:
+    address-limit-across-salons: ${SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS:60}
   codes:
     number-limit: ${SALON_IDENTITY_CODE_NUMBER_LIMIT:3}
     device-limit: ${SALON_IDENTITY_CODE_DEVICE_LIMIT:10}

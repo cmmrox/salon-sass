@@ -1,6 +1,5 @@
 package com.salonplatform.identity.service.impl;
 
-import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.Identifiers;
 import com.salonplatform.identity.domain.PasswordPolicy;
 import com.salonplatform.identity.inprocess.IdentityProvisioning;
@@ -24,13 +23,13 @@ import org.springframework.stereotype.Service;
 @Service
 class IdentityProvisioningImpl implements IdentityProvisioning {
 
-    private final IdentityCrypto crypto;
+    private final PasswordChecks passwords;
     private final ObjectProvider<PlatformDatabase> platform;
     private final IdentityPlatformFunctions functions;
 
     IdentityProvisioningImpl(
-            IdentityCrypto crypto, ObjectProvider<PlatformDatabase> platform, IdentityPlatformFunctions functions) {
-        this.crypto = crypto;
+            PasswordChecks passwords, ObjectProvider<PlatformDatabase> platform, IdentityPlatformFunctions functions) {
+        this.passwords = passwords;
         this.platform = platform;
         this.functions = functions;
     }
@@ -70,7 +69,9 @@ class IdentityProvisioningImpl implements IdentityProvisioning {
             errors.add(new FieldProblem(
                     prefix + "password", "must contain 15 to 128 characters and must not be a common password"));
         if (!errors.isEmpty()) throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
-        return new ValidatedOwner(trimmedName, normalizedEmail, crypto.encodePassword(password));
+        // Hashed through PasswordChecks, outside any transaction (decision 120): this runs before the platform
+        // transaction that provisions the salon opens.
+        return new ValidatedOwner(trimmedName, normalizedEmail, passwords.encode(password));
     }
 
     @Override
