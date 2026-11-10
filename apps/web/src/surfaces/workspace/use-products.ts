@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   newProduct,
   productProblemOfField,
@@ -12,10 +12,12 @@ import {
   type ProductListAnswer,
   type ProductProblem,
   type ProductValues,
-  type PublicTax,
+  useCatalogueChanges,
+  useProductList,
+  usePublicTax,
 } from '@/features/catalogue';
 import { IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
-import { change as changeOnce, read, workspaceSession } from '@/lib/api-core/request';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 
 /** What the tab says above the list: someone else changed it, the API could not be reached, or a change was refused. */
 export type ProductsNotice = 'conflict' | 'unavailable' | 'refused' | null;
@@ -43,10 +45,17 @@ const FIELD_OF: Record<ProductProblem, 'name' | 'price'> = { name: 'name', taken
  */
 export function useProducts(kind: Kind, notify: (toast: ProductsToast) => void) {
   const router = useRouter();
-  const [products, setProducts] = useState<ProductListAnswer | null>(null);
-  // The salon's current tax: null before the first save, undefined while it could not be read.
-  const [tax, setTax] = useState<PublicTax | null | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
+  const reads = {
+    products: useProductList(kind),
+    // The salon's current tax: only the tax column and the banners depend on it, so the tab works without it.
+    tax: usePublicTax(kind),
+  };
+  const change = useCatalogueChanges(kind).run;
+  // The products are shown once the tax has answered too, as they were read together.
+  const products = reads.tax.status !== 'pending' ? (reads.products.data ?? null) : null;
+  // Null before the first save, undefined while it could not be read.
+  const tax = reads.tax.error ? undefined : reads.tax.data?.current;
+  const loading = reads.products.isFetching || reads.tax.isFetching;
   const [notice, setNotice] = useState<ProductsNotice>(null);
   const [refusal, setRefusal] = useState<ProductsRefusal>(null);
   const [locked, setLocked] = useState(false);
@@ -77,28 +86,12 @@ export function useProducts(kind: Kind, notify: (toast: ProductsToast) => void) 
     return null;
   }
 
-  /** Reads the products and the salon's tax; null when the products could not be read (the tab says why). */
+  /** Reads the products and the salon's tax again; null when the products could not be read (the tab says why). */
   async function load(): Promise<ProductListAnswer | null> {
-    setLoading(true);
-    try {
-      const [next, published] = await Promise.all([
-        read<ProductListAnswer>(workspaceSession(kind), 'catalogue-products'),
-        // Only the tax column and the banners depend on it: the tab works without it.
-        read<{ current: PublicTax | null }>(workspaceSession(kind), 'catalogue-tax-public').then(
-          (answer) => answer.current,
-          () => undefined,
-        ),
-      ]);
-      setProducts(next);
-      setTax(published);
-      setNotice((current) => (current === 'refused' ? current : null));
-      return next;
-    } catch (error) {
-      failed(error);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    const [next] = await Promise.all([reads.products.refetch(), reads.tax.refetch()]);
+    if (!next.data || next.error) return null;
+    setNotice((current) => (current === 'refused' ? current : null));
+    return next.data;
   }
 
   /** Reads the products again after a conflict, and the open sheet's product as it is now, edits dropped. */
@@ -111,21 +104,8 @@ export function useProducts(kind: Kind, notify: (toast: ProductsToast) => void) 
     else setSheetOpen(false);
   }
 
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // Loaded once when the tab opens; reload is the person's choice after a conflict.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function change<T>(action: string, body: unknown): Promise<T> {
-    return changeOnce<T>(workspaceSession(kind), action, body);
-  }
+  // The products that could not be read say why.
+  useReadFailure([reads.products], (failure) => failed(failure));
 
   const otherNames = (id: string | null) =>
     (products?.items ?? []).filter((product) => product.id !== id).map((product) => product.name);

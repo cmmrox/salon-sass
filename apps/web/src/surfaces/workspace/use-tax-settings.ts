@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   EXAMPLE_PRODUCT,
   EXAMPLE_SERVICE,
@@ -11,26 +11,24 @@ import {
   taxProblemOfField,
   taxProblemsOf,
   taxRequestOf,
+  useCatalogueChanges,
+  useCategories,
+  useProductList,
+  usePublicTax,
+  useServices,
+  useSetCatalogueAnswer,
+  useTaxHistory,
+  useTaxSettings as useTaxSettingsRead,
   type CategoryList,
   type ProductListAnswer,
-  type PublicTax,
   type ServiceList,
   type TaxForm,
-  type TaxHistory,
   type TaxHistoryState,
   type TaxProblem,
   type TaxSettings,
 } from '@/features/catalogue';
-import {
-  ensurePrincipal,
-  IdentityFailure,
-  identityRequest,
-  leaveEndedSession,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-  type Kind,
-} from '@/features/identity';
+import { IdentityFailure, leaveEndedSession, usePrincipal, type Kind } from '@/features/identity';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 import type { SettingsNotice } from './use-settings-draft';
 
 /** What the tab says above the form: the shared settings notices, or that a save changed nothing. */
@@ -73,22 +71,37 @@ function examplesOf(categories: CategoryList | null, services: ServiceList | nul
  */
 export function useTaxSettings(kind: Kind, notify: () => void) {
   const router = useRouter();
-  const [settings, setSettings] = useState<TaxSettings | null>(null);
-  const [current, setCurrent] = useState<PublicTax | null>(null);
+  const reads = {
+    principal: usePrincipal(kind),
+    settings: useTaxSettingsRead(kind),
+    current: usePublicTax(kind),
+  };
+  // What the preview prices; the tab works without them, with the prototype's examples.
+  const examplesFrom = { categories: useCategories(kind), services: useServices(kind), products: useProductList(kind) };
+  const change = useCatalogueChanges(kind).run;
+  const setAnswer = useSetCatalogueAnswer(kind);
+  const ready = Boolean(reads.principal.data && reads.settings.data && reads.current.data);
+  const settings = ready ? (reads.settings.data ?? null) : null;
+  const current = ready ? (reads.current.data?.current ?? null) : null;
+  const viewer = reads.principal.data?.staffId ?? null;
+  const examples = examplesOf(
+    examplesFrom.categories.data ?? null,
+    examplesFrom.services.data ?? null,
+    examplesFrom.products.data ?? null,
+  );
+  // The form starts from each version of the settings read or saved, and keeps the person's edits in between.
   const [form, setForm] = useState<TaxForm | null>(null);
-  const [examples, setExamples] = useState<Examples>({
-    service: EXAMPLE_SERVICE,
-    product: EXAMPLE_PRODUCT,
-    currency: 'LKR',
-  });
-  const [viewer, setViewer] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [formOf, setFormOf] = useState<TaxSettings | null>(null);
+  if (settings && settings !== formOf) {
+    setFormOf(settings);
+    setForm(taxFormOf(settings.settings));
+  }
+  const loading = Object.values(reads).some((each) => each.isFetching) || (!ready && !failedRead(reads));
   const [notice, setNotice] = useState<TaxNotice>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [apiProblems, setApiProblems] = useState<TaxProblem[]>([]);
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [history, setHistory] = useState<TaxHistoryState>({ state: 'loading' });
 
   function failed(error: unknown): IdentityFailure | null {
     const failure = error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable');
@@ -107,64 +120,36 @@ export function useTaxSettings(kind: Kind, notify: () => void) {
     return null;
   }
 
-  /** Reads what the preview prices; the tab works without it, with the prototype's examples. */
-  async function readExamples() {
-    const optional = <T>(action: string) => identityRequest<T>(kind, action).catch(() => null);
-    const [categories, services, products] = await Promise.all([
-      optional<CategoryList>('catalogue-categories'),
-      optional<ServiceList>('catalogue-services'),
-      optional<ProductListAnswer>('catalogue-products'),
-    ]);
-    setExamples(examplesOf(categories, services, products));
-  }
-
+  /** Reads the tab again: the settings, the salon's current tax and who is looking. */
   async function load() {
-    setLoading(true);
-    try {
-      const principal = await ensurePrincipal(kind);
-      setViewer(principal.staffId ?? null);
-      const [next, published] = await Promise.all([
-        identityRequest<TaxSettings>(kind, 'catalogue-tax-settings'),
-        identityRequest<{ current: PublicTax | null }>(kind, 'catalogue-tax-public'),
-        readExamples(),
-      ]);
-      setSettings(next);
-      setCurrent(published.current);
-      setForm(taxFormOf(next.settings));
-      setApiProblems([]);
-      setNotice(null);
-    } catch (error) {
-      failed(error);
-    } finally {
-      setLoading(false);
-    }
+    const results = await Promise.all([
+      reads.principal.refetch(),
+      reads.settings.refetch(),
+      reads.current.refetch(),
+      examplesFrom.categories.refetch(),
+      examplesFrom.services.refetch(),
+      examplesFrom.products.refetch(),
+    ]);
+    if (results.slice(0, 3).some((each) => each.error)) return;
+    setForm(results[1]?.data ? taxFormOf(results[1].data.settings) : null);
+    setApiProblems([]);
+    setNotice(null);
   }
 
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // Loaded once when the tab opens; reload is the person's choice after a conflict.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useReadFailure([reads.principal, reads.settings, reads.current], (failure) => failed(failure));
 
-  async function readHistory(page: number) {
-    setHistory({ state: 'loading' });
-    try {
-      setHistory({
-        state: 'ready',
-        history: await identityRequest<TaxHistory>(kind, `catalogue-tax-history?page=${page}`),
-      });
-    } catch (error) {
-      const failure = error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable');
-      if (failure.code === 'invalid_session') leaveEndedSession(kind, router);
-      else setHistory({ state: 'unavailable' });
-    }
-  }
+  // The history of changes, a page at a time, read while its sheet is open.
+  const [historyPage, setHistoryPage] = useState(0);
+  const historyRead = useTaxHistory(kind, historyPage, historyOpen);
+  const history: TaxHistoryState =
+    historyRead.isFetching || (!historyRead.data && !historyRead.error)
+      ? { state: 'loading' }
+      : historyRead.error || !historyRead.data
+        ? { state: 'unavailable' }
+        : { state: 'ready', history: historyRead.data };
+  useReadFailure([historyRead], (failure) => {
+    if (failure.code === 'invalid_session') leaveEndedSession(kind, router);
+  });
 
   const max = settings?.configured.serviceChargeMaxPercent ?? 0;
   const problems = form ? [...new Set([...taxProblemsOf(form, max), ...apiProblems])] : [];
@@ -174,22 +159,13 @@ export function useTaxSettings(kind: Kind, notify: () => void) {
 
   async function save() {
     if (!settings || !form || taxProblemsOf(form, max).length > 0) return;
-    if (!supportsLocks()) {
-      setNotice('unavailable');
-      return;
-    }
     setSaving(true);
     try {
-      const saved = await withIdentityLock(kind, async () => {
-        await principalInsideLock(kind);
-        return identityRequest<TaxSettings>(kind, 'catalogue-tax-save', taxRequestOf(form, settings.version));
-      });
-      setSettings(saved);
+      const saved = await change('catalogue-tax-save', taxRequestOf(form, settings.version));
+      setAnswer('catalogue-tax-settings', saved);
       setForm(taxFormOf(saved.settings));
-      const published = await identityRequest<{ current: PublicTax | null }>(kind, 'catalogue-tax-public').catch(
-        () => null,
-      );
-      if (published) setCurrent(published.current);
+      setFormOf(saved);
+      await reads.current.refetch();
       setApiProblems([]);
       setNotice(null);
       notify();
@@ -235,11 +211,17 @@ export function useTaxSettings(kind: Kind, notify: () => void) {
       setForm((now) => (now ? { ...now, [field]: value } : now));
     },
     setHistoryOpen: (open: boolean) => {
+      // Opening it reads its first page again.
       setHistoryOpen(open);
-      if (open) void readHistory(0);
+      if (open) setHistoryPage(0);
     },
-    historyPage: (page: number) => void readHistory(page),
+    historyPage: (page: number) => setHistoryPage(page),
   };
+}
+
+/** Whether one of the tab's reads failed, so that it is not loading any more. */
+function failedRead(reads: Record<string, { error: unknown }>) {
+  return Object.values(reads).some((each) => each.error);
 }
 
 /** The settings before the first save: both parts off. */

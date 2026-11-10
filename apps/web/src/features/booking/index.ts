@@ -47,3 +47,4 @@ export {
 export { type SheetAction } from './client/appointment-rules';
 export { aYearOn, dateInZone, minutesLeft, secondsLeft, whenOf } from './client/booking-time';
 export { filtered, listRequest, PAGE_SIZE, queryOf, searchOf, type BookingsQuery } from './client/bookings-query';
+export { usePublicBookingRules } from './client/booking-data';

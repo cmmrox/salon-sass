@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   categoryProblem,
   categoryProblemOfField,
@@ -11,6 +11,12 @@ import {
   sameValues,
   shownProblems,
   valuesOf,
+  useCatalogueChanges,
+  useCategories,
+  usePopularSetting,
+  usePublicTax,
+  useServices,
+  useSetCatalogueAnswer,
   variantIdRefused,
   type CatalogueService,
   type Category,
@@ -18,15 +24,13 @@ import {
   type CategoryProblem,
   type PhotoUpload,
   type PopularMode,
-  type PopularSetting,
-  type PublicTax,
   type ServiceList,
   type ServiceProblem,
   type ServiceValues,
 } from '@/features/catalogue';
-import type { PublicBookingRules } from '@/features/booking';
+import { usePublicBookingRules } from '@/features/booking';
 import { IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
-import { change as changeOnce, read, workspaceSession } from '@/lib/api-core/request';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 
 /** What the page says above its lists: someone else changed them, the API could not be reached, or a change was refused. */
 export type CatalogueNotice = 'conflict' | 'unavailable' | 'refused' | null;
@@ -67,15 +71,26 @@ type Confirm = { service: CatalogueService } | { category: Category } | null;
  */
 export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void) {
   const router = useRouter();
-  const [categories, setCategories] = useState<CategoryList | null>(null);
-  const [services, setServices] = useState<ServiceList | null>(null);
-  const [popular, setPopular] = useState<PopularSetting | null>(null);
-  // The salon's booking rules as customers see them: null before the first save, undefined while unknown.
-  const [rules, setRules] = useState<PublicBookingRules | null | undefined>(undefined);
-  // The salon's current tax, for the Services tab's banner (F05-S03): null before the first save, undefined while
-  // unknown.
-  const [tax, setTax] = useState<PublicTax | null | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
+  const reads = {
+    categories: useCategories(kind),
+    services: useServices(kind),
+    popular: usePopularSetting(kind),
+    // The salon's booking rules as customers see them: only the words of a "Salon rule" deposit depend on them.
+    rules: usePublicBookingRules(kind),
+    // The salon's current tax, for the Services tab's banner (F05-S03): only the banner depends on it.
+    tax: usePublicTax(kind),
+  };
+  const changes = useCatalogueChanges(kind);
+  const setAnswer = useSetCatalogueAnswer(kind);
+  // The three lists are shown together, once each has been read: the page never shows a service without its category.
+  const together = Boolean(reads.categories.data && reads.services.data && reads.popular.data);
+  const categories = together ? (reads.categories.data ?? null) : null;
+  const services = together ? (reads.services.data ?? null) : null;
+  const popular = together ? (reads.popular.data ?? null) : null;
+  // Null before the first save, undefined while unknown or unreadable.
+  const rules = reads.rules.error ? undefined : reads.rules.data?.current;
+  const tax = reads.tax.error ? undefined : reads.tax.data?.current;
+  const loading = Object.values(reads).some((each) => each.isFetching);
   const [notice, setNotice] = useState<CatalogueNotice>(null);
   const [refusal, setRefusal] = useState<CatalogueRefusal>(null);
   const [locked, setLocked] = useState(false);
@@ -113,38 +128,19 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     return null;
   }
 
-  /** Reads both lists; null when they could not be read (the page says why). */
+  /** Reads every list again; null when the lists could not be read (the page says why). */
   async function load(): Promise<{ categories: CategoryList; services: ServiceList } | null> {
-    setLoading(true);
-    try {
-      const [nextCategories, nextServices, nextPopular, nextRules, nextTax] = await Promise.all([
-        read<CategoryList>(workspaceSession(kind), 'catalogue-categories'),
-        read<ServiceList>(workspaceSession(kind), 'catalogue-services'),
-        read<PopularSetting>(workspaceSession(kind), 'catalogue-popular-setting'),
-        // Only the words of a "Salon rule" deposit depend on it: the page works without it.
-        read<{ current: PublicBookingRules | null }>(workspaceSession(kind), 'booking-rules-public').then(
-          (answer) => answer.current,
-          () => undefined,
-        ),
-        // Only the tax banner depends on it: the page works without it.
-        read<{ current: PublicTax | null }>(workspaceSession(kind), 'catalogue-tax-public').then(
-          (answer) => answer.current,
-          () => undefined,
-        ),
-      ]);
-      setCategories(nextCategories);
-      setServices(nextServices);
-      setPopular(nextPopular);
-      setRules(nextRules);
-      setTax(nextTax);
-      setNotice((current) => (current === 'refused' ? current : null));
-      return { categories: nextCategories, services: nextServices };
-    } catch (error) {
-      failed(error);
+    const [nextCategories, nextServices, nextPopular] = await Promise.all([
+      reads.categories.refetch(),
+      reads.services.refetch(),
+      reads.popular.refetch(),
+      reads.rules.refetch(),
+      reads.tax.refetch(),
+    ]);
+    if (!nextCategories.data || !nextServices.data || nextCategories.error || nextServices.error || nextPopular.error)
       return null;
-    } finally {
-      setLoading(false);
-    }
+    setNotice((current) => (current === 'refused' ? current : null));
+    return { categories: nextCategories.data, services: nextServices.data };
   }
 
   /**
@@ -168,22 +164,11 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     }
   }
 
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // Loaded once when the page opens; reload is the person's choice after a conflict.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // A list that could not be read says why; the booking rules and the tax are not needed to work.
+  useReadFailure([reads.categories, reads.services, reads.popular], (failure) => failed(failure));
 
-  /** A change made under the session's lock, the lists read again after it. */
-  async function change<T>(action: string, body: unknown): Promise<T> {
-    return changeOnce<T>(workspaceSession(kind), action, body);
-  }
+  /** A change, the lists read again after it by its caller. */
+  const change = changes.run;
 
   async function quietly(work: () => Promise<void>, rules: (failure: IdentityFailure) => CatalogueRefusal) {
     setBusy(true);
@@ -232,14 +217,14 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     try {
       if (serviceChanged || !popularChanged)
         saved = editing
-          ? await change<CatalogueService>('catalogue-service-save', {
+          ? await change('catalogue-service-save', {
               id: editing.id,
               ...requestOf(values),
               version: editing.version,
             })
-          : await change<CatalogueService>('catalogue-service-create', requestOf(values));
+          : await change('catalogue-service-create', requestOf(values));
       if (popularChanged && saved)
-        saved = await change<CatalogueService>('catalogue-service-popular', {
+        saved = await change('catalogue-service-popular', {
           id: saved.id,
           popular: values.popular,
           version: saved.version,
@@ -281,7 +266,10 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     if (!popular) return;
     await quietly(
       async () => {
-        setPopular(await change<PopularSetting>('catalogue-popular-mode', { mode, version: popular.version }));
+        setAnswer(
+          'catalogue-popular-setting',
+          await change('catalogue-popular-mode', { mode, version: popular.version }),
+        );
         notify('saved');
       },
       () => ({ reason: 'unchanged' }),
@@ -307,7 +295,7 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     form.append('serviceId', service.id);
     form.append('file', file);
     try {
-      const saved = await change<CatalogueService>('catalogue-photo', form);
+      const saved = await change('catalogue-photo', form);
       photoChanged(started, saved);
       if (stillOpen()) setPhotoUpload({ state: 'idle' });
       notify('photoSaved');
@@ -329,7 +317,7 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     const started = opening.current;
     await quietly(
       async () => {
-        const saved = await change<CatalogueService>('catalogue-photo-remove', { id: service.id });
+        const saved = await change('catalogue-photo-remove', { id: service.id });
         photoChanged(started, saved);
         notify('photoRemoved');
         await load();
@@ -443,7 +431,7 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     duplicate: (service: CatalogueService) =>
       quietly(
         async () => {
-          const copy = await change<CatalogueService>('catalogue-service-duplicate', { id: service.id });
+          const copy = await change('catalogue-service-duplicate', { id: service.id });
           notify('duplicated');
           await load();
           openSheet({ service: copy, values: valuesOf(copy), apiProblems: [] });
@@ -499,12 +487,12 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     move: (category: Category, direction: 'up' | 'down') =>
       quietly(
         async () => {
-          const next = await change<CategoryList>('catalogue-category-move', {
+          const next = await change('catalogue-category-move', {
             id: category.id,
             direction,
             listVersion: categories?.listVersion,
           });
-          setCategories(next);
+          setAnswer('catalogue-categories', next);
           notify('ordered');
         },
         () => null,

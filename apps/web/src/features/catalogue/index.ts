@@ -13,6 +13,17 @@ export type {
   TaxHistory,
   TaxSettings,
 } from './types';
+export {
+  useCatalogueChanges,
+  useCategories,
+  usePopularSetting,
+  useProductList,
+  usePublicTax,
+  useServices,
+  useSetCatalogueAnswer,
+  useTaxHistory,
+  useTaxSettings,
+} from './client/catalogue-data';
 export { ProductList } from './components/ProductList';
 export { ProductSheet } from './components/ProductSheet';
 export { TaxSentence } from './components/TaxSentence';
