@@ -28,6 +28,7 @@ import { Operator, supportJson, type SupportStart } from '../../shared/operator'
 import { TaxCatalogue, taxInput } from '../../shared/catalogue-tax';
 import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
 import { fixture } from '../../shared/salon-brand';
+import { slowUpload } from '../../shared/slow-upload';
 import { alpha, gamma, salonUrl, type Salon } from '../../shared/tenants';
 
 const test = browserTest.extend<{ operator: Operator; cat: Catalogue }>({
@@ -878,4 +879,18 @@ test('TC-F05-S01-050 AC-18: the Services tab lists only categories with services
     await expect(id(other.page, T.empty)).toContainText(TEXT.empty);
     await expect(other.page.getByTestId(T.emptyNew)).toHaveCount(0);
   });
+});
+
+test('TC-F05-S01-051 AC-10: a service photo chosen over a slow connection, whose file takes longer to send than the three seconds a call to the API may take, is uploaded and shown', async ({ accounts, operator, cat }) => {
+  // BUG-F04-001 (CAT-01's service image uses the same path); docs/engineering/web.md "Structure".
+  const { salon, owner } = await newSalon(operator, accounts);
+  const { gel } = await arrangeMenu(cat, salon, owner.tokens);
+  const { page } = await open(accounts, owner);
+  await card(page, gel.id).getByTestId(T.cardEdit).click();
+  await openMore(page);
+  const answer = await slowUpload(page, 'catalogue-photo', () => page.getByTestId(T.photo).setInputFiles(fixture('logo-700x600-banded.png')));
+  expect(answer.status, `the slow upload is answered (${answer.body})`).toBe(200);
+  await expect(id(page, T.photoPreview), 'the photo is shown').toBeVisible();
+  await expect(id(page, T.photoError), 'and no error').toHaveCount(0);
+  expect((await cat.service(salon, owner.tokens, gel.id)).photoUrl, 'the photo is saved').not.toBeNull();
 });

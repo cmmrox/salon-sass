@@ -250,6 +250,12 @@ cases:
   priority: high
   covers:
   - AC-12
+- id: TC-F03-S03-018
+  title: After deletion the tombstone keeps no name, contact or Owner email, the slug stays retired, and the invoices and the platform audit stay readable without them
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-8
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -283,6 +289,7 @@ verification:
     - TC-F03-S03-011
     - TC-F03-S03-012
     - TC-F03-S03-014
+    - TC-F03-S03-018
     suites: [regression]
   - id: lifecycle-screens
     tool: playwright

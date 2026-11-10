@@ -377,3 +377,48 @@ test(`${id(28)} A billing job interrupted after invoice issue resumes without a 
   expect(paymentRows(page.items[0].id), 'one payment').toBe(1);
 });
 
+
+/** The salon's card-charge requests to the provider, as their outbox messages' statuses (BillingLedger.CHARGE). */
+const chargeRequests = (salonId: string) => identitySql(
+  `SELECT coalesce(string_agg(lower(status), ',' ORDER BY created_at), '') FROM outbox_message WHERE tenant_id = ${sqlLiteral(salonId)} AND channel = 'billing-charge'`)
+  .split(',').filter(Boolean);
+
+test(`${id(29)} One card charge is in flight for an invoice at a time: an attempt left unsettled across the due date and the reminder days is the only one, the provider receives one charge, and after it fails the next reminder day retries once`, async ({ operator, clock }) => {
+  // BUG-F03-010, PLT-05, NFR-11. The salon is suspended so that its outbox, and so its charge request, waits while the
+  // clock crosses the due date and the reminder days (F03-S03: billing continues while messages wait); reactivating it
+  // lets the request reach the provider fake, which is set to fail it, and then to accept the retry.
+  test.setTimeout(300_000);
+  const { admin, created } = await billed(operator, clock, '2026-11-24T07:00:00Z', { subscription: { monthlyAmount: 250000, paymentMethod: 'card' } });
+  await operatorJson(await operator.suspend(admin, created.id, await operator.version(admin, created.id), 'QA hold the charge request'), 'salon');
+  const invoice = await firstInvoice(operator, clock, admin, created.id);
+  const occasions = () => attempts(invoice.id).map(a => `${a.occasion}:${a.status}`);
+  expect(occasions(), 'the invoice\'s first charge attempt, waiting').toEqual(['issue:requested']);
+
+  await test.step('unsettled across the due date and the first reminder day: no second attempt, one charge request', async () => {
+    for (const boundary of ['due', 'due_3'] as const) {
+      await crossBoundary(operator, clock, admin, invoice, boundary, SECOND);
+      expect(occasions(), `after ${boundary}, still the one waiting attempt`).toEqual(['issue:requested']);
+    }
+    expect(chargeRequests(created.id), 'one charge request waits for the provider').toHaveLength(1);
+    expect((await operator.subscription(admin, created.id)).state, 'the reminders still ran').toBe('past_due');
+  });
+
+  await test.step('delivered: the provider receives the one charge, and fails it', async () => {
+    await operator.providerOutcome(created.id, 'failure');
+    await operatorJson(await operator.reactivate(admin, created.id, await operator.version(admin, created.id)), 'salon');
+    await expect.poll(occasions, { message: 'the provider\'s failure settles the attempt', timeout: 30_000, intervals: [250, 500, 1000] }).toEqual(['issue:failed']);
+    expect(chargeRequests(created.id), 'one charge reached the provider').toEqual(['delivered']);
+  });
+
+  await test.step('after the failure: a pass on no reminder day retries nothing; the next reminder day retries once', async () => {
+    await billAt(operator, clock, plusMs(invoice.dueAt, BOUNDARY.due_3 + DAY));
+    await operator.renew(admin);
+    expect(occasions(), 'no retry between reminder days').toEqual(['issue:failed']);
+    await operator.providerOutcome(created.id, 'success');
+    await crossBoundary(operator, clock, admin, invoice, 'due_10', SECOND);
+    expect(attempts(invoice.id).length, 'one retry on the next reminder day, ten days after due').toBe(2);
+    await settled(operator, admin, invoice.id, 'paid', 2);
+    expect(occasions().map(o => o.split(':')[1]), 'the failed attempt and the accepted retry').toEqual(['failed', 'succeeded']);
+    expect(chargeRequests(created.id), 'two charges in all reached the provider, one after the other').toEqual(['delivered', 'delivered']);
+  });
+});

@@ -319,3 +319,25 @@ Account-kind refusals will be added through final S02 customer fixtures; no cust
 - **Steps:** Start separate local-machine API using qa-nonlocal profile,ephemeral port,Flyway disabled and empty keys; check exit/refusal. Supply three independent throwaway keys and check healthy process denies local identity GET/POST/DELETE hooks; terminate only own process.
 - **Expected:** Missing keys refuse startup with named setting; configured process healthy, local hooks404, primary product unchanged, no real remote environment touched.
 - **Automation:** `qa/checks/F02/S01-nonlocal-secrets.sh` (registered for feature QA)
+
+### TC-F02-S01-031 a burst of staff sign-ins on two salons leaves a third salon answered at once, and a sign-in beyond the password-check cap is an honest 503 that answers correctly when tried again
+
+- **Type:** concurrency
+- **Priority:** critical
+- **Covers:** AC-1 (and NFR-02; decision 120)
+- **Added for:** BUG-F02-016, re-verified after the merge of 2026-11-10
+- **Performed as / preconditions:** The API restarted with `SALON_IDENTITY_PASSWORD_CHECKS_CONCURRENT=1` (a one-processor host) and started on its defaults afterwards. Beta's Manager signed in first; on alpha the roster Manager, the roster Owner and an extra Receptionist who is then removed.
+- **Steps:** Send at once 17 unknown-identifier sign-ins to alpha and 33 to gamma, then the right password, a wrong password and the removed account on alpha; read beta's `/me` every 100 ms while they are in flight. Send each named request that answered 503 again, then each named request once more.
+- **Expected:** No 500. Each sign-in is 200 `authenticated` or 401 `invalid_credentials` as its credential says, 429 `rate_limited` exactly for gamma's three attempts beyond 30, or 503 `service_unavailable` (problem details, no internals) when the checks are full, and at least one is 503. Every read of beta answers 200 in under two seconds. A request tried again after its 503 is answered as its credential says.
+- **Automation:** `qa/api/F02/S01-sign-in-pressure.spec.ts`
+
+### TC-F02-S01-032 a sign-in whose rate buckets the security cleanup job removes while the attempt is counted is answered 200, not 500
+
+- **Type:** concurrency
+- **Priority:** high
+- **Covers:** AC-1
+- **Added for:** BUG-F02-017, re-verified after the merge of 2026-11-10
+- **Performed as / preconditions:** Alpha's roster Manager signed in once, which makes the salon's identifier and address buckets.
+- **Steps:** In a database session of its own, run the identity cleanup job's DELETE of alpha's staff buckets and hold it open for two seconds; 400 ms in, sign in with the right password. Then sign in again, and once with a wrong password.
+- **Expected:** The held DELETE removed the two buckets; the sign-in is 200 `authenticated`; the next sign-in succeeds and a wrong password is a plain 401.
+- **Automation:** `qa/api/F02/S01-sign-in-pressure.spec.ts`
