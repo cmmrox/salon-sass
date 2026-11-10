@@ -1,4 +1,5 @@
 import 'server-only';
+import { staffPages } from '../pages';
 import { moduleRoutes, type BffChange, type BffRead, type Call } from '@/lib/api-core/routes';
 import { salonHoursFor } from './salon-hours';
 import { salonTeamFor } from './salon-team';
@@ -49,16 +50,7 @@ const hoursChange = (
  * is the one its customers see: its endpoint answers anyone.
  */
 export const staffRoutes = moduleRoutes('staff', {
-  pages: [
-    {
-      path: '/workspace/team',
-      view: 'team',
-      permission: 'team.read',
-      title: 'team',
-      nav: { order: 20, label: 'teamNav', icon: 'staff', testId: 'workspace-team', alsoFor: ['staff'] },
-    },
-    { path: '/workspace/settings/hours', view: 'settings', permission: 'settings.read', title: 'settings' },
-  ],
+  pages: staffPages,
   reads: {
     'team-members': teamRead('team.read', (team, call) => team.members(call)),
     'team-sign-in-accounts': teamRead('team.manage', (team, call) => team.signInAccounts(call)),

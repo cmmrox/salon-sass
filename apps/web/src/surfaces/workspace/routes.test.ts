@@ -1,6 +1,7 @@
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { WORKSPACE_PAGES } from './pages';
 import { WORKSPACE_ROUTES } from './routes';
 
 /** Every workspace page file's path: `src/app/(workspace)/workspace/<path>/page.tsx`. */
@@ -29,5 +30,9 @@ describe('the workspace route table', () => {
       expect(page.permission, page.path).toMatch(/^[a-z]+(\.[a-z]+)+$/);
       expect(page.title, page.path).not.toBe('');
     }
+  });
+
+  it('gives the frame and the menu the same pages as the server’s table', () => {
+    expect(WORKSPACE_PAGES).toEqual(WORKSPACE_ROUTES.pages);
   });
 });

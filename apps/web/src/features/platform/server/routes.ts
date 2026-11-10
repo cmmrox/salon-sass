@@ -1,4 +1,5 @@
 import 'server-only';
+import { platformPages } from '../pages';
 import { moduleRoutes } from '@/lib/api-core/routes';
 import { salonAccountFor } from './salon-account';
 
@@ -11,22 +12,7 @@ const pageOf = (query: URLSearchParams) => ({ page: Number(query.get('page') ?? 
  * `support.manage`. A support view never reads or ends the salon's support sessions (F03-S04).
  */
 export const platformRoutes = moduleRoutes('platform', {
-  pages: [
-    {
-      path: '/workspace/billing',
-      view: 'billing',
-      permission: 'invoice.read',
-      title: 'billing',
-      nav: { order: 50, label: 'billing', icon: 'billing', testId: 'workspace-billing' },
-    },
-    {
-      path: '/workspace/support-access',
-      view: 'support-access',
-      permission: 'support.manage',
-      title: 'supportAccess',
-      nav: { order: 60, label: 'supportAccess', icon: 'support', testId: 'workspace-support-access' },
-    },
-  ],
+  pages: platformPages,
   reads: {
     entitlements: {
       permission: 'entitlement.read',

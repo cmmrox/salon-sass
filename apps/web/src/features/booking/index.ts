@@ -57,3 +57,4 @@ export {
   usePublicBookingRules,
   useSetBookingAnswer,
 } from './client/booking-data';
+export { bookingPages } from './pages';

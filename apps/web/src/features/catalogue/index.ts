@@ -73,3 +73,4 @@ export {
   type ServiceProblem,
   type ServiceValues,
 } from './client/service-form';
+export { cataloguePages } from './pages';

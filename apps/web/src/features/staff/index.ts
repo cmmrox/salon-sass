@@ -100,3 +100,4 @@ export {
   useTeamMembers,
   type StaffChange,
 } from './client/staff-data';
+export { staffPages } from './pages';

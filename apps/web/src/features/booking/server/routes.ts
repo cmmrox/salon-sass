@@ -1,5 +1,6 @@
 import 'server-only';
 import { apiTime } from '@/lib/api-core/meta';
+import { bookingPages } from '../pages';
 import { moduleRoutes, type BffChange, type BffRead, type Call } from '@/lib/api-core/routes';
 import { salonBookingRulesFor } from './salon-booking-rules';
 import { salonBookingsFor } from './salon-bookings';
@@ -48,17 +49,7 @@ const bookingChange = (action: (typeof ACTIONS)[number]): [string, BffChange] =>
  * and the API's clock answer anyone.
  */
 export const bookingRoutes = moduleRoutes('booking', {
-  pages: [
-    {
-      path: '/workspace/bookings',
-      view: 'bookings',
-      permission: 'calendar.read',
-      title: 'bookings',
-      // After Today's place in the prototype's order, which F10 delivers, so first after Account.
-      nav: { order: 10, label: 'bookingsNav', icon: 'bookings', testId: 'workspace-bookings' },
-    },
-    { path: '/workspace/settings/rules', view: 'settings', permission: 'settings.read', title: 'settings' },
-  ],
+  pages: bookingPages,
   reads: {
     bookings: bookingsRead('calendar.read', (bookings, call, query) => bookings.list(call, query)),
     booking: bookingsRead('calendar.read', (bookings, call, query) => bookings.detail(call, query.get('id'))),

@@ -5,7 +5,7 @@ import { BrandStyle } from '@/components/shared/BrandStyle';
 import { DataLayer } from '@/lib/api-core/data-layer';
 import { WorkspaceShell, type WorkspaceView } from './WorkspaceShell';
 import { SessionRenewal } from './SessionRenewal';
-import { pageOf } from './routes';
+import { pageOf } from './pages';
 import { StaffSignInFrame } from './StaffSignInFrame';
 import type { Kind } from '@/features/identity';
 /** Every salon screen carries the salon's resolved identity and its brand accent. */

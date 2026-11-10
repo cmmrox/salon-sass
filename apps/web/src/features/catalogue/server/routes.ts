@@ -1,4 +1,5 @@
 import 'server-only';
+import { cataloguePages } from '../pages';
 import { moduleRoutes, type BffChange, type BffRead } from '@/lib/api-core/routes';
 import { salonCatalogueFor } from './salon-catalogue';
 
@@ -34,18 +35,7 @@ const named = (action: string, permission = CHANGE): [string, BffChange] => [
  * photo. The salon's current tax is read by its customers too: its endpoint answers anyone.
  */
 export const catalogueRoutes = moduleRoutes('catalogue', {
-  pages: [
-    {
-      path: '/workspace/services',
-      view: 'services',
-      permission: READ,
-      title: 'services',
-      nav: { order: 30, label: 'servicesNav', icon: 'services', testId: 'workspace-services' },
-    },
-    { path: '/workspace/services/categories', view: 'services', permission: READ, title: 'services' },
-    { path: '/workspace/services/products', view: 'services', permission: READ, title: 'services' },
-    { path: '/workspace/settings/tax', view: 'settings', permission: 'settings.read', title: 'settings' },
-  ],
+  pages: cataloguePages,
   reads: {
     'catalogue-categories': read((catalogue, _host, call) => catalogue.categories(call), READ),
     'catalogue-services': read((catalogue, _host, call) => catalogue.services(call), READ),

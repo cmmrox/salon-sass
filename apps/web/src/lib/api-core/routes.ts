@@ -6,6 +6,8 @@
  * from anywhere but that module's own `server/routes.ts`.
  */
 
+import type { WorkspacePage } from './pages';
+
 /** The caller's credential and the request's API budget, for one upstream call. */
 export type Call = { headers: Record<string, string | undefined>; signal: AbortSignal };
 
@@ -46,24 +48,6 @@ type BffUpload = {
   created?: boolean;
   /** Null when the API is not configured. */
   upload(hostname: string, call: Call, text: string, file: Blob): Promise<Answer> | null;
-};
-
-/** A workspace page: where it is, the view the workspace renders, who may see it, its title and its place in the menu. */
-type WorkspacePage = {
-  readonly path: string;
-  readonly view: string;
-  readonly permission: string;
-  /** Its title's key in the `account` messages. */
-  readonly title: string;
-  /** Its item in the workspace navigation, if it has one: the first page of a view with one carries it. */
-  readonly nav?: {
-    readonly order: number;
-    readonly label: string;
-    readonly icon: string;
-    readonly testId: string;
-    /** The other views it is the current item for (the Team item for the Sign-in accounts tab). */
-    readonly alsoFor?: readonly string[];
-  };
 };
 
 export type ModuleRoutes<Module extends string = string> = {

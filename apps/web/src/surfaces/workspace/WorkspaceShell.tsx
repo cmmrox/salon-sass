@@ -5,7 +5,7 @@ import type { Salon } from '@/features/branding';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shared/Navigation';
-import { WORKSPACE_ROUTES } from './routes';
+import { WORKSPACE_PAGES } from './pages';
 
 /** An image beside the salon's name, which says nothing the name does not: no text alternative. */
 const DECORATIVE = '';
@@ -51,7 +51,7 @@ export function WorkspaceShell({
   ];
   // Every other item is a page of the one route table that has one, in its order, for whoever holds its permission
   // (web M5): Bookings, Team, Services, Audit, Billing, Support access, and Settings last, as in the prototype.
-  for (const page of [...WORKSPACE_ROUTES.pages].sort((a, b) => (a.nav?.order ?? 0) - (b.nav?.order ?? 0))) {
+  for (const page of [...WORKSPACE_PAGES].sort((a, b) => (a.nav?.order ?? 0) - (b.nav?.order ?? 0))) {
     if (!page.nav || !permissions.includes(page.permission)) continue;
     items.push({
       href: page.path,

@@ -21,8 +21,3 @@ export const WORKSPACE_ROUTES = routeTable(
   platformRoutes,
   brandingRoutes,
 );
-
-/** The page that opens each view: its permission and title. */
-export function pageOf(view: string) {
-  return WORKSPACE_ROUTES.pages.find((page) => page.view === view) ?? null;
-}

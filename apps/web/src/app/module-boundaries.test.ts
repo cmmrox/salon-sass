@@ -160,6 +160,13 @@ describe('routes are registered per module', () => {
     expect(await ruleIds(filePath, declare(module))).toContain('local/own-routes');
   });
 
+  it("refuses another module's pages in a module's pages.ts", async () => {
+    const pages =
+      "import { modulePages } from '@/lib/api-core/pages';\nexport const pages = modulePages('catalogue', []);\n";
+    expect(await ruleIds('src/features/staff/pages.ts', pages)).toContain('local/own-routes');
+    expect(await ruleIds('src/features/staff/components/Probe.tsx', pages)).toContain('local/own-routes');
+  });
+
   it('allows a module its own routes in its routes.ts', async () => {
     expect(await ruleIds('src/features/staff/server/routes.ts', declare('staff'))).toEqual([]);
   });

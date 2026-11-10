@@ -19,7 +19,7 @@ import { SupportAccessScreen } from './SupportAccessScreen';
 import { SupportBanner } from './SupportBanner';
 import { TaxSettingsScreen } from './TaxSettingsScreen';
 import { TeamFrame } from './TeamFrame';
-import { pageOf } from './routes';
+import { pageOf } from './pages';
 import { TeamScreen } from './TeamScreen';
 
 type PageProps = { kind: Kind; view?: string; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };

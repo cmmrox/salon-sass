@@ -113,22 +113,29 @@ const SURFACE_ENTRY = element('surface', { fileInternalPath: ['index.ts', 'route
 
 /**
  * Routes are registered per module (decision 121, docs/engineering/web.md, "Structure"): `moduleRoutes('<module>', …)`
- * is called only in that module's own `src/features/<module>/server/routes.ts`, so no module declares another's pages,
- * actions or permissions, and nothing outside the modules declares any.
+ * is called only in that module's own `src/features/<module>/server/routes.ts`, and `modulePages('<module>', …)` only
+ * in its client-safe `src/features/<module>/pages.ts`, so no module declares another's pages, actions or permissions,
+ * and nothing outside the modules declares any.
  */
 const ownRoutes = {
   meta: {
     type: 'problem',
     messages: {
-      elsewhere: "A module's routes are declared in its own src/features/<module>/server/routes.ts.",
+      elsewhere:
+        "A module's routes are declared in its own src/features/<module>/server/routes.ts, its pages in its pages.ts.",
       another: "The {{module}} module's routes are declared by the {{module}} module, not here.",
     },
   },
   create(context) {
-    const owner = /\/src\/features\/([^/]+)\/server\/routes\.ts$/.exec(context.filename.replaceAll('\\', '/'))?.[1];
+    const file = context.filename.replaceAll('\\', '/');
     return {
       CallExpression(node) {
-        if (node.callee.type !== 'Identifier' || node.callee.name !== 'moduleRoutes') return;
+        if (node.callee.type !== 'Identifier' || !['moduleRoutes', 'modulePages'].includes(node.callee.name)) return;
+        const where =
+          node.callee.name === 'moduleRoutes'
+            ? /\/src\/features\/([^/]+)\/server\/routes\.ts$/
+            : /\/src\/features\/([^/]+)\/pages\.ts$/;
+        const owner = where.exec(file)?.[1];
         if (!owner) return context.report({ node, messageId: 'elsewhere' });
         const [first] = node.arguments;
         if (first?.type !== 'Literal' || first.value !== owner)

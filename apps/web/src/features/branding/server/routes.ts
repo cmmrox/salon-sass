@@ -1,4 +1,5 @@
 import 'server-only';
+import { brandingPages } from '../pages';
 import { moduleRoutes, type BffChange, type Call } from '@/lib/api-core/routes';
 import { salonSettingsFor } from './salon-settings';
 
@@ -21,18 +22,7 @@ const settingsChange = (
  * by its contract; the request is rebuilt by branding.
  */
 export const brandingRoutes = moduleRoutes('branding', {
-  pages: [
-    {
-      path: '/workspace/settings',
-      view: 'settings',
-      permission: 'settings.read',
-      title: 'settings',
-      // Last, as in the prototype's navigation (F04-S01).
-      nav: { order: 70, label: 'settings', icon: 'settings', testId: 'workspace-settings' },
-    },
-    { path: '/workspace/settings/profile', view: 'settings', permission: 'settings.read', title: 'settings' },
-    { path: '/workspace/settings/branding', view: 'settings', permission: 'settings.read', title: 'settings' },
-  ],
+  pages: brandingPages,
   reads: {
     'profile-draft': {
       permission: 'settings.read',
