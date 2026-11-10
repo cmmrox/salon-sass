@@ -78,7 +78,9 @@ qa/
   `require_product_up`; a run of only other shell checks (a reader of the CI workflow, a scan of
   the build) does not ask the API. Playwright's global setup makes the same check again, for a test
   file run directly. The web build's commit is not checked; `qa-redeploy.sh` rebuilds both. It
-  refuses, stopping nothing, while a `sdlc run` of this checkout is still going.
+  refuses, stopping nothing, while a `sdlc run` of this checkout is still going, and a run refuses
+  to start while a redeploy is going: both take the QA instance's lock
+  (`docs/operations/verification-evidence.md`, "Progress and interruption").
 - Start a test's title with its case id:
 
   ```ts

@@ -53,9 +53,14 @@ built from the tested commit and that the fixtures are the ones the run assumed.
 The runner writes `summary.json` atomically while it runs: the current entry, completed counts,
 elapsed time and the child process. An interrupted run is marked `interrupted` and is not a pass.
 Read the summary to report progress; never start a second run while the first one's process is
-alive. `infra/scripts/qa-redeploy.sh` reads the same summaries and refuses, naming the report
-folder and stopping nothing, while a run of its checkout is alive: restarting the API and web app
-would break that run partway. An entry that reaches its time limit is recorded `timeout`. A run narrowed by `--entry` or
+alive. A run and `infra/scripts/qa-redeploy.sh` exclude each other through one lock,
+`.local/run/qa-instance.lock` in the product checkout: the runner holds it for the whole run,
+from before its build check, and a redeploy across its guard, stop, rebuild and start, so neither
+can start while the other is going (a redeploy would break a run partway). Each refuses, starting
+or stopping nothing and naming the holding process, while the other holds it. The lock names its
+holder by process id and start time; one whose holder is gone, killed or not, is stale and is
+replaced. `qa-redeploy.sh` also refuses while a summary of its checkout says a live run is going,
+naming the report folder. An entry that reaches its time limit is recorded `timeout`. A run narrowed by `--entry` or
 `--rerun-failed` is `partial` and is not held to the suite budget.
 
 ## Older records
