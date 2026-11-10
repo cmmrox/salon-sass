@@ -25,15 +25,8 @@ import {
   type ServiceValues,
 } from '@/features/catalogue';
 import type { PublicBookingRules } from '@/features/booking';
-import {
-  IdentityFailure,
-  identityRequest,
-  leaveEndedSession,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-  type Kind,
-} from '@/features/identity';
+import { IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
+import { change as changeOnce, read, workspaceSession } from '@/lib/api-core/request';
 
 /** What the page says above its lists: someone else changed them, the API could not be reached, or a change was refused. */
 export type CatalogueNotice = 'conflict' | 'unavailable' | 'refused' | null;
@@ -125,16 +118,16 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     setLoading(true);
     try {
       const [nextCategories, nextServices, nextPopular, nextRules, nextTax] = await Promise.all([
-        identityRequest<CategoryList>(kind, 'catalogue-categories'),
-        identityRequest<ServiceList>(kind, 'catalogue-services'),
-        identityRequest<PopularSetting>(kind, 'catalogue-popular-setting'),
+        read<CategoryList>(workspaceSession(kind), 'catalogue-categories'),
+        read<ServiceList>(workspaceSession(kind), 'catalogue-services'),
+        read<PopularSetting>(workspaceSession(kind), 'catalogue-popular-setting'),
         // Only the words of a "Salon rule" deposit depend on it: the page works without it.
-        identityRequest<{ current: PublicBookingRules | null }>(kind, 'booking-rules-public').then(
+        read<{ current: PublicBookingRules | null }>(workspaceSession(kind), 'booking-rules-public').then(
           (answer) => answer.current,
           () => undefined,
         ),
         // Only the tax banner depends on it: the page works without it.
-        identityRequest<{ current: PublicTax | null }>(kind, 'catalogue-tax-public').then(
+        read<{ current: PublicTax | null }>(workspaceSession(kind), 'catalogue-tax-public').then(
           (answer) => answer.current,
           () => undefined,
         ),
@@ -189,11 +182,7 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
 
   /** A change made under the session's lock, the lists read again after it. */
   async function change<T>(action: string, body: unknown): Promise<T> {
-    if (!supportsLocks()) throw new IdentityFailure('browser_unsupported');
-    return withIdentityLock(kind, async () => {
-      await principalInsideLock(kind);
-      return identityRequest<T>(kind, action, body);
-    });
+    return changeOnce<T>(workspaceSession(kind), action, body);
   }
 
   async function quietly(work: () => Promise<void>, rules: (failure: IdentityFailure) => CatalogueRefusal) {

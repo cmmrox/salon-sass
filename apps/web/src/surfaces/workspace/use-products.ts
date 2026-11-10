@@ -14,15 +14,8 @@ import {
   type ProductValues,
   type PublicTax,
 } from '@/features/catalogue';
-import {
-  IdentityFailure,
-  identityRequest,
-  leaveEndedSession,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-  type Kind,
-} from '@/features/identity';
+import { IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
+import { change as changeOnce, read, workspaceSession } from '@/lib/api-core/request';
 
 /** What the tab says above the list: someone else changed it, the API could not be reached, or a change was refused. */
 export type ProductsNotice = 'conflict' | 'unavailable' | 'refused' | null;
@@ -89,9 +82,9 @@ export function useProducts(kind: Kind, notify: (toast: ProductsToast) => void) 
     setLoading(true);
     try {
       const [next, published] = await Promise.all([
-        identityRequest<ProductListAnswer>(kind, 'catalogue-products'),
+        read<ProductListAnswer>(workspaceSession(kind), 'catalogue-products'),
         // Only the tax column and the banners depend on it: the tab works without it.
-        identityRequest<{ current: PublicTax | null }>(kind, 'catalogue-tax-public').then(
+        read<{ current: PublicTax | null }>(workspaceSession(kind), 'catalogue-tax-public').then(
           (answer) => answer.current,
           () => undefined,
         ),
@@ -131,11 +124,7 @@ export function useProducts(kind: Kind, notify: (toast: ProductsToast) => void) 
   }, []);
 
   async function change<T>(action: string, body: unknown): Promise<T> {
-    if (!supportsLocks()) throw new IdentityFailure('browser_unsupported');
-    return withIdentityLock(kind, async () => {
-      await principalInsideLock(kind);
-      return identityRequest<T>(kind, action, body);
-    });
+    return changeOnce<T>(workspaceSession(kind), action, body);
   }
 
   const otherNames = (id: string | null) =>

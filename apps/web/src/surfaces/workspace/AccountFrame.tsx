@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import type { Salon } from '@/features/branding';
 import { BrandStyle } from '@/components/shared/BrandStyle';
 import { WorkspaceShell, type WorkspaceView } from './WorkspaceShell';
+import { SessionRenewal } from './SessionRenewal';
 import { StaffSignInFrame } from './StaffSignInFrame';
+import type { Kind } from '@/features/identity';
 /** Every salon screen carries the salon's resolved identity and its brand accent. */
 export function AccountFrame({
   salon,
@@ -14,6 +16,7 @@ export function AccountFrame({
   banner,
   supportBanner,
   support = false,
+  renew,
 }: {
   salon: Salon;
   children: ReactNode;
@@ -23,6 +26,8 @@ export function AccountFrame({
   banner?: ReactNode;
   supportBanner?: ReactNode;
   support?: boolean;
+  /** Rendered without a principal: the session the browser renews before rendering the page again. */
+  renew?: Kind;
 }) {
   const t = useTranslations('account');
   if (signIn)
@@ -35,6 +40,7 @@ export function AccountFrame({
   return (
     <>
       <BrandStyle colour={salon.brandColour} />
+      {renew && <SessionRenewal kind={renew} />}
       <WorkspaceShell
         salon={salon}
         permissions={permissions}

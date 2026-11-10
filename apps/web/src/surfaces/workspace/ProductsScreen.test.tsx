@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
+import { expireAccessBefore } from '@test/renewal';
 import { CATEGORIES, POPULAR, PRODUCTS, product, RULES, SERVICES, TAX_PUBLIC } from './catalogue-fixtures';
 import { ServicesScreen } from './ServicesScreen';
 
@@ -309,5 +310,14 @@ describe('the product sheet (AC-8)', () => {
     expect(screen.getByTestId('products-read-only')).toHaveTextContent(
       'A support session can read the products but cannot change them.',
     );
+  });
+});
+
+describe('an idle session (BUG-F05-002)', () => {
+  it('renews an access credential that lapsed and shows the products, not the sign-in form', async () => {
+    const renewals = expireAccessBefore(answers, 'catalogue-products');
+    render();
+    await screen.findByTestId('product-table');
+    expect(renewals()).toBe(1);
   });
 });

@@ -109,6 +109,9 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
   // Settings open their first tab the person may see (F04-S01); only Profile is delivered.
   if (principal && view === 'settings' && !tab) redirect('/workspace/settings/profile');
   const readOnly = support || entitlements?.subscription?.state === 'read_only';
+  // The account pages read and renew the principal themselves (AccountScreen); every other page is rendered again by
+  // the frame once the browser has renewed.
+  const screenRenews = !view || view === 'account' || view === 'staff' || view === 'audit';
   return (
     <AccountFrame
       salon={salon}
@@ -117,6 +120,7 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
       banner={banner}
       supportBanner={supportBanner}
       support={support}
+      renew={principal === null && !screenRenews ? kind : undefined}
     >
       {view === 'bookings' ? (
         <BookingsScreen
@@ -128,7 +132,6 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
           canSetRules={Boolean(principal?.permissions.includes('settings.manage')) && !support}
           readOnly={support ? 'support' : readOnly ? 'salon' : null}
           phoneRegion={phoneRegion()}
-          principalKnown={principal !== null}
         />
       ) : view === 'team' ? (
         <TeamScreen

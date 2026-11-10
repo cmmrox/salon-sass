@@ -104,7 +104,6 @@ const render = (props: Partial<React.ComponentProps<typeof BookingsScreen>> = {}
       canSetRules={false}
       readOnly={null}
       phoneRegion="LK"
-      principalKnown
       {...props}
     />,
   );
@@ -317,14 +316,6 @@ describe('the Bookings page (F07-S03 AC-2, AC-3)', () => {
 });
 
 describe('who sees what (F07-S03 AC-10)', () => {
-  it('rendered from an expired access credential, renews in the browser and renders again with the caller’s permissions', async () => {
-    const refresh = vi.spyOn((await import('./bookings-fixtures')).router, 'refresh');
-    answers.principal = () => Response.json({ kind: 'staff', permissions: ['calendar.read', 'booking.manage'] });
-    render({ principalKnown: false, canBook: false, scope: 'own' });
-    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
-    expect(sent('principal')).toHaveLength(1);
-  });
-
   it('a Professional with the own scope: no professional filter, no team read, no New appointment', async () => {
     render({ scope: 'own', canBook: false });
     await ready();
