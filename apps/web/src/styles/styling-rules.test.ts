@@ -24,6 +24,8 @@ const STYLE_SHEETS = [...HAND_WRITTEN, GENERATED];
 /** The only files that import a style sheet, and what each of them imports. */
 const STYLE_SHEET_IMPORTS: Record<string, string[]> = {
   'src/app/layout.tsx': ['./globals.css'],
+  // The root layout's stand-in when the root layout itself fails (web M3): it renders its own document.
+  'src/app/global-error.tsx': ['./globals.css'],
   'src/lib/plain-page/plain-page.ts': ['../../styles/theme.css?raw', './plain-page.generated.css?raw'],
 };
 
