@@ -330,7 +330,11 @@ function Notices({ catalogue, readOnly }: { catalogue: Catalogue; readOnly: 'sup
       )}
       {refusal && (
         <Alert variant="notice" role="alert" data-testid="services-rule" data-reason={refusal.reason}>
-          {refusal.reason === 'inUseCategory' ? t('inUseCategory', { count: refusal.count }) : t(refusal.reason)}
+          {refusal.reason === 'inUseCategory'
+            ? t('inUseCategory', { count: refusal.count })
+            : refusal.reason === 'inUseMove'
+              ? t('inUseMove', { members: refusal.members, count: refusal.count, category: refusal.category })
+              : t(refusal.reason)}
         </Alert>
       )}
     </>

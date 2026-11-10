@@ -7101,7 +7101,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `version` is not the service's: `conflict`. Nothing changed: `invalid_state`. Nothing is saved. */
+            /** @description `version` is not the service's: `conflict`. Nothing changed: `invalid_state`. A move to another category would stop team members performing the service while they have upcoming bookings for it: `in_use`, with one `errors` item per person, `field` `categoryId` and `detail` the person's name. Nothing is saved. */
             409: {
                 headers: {
                     [name: string]: unknown;

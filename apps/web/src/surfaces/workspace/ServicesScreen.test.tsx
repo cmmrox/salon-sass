@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
+import { chooseOption } from '@test/select';
 import {
   CATEGORIES,
   COLOUR,
@@ -442,6 +443,41 @@ describe('the card actions (AC-7, AC-8, AC-9)', () => {
       'This service has upcoming bookings. Hide it from online booking instead.',
     );
   });
+
+  it.each([
+    {
+      names: ['Nimal Fonseka'],
+      says: 'Nimal Fonseka has upcoming bookings for this service and does not perform Nails. Add Nails to their services on the Team page first.',
+    },
+    {
+      names: ['Nimal Fonseka', 'Ruwan Silva'],
+      says: 'Nimal Fonseka, Ruwan Silva have upcoming bookings for this service and do not perform Nails. Add Nails to their services on the Team page first.',
+    },
+  ])(
+    'says who a refused move to another category would stop performing a booked service, and keeps the sheet (BUG-F06-002): $names',
+    async ({ names, says }) => {
+      answers['catalogue-service-save'] = () =>
+        Response.json(
+          { code: 'in_use', errors: names.map((name) => ({ field: 'categoryId', detail: name })) },
+          { status: 409 },
+        );
+      render();
+      await screen.findAllByTestId('service-card');
+      fireEvent.click(within(card('Balayage')).getByTestId('service-card-edit'));
+      await chooseOption(await screen.findByTestId('service-sheet-category'), 'Nails');
+      fireEvent.change(screen.getByTestId('service-sheet-name'), { target: { value: 'Balayage moved' } });
+      fireEvent.click(screen.getByTestId('service-sheet-save'));
+
+      const sheet = screen.getByTestId('service-sheet');
+      const rule = await within(sheet).findByTestId('services-rule');
+      expect(rule).toHaveTextContent(says);
+      expect(rule).toHaveAttribute('data-reason', 'inUseMove');
+      expect(sent('catalogue-service-save')).toEqual([expect.objectContaining({ categoryId: NAILS })]);
+      // The sheet stays open with what was typed and chosen.
+      expect(within(sheet).getByTestId('service-sheet-name')).toHaveValue('Balayage moved');
+      expect(within(sheet).getByTestId('service-sheet-category')).toHaveTextContent('Nails');
+    },
+  );
 
   it('asks before deleting, and says to hide a service upcoming bookings use', async () => {
     answers['catalogue-service-delete'] = () => Response.json({ code: 'in_use' }, { status: 409 });

@@ -4,6 +4,7 @@ import static com.salonplatform.catalogue.service.impl.CategoryServiceImpl.chang
 import static com.salonplatform.catalogue.service.impl.CategoryServiceImpl.requiredVersion;
 
 import com.salonplatform.catalogue.ServiceDeposit;
+import com.salonplatform.catalogue.ServiceMoveBookings;
 import com.salonplatform.catalogue.ServiceVariant;
 import com.salonplatform.catalogue.UpcomingServiceBookings;
 import com.salonplatform.catalogue.domain.CatalogueLimits;
@@ -36,6 +37,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -71,6 +73,7 @@ class SalonServicesImpl implements SalonServices {
     private final PopularSettingRepository popularSettings;
     private final ServiceViews views;
     private final UpcomingServiceBookings upcoming;
+    private final ServiceMoveBookings moves;
     private final TransactionLocks locks;
     private final SalonCurrency currency;
     private final CatalogueAudit audit;
@@ -89,6 +92,7 @@ class SalonServicesImpl implements SalonServices {
             PopularSettingRepository popularSettings,
             ServiceViews views,
             UpcomingServiceBookings upcoming,
+            ServiceMoveBookings moves,
             TransactionLocks locks,
             SalonCurrency currency,
             CatalogueAudit audit,
@@ -104,6 +108,7 @@ class SalonServicesImpl implements SalonServices {
         this.popularSettings = popularSettings;
         this.views = views;
         this.upcoming = upcoming;
+        this.moves = moves;
         this.locks = locks;
         this.currency = currency;
         this.audit = audit;
@@ -154,6 +159,16 @@ class SalonServicesImpl implements SalonServices {
         String salonCurrency = currency.current();
         Valid valid = ServiceValidation.valid(input, MinorUnits.of(salonCurrency), true);
         long expected = requiredVersion("version", version);
+        // A move to another category takes the service from those who perform the old one whole: staff's answer, in
+        // its own transactions, before this one opens, and again under the guard lock inside it (BUG-F06-002).
+        // The field checks come first, as inside the transaction, so that a refused field is answered as one.
+        UUID heldCategory = reading.execute(status -> {
+            SalonService service = live(id, at);
+            refuseForeignCategory(valid.categoryId(), at);
+            refuseTakenName(valid.name(), id, at);
+            return service.getCategoryId();
+        });
+        refuseLosingBookedPerformers(id, heldCategory, valid.categoryId());
         return changing(() -> writing.execute(status -> {
             SalonService service = live(id, at);
             if (service.getVersion() != expected) {
@@ -161,6 +176,10 @@ class SalonServicesImpl implements SalonServices {
             }
             refuseForeignCategory(valid.categoryId(), at);
             refuseTakenName(valid.name(), id, at);
+            if (!Objects.equals(valid.categoryId(), service.getCategoryId())) {
+                locks.hold(UpcomingServiceBookings.GUARD_LOCK, id);
+                refuseLosingBookedPerformers(id, service.getCategoryId(), valid.categoryId());
+            }
             TermsRows.Read current = terms.require(service.getCurrentTermsId());
             TermsVersion.Terms saved =
                     termsOf(valid, salonCurrency, current.terms().variants());
@@ -320,6 +339,22 @@ class SalonServicesImpl implements SalonServices {
             audit.record(at.actor(), DELETED, CatalogueAudit.SERVICE, id, before, null, now);
             return null;
         }));
+    }
+
+    /** Refused as a team save is (F06-S01 AC-8): one item per person who would lose a service they are booked for. */
+    private void refuseLosingBookedPerformers(UUID id, UUID fromCategoryId, UUID toCategoryId) {
+        if (fromCategoryId == null || fromCategoryId.equals(toCategoryId)) {
+            return;
+        }
+        List<ServiceMoveBookings.BookedMember> losing = moves.losingBookedService(id, fromCategoryId, toCategoryId);
+        if (!losing.isEmpty()) {
+            throw new ApplicationProblemException(
+                    409,
+                    ErrorCode.IN_USE,
+                    losing.stream()
+                            .map(member -> new FieldProblem("categoryId", member.name()))
+                            .toList());
+        }
     }
 
     private void refuseUpcomingBookings(UUID id) {

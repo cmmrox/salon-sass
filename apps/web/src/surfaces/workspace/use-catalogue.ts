@@ -42,6 +42,9 @@ export type CatalogueNotice = 'conflict' | 'unavailable' | 'refused' | null;
 export type CatalogueRefusal =
   | { reason: 'inUseService' | 'lastCategory' | 'categoryLimit' | 'serviceLimit' | 'unchanged' | 'popularLimit' }
   | { reason: 'inUseCategory'; count: number }
+  // A move to another category refused (BUG-F06-002): who would stop performing a service they are booked for, and the
+  // category the service was being moved to.
+  | { reason: 'inUseMove'; members: string; count: number; category: string }
   | null;
 
 /** The passing notices the page announces in a toast. */
@@ -275,6 +278,12 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
       else if (left?.code === 'invalid_state') setRefusal({ reason: 'unchanged' });
       else if (left?.code === 'limit_reached')
         setRefusal({ reason: saved && popularChanged ? 'popularLimit' : 'serviceLimit' });
+      else if (left?.code === 'in_use') {
+        // The move would stop these people performing a service they are booked for; the sheet keeps what was typed.
+        const members = left.problems.map((problem) => problem.detail ?? '').filter((name) => name !== '');
+        const category = categories?.items.find((item) => item.id === values.categoryId)?.name ?? '';
+        setRefusal({ reason: 'inUseMove', members: members.join(', '), count: members.length, category });
+      }
     }
     setBusy(false);
   }
