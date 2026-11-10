@@ -420,7 +420,8 @@ test(`${id(29)} One card charge is in flight for an invoice at a time: an attemp
     await crossBoundary(operator, clock, admin, invoice, 'due_10', SECOND);
     expect(attempts(invoice.id).length, 'one retry on the next reminder day, ten days after due').toBe(2);
     await settled(operator, admin, invoice.id, 'paid', 2);
-    expect(occasions().map(o => o.split(':')[1]), 'the failed attempt and the accepted retry').toEqual(['failed', 'succeeded']);
+    // Decision 125, operator-console.md "Payment": the retry is made by the pass that sends a reminder, under that reminder.
+    expect(occasions(), 'the failed attempt, and the retry under the ten-day reminder, accepted').toEqual(['issue:failed', 'due_10:succeeded']);
     expect(chargeRequests(created.id), 'two charges in all reached the provider, one after the other').toEqual(['sent', 'sent']);
   });
 });
