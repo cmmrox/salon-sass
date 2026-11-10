@@ -43,9 +43,15 @@ def cmd_status(_args):
     bundle = model.load()
     for feature in bundle["features"]:
         stages = [s for s in bundle["stages"] if s.get("_feature_dir") == feature["_dir"]]
+        role, action = flow.feature_turn(feature, stages, bundle["features"], bundle["change_requests"])
         if feature.get("status") == "backlog":
+            # Shown when it is someone's turn to start it, or when a change request is what holds
+            # it; one waiting in ordinary order is in features/README.md. Its outlined stages
+            # wait for feature-new, so they are not listed.
+            held = flow.changing_dependencies(feature, bundle["change_requests"])
+            if role != "waiting" or (held and action == flow.change_request_wait(held)):
+                print(f"{feature.get('id')} {feature.get('status'):12} next: {role}: {action}")
             continue
-        role, action = flow.feature_turn(feature, stages, bundle["features"])
         print(f"{feature.get('id')} {feature.get('status'):12} next: {role}: {action}")
         for stage in sorted(stages, key=lambda s: (s.get("sequence") or 0, s.get("id") or "")):
             role, action = flow.stage_turn(stage)

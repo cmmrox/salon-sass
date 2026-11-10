@@ -139,6 +139,10 @@ def merge_sync(bundle, fid, check=False):
 
 def start_check(bundle, fid):
     scope = feature(bundle, fid)
+    held = flow.changing_dependencies(scope, bundle.get("change_requests"))
+    if held:
+        raise Refusal(f"{fid} depends on work an approved change request is still changing; start it "
+                      + flow.change_request_wait(held))
     main = remote_main()
     for previous in flow.predecessors(scope, bundle["features"]):
         # A recorded owner exception may waive portfolio order, never a dependency's merge.

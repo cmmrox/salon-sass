@@ -70,7 +70,7 @@ def render_portfolio(bundle):
             "merged" if flow.merged(feature) else ("awaiting owner" if (feature.get("integration") or {}).get("pull_request") else "-"),
             f"{done}/{len(stages)}" if stages else "-",
             len(_list(feature.get("requirements"))),
-            _turn(flow.feature_turn(feature, stages, bundle["features"])),
+            _turn(flow.feature_turn(feature, stages, bundle["features"], bundle.get("change_requests"))),
         ))
         if feature.get("status") in ("planned", "in-progress", "in-qa"):
             in_flight.append((feature, stages))

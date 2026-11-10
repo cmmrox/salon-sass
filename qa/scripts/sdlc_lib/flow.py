@@ -24,6 +24,30 @@ def predecessors(feature, features):
     return [f for f in features if f.get("id", "") < fid or f.get("id") in dependencies]
 
 
+# A change request in this state is decided but its follow-up has not merged yet.
+OPEN_CHANGE_REQUESTS = ("approved",)
+
+
+def changing_dependencies(feature, change_requests):
+    """[(change request, dependency)] for each feature this one depends on that an approved change
+    request is still changing (it names one of that feature's stages). Work planned on it now
+    would be planned on what the follow-up replaces."""
+    held = []
+    for request in change_requests or ():
+        if request.get("status") not in OPEN_CHANGE_REQUESTS:
+            continue
+        changed = {str(sid).split("-")[0] for sid in request.get("stages") or []}
+        for dep in feature.get("depends_on") or []:
+            if dep in changed and (request.get("id"), dep) not in held:
+                held.append((request.get("id"), dep))
+    return held
+
+
+def change_request_wait(held):
+    """The reason a feature waits on changing dependencies, for status and start-check."""
+    return "after " + ", ".join(f"{cr}'s follow-up to {dep} is merged" for cr, dep in held)
+
+
 def _awaiting_developer(scope):
     bugs = list(scope.get("_bugs") or []) + list(scope.get("_stage_bugs") or [])
     return [b for b in bugs if b.get("status") in ("open", "reopened")]
@@ -58,11 +82,12 @@ def stage_turn(stage):
     return NOBODY
 
 
-def feature_turn(feature, stages, features=()):
+def feature_turn(feature, stages, features=(), change_requests=()):
     """Returns (role, next action) for one feature, given its own stages.
 
-    features is every feature, used to see whether a backlog feature's dependencies are done.
-    The role "waiting" means nobody can act yet.
+    features is every feature, used to see whether a backlog feature's dependencies are done;
+    change_requests, whether one of them is still being changed. The role "waiting" means
+    nobody can act yet.
     """
     fid, status = feature.get("id"), feature.get("status")
     if status == "backlog":
@@ -70,6 +95,9 @@ def feature_turn(feature, stages, features=()):
         unmet = [dep for dep in feature.get("depends_on") or [] if dep not in done]
         if unmet:
             return ("waiting", "after " + ", ".join(unmet))
+        held = changing_dependencies(feature, change_requests)
+        if held:
+            return ("waiting", change_request_wait(held))
         mine = str(feature.get("milestone") or "")
         earlier = sorted({str(f.get("milestone")) for f in features
                           if f.get("milestone") and str(f.get("milestone")) < mine and f.get("status") != "released"})

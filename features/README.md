@@ -19,7 +19,7 @@ requirement detail is in `qa/coverage.md`.
 | F09 | [Manage a booking: reschedule and cancel](F09-manage-a-booking/) | M1-web | backlog | - | - | 3 | after F08 |
 | F10 | [Salon calendar and front desk](F10-salon-calendar-and-front-desk/) | M1-web | backlog | - | - | 12 | after F08 |
 | F11 | [Notifications and reminders](F11-notifications-and-reminders/) | M1-web | backlog | - | - | 9 | after F09 |
-| F12 | [Customer records](F12-customer-records/) | M1-web | backlog | - | - | 5 | **lead**: `feature-new F12` |
+| F12 | [Customer records](F12-customer-records/) | M1-web | backlog | - | - | 5 | after CR-028's follow-up to F07 is merged |
 | F13 | [Reports](F13-reports/) | M1-web | backlog | - | - | 5 | after F10 |
 | F14 | [Guided onboarding and data import](F14-guided-onboarding-and-import/) | M1-web | backlog | - | - | 3 | after F08 |
 | F15 | [Customer mobile app](F15-customer-mobile-app/) | M2-mobile | backlog | - | - | 12 | after F09, F11 |
