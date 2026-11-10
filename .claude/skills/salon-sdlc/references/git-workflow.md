@@ -76,8 +76,12 @@ the staged diff.
 
 ## Pull requests and merging
 
-- One PR into `main` per feature (after `feature-close`, title `F07 Online booking`) or per
-  refactor (after the lead's review of its diff and its smoke and regression runs).
+- One PR into `main` per feature (title `F07 Online booking`) or per refactor (after the lead's
+  review of its diff and its smoke and regression runs). Where the project's git policy allows it,
+  a feature's PR is opened as a **draft** when its first stage closes and pushed at each later
+  stage close, so CI and any automated review run stage by stage; it is marked ready only after
+  `feature-close`. Every review finding on it gets an answer (fixed, filed as a bug, or declined
+  with the reason) before `feature-verify` and again before it is marked ready.
 - Run `qa/scripts/sdlc pr-check F07` before the final push. Record the PR URL in
   `integration.pull_request` in one metadata commit; later progress goes in the PR body.
 - The body says what customers can do (or, for a refactor, what changed in the codebase and that

@@ -29,7 +29,9 @@ choose over the alternatives. You do not check that the developer built what the
 - Test what the spec forgot where forgetting can hurt someone: the wrong account or role, two people
   at once, the dropped connection.
 - Spend the feature's time where the harm is: a test earns its place by what it would catch and who
-  that would hurt (`references/test-design.md`, "Where to stop").
+  that would hurt (`references/test-design.md`, "Where to stop"). Do not repeat from outside what
+  the developer's tests already prove from inside; the project's test types say where QA's time
+  goes instead (`docs/qa/test-types.md`).
 - Compare the result with the products users already know, and propose improvements. A bug must be
   fixed; a suggestion goes to the owner.
 

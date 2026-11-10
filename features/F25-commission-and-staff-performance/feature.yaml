@@ -1,0 +1,20 @@
+id: F25
+title: "Commission and staff performance"
+summary: "A salon sets each professional's commission per service and per product, keeps tips separate, and sees a commission and performance report for any period (CR-028)."
+release: R2
+milestone: M3-growth
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F10, F13]
+surfaces: [api, web]
+requirements: [STF-08, REP-08]
+nfr_focus: []
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -59,6 +59,16 @@ full before starting; this table is for everything the spec did not anticipate.
 | `operations/skill-evaluation.md` | The requests used to check that the skills and these documents lead an agent to the right behaviour |
 | `operations/verification-evidence.md` | Developer-gate records, how long a QA pass holds, run progress and interruption |
 | `decisions/DECISION_LOG.md` | Decisions taken, one entry each |
+| `reviews/2026-11-10-foundation-review/README.md` | The foundation review before F08: verdict, what came of it, open checks for the owner |
+| `reviews/2026-11-10-foundation-review/HANDOVER.md` | The fixes that follow the review, in order, for the developer and QA |
+| `reviews/2026-11-10-foundation-review/market-global.md` | Reviewer report: the register against eleven leading salon products |
+| `reviews/2026-11-10-foundation-review/market-sri-lanka-and-bridal.md` | Reviewer report: the Sri Lankan market, bridal practice and the white-label app model |
+| `reviews/2026-11-10-foundation-review/api-platform.md` | Reviewer report: tenancy, identity, operator console, outbox and jobs |
+| `reviews/2026-11-10-foundation-review/api-domain.md` | Reviewer report: catalogue, staff, the booking engine and readiness for later features |
+| `reviews/2026-11-10-foundation-review/web.md` | Reviewer report: the web workspace and console |
+| `reviews/2026-11-10-foundation-review/qa-and-delivery.md` | Reviewer report: QA automation, tooling, CI and delivery history |
+| `changes/CR-028-foundation-review-requirements.md` | Owner-approved: several services in one booking, the customer booking page (F24), R1 scope moves, F12 before F08, with F07's follow-up criteria |
+| `changes/CR-029-review-before-qa-and-leaner-verification.md` | Owner-approved: review before QA, design and market checks at planning, QA's scope, regression at every feature close |
 | `changes/README.md` | Change requests: how a requirement changes after the baseline |
 | `changes/CR-007-prototype-design-fidelity.md` | Owner-approved HTML design authority and existing UI repair |
 | `changes/CR-008-skill-productivity-and-progress.md` | Owner-approved shared skill upgrades, progress visibility and guarded evidence reuse |

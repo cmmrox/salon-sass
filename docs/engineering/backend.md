@@ -169,7 +169,10 @@ signature:
   that returns the same data has its own response record in `dto/`.
 - The tenant is never a parameter. The implementation reads it from `TenantContext`, as an
   extracted service will read it from the signed token.
-- An implementation opens its own transaction and does not join the caller's. A contract that
+- An implementation opens its own transaction and does not join the caller's. A read interface
+  runs read-only and refuses to be called inside a writing transaction, so a caller reads what it
+  needs before it opens its own; an architecture test holds this (decision 119; several F04 to F07
+  implementations still join the caller and are corrected before F08). A contract that
   genuinely must join the caller's transaction (it writes in the same unit of work, or holds a lock
   until the caller commits) is declared **in-process only**: it sits in a named interface called
   `inprocess`, its Javadoc says why, and it is never exposed remotely. A module may declare an
@@ -219,7 +222,10 @@ signature:
   records of its build and asks `outbox_due_events` for due events of those types only. An event of
   a type the instance does not know stays pending, unattempted, for an instance that knows it, so a
   rolling deployment never loses a newer event; it shows in the waiting and oldest-due meters
-  meanwhile. A declared type with no subscriber is delivered at once. An event record is therefore
+  meanwhile. A declared type with no subscriber is delivered at once; decision 119 changes this, so
+  that an instance claims only types it has a subscriber for and a type nobody subscribes to stays
+  pending (otherwise the deployment that adds the first subscriber loses the events an older instance
+  still claims). An event record is therefore
   kept in the code until none of its events is pending anywhere; retiring a type means deleting its
   pending rows deliberately.
 - Meters: `salon.outbox.deliveries` carries a `kind` tag (`delivery` or `event`); the waiting, dead
@@ -404,6 +410,25 @@ change, and a stage leaves the code it touches meeting them.
   (`refusesAHoldThatOverlapsAnother`), arrange-act-assert, test data built by named fixtures.
 
 ## Booking integrity
+
+**Being changed before F08 (decisions 114, 116, 118, 119; CR-028).** The points below describe the
+code as F07 merged it. The follow-up to F07 and the refactors in
+`docs/reviews/2026-11-10-foundation-review/HANDOVER.md` build to these rules, and the lead rewrites
+this section when they close:
+
+- A booking is a **visit** with 1 to 6 **service lines**. The visit owns the reference, customer,
+  channel, note, idempotency key, state, hold expiry and history. `booking_appointment` is the line:
+  one professional, service, terms version, variant, segments, occupied time and price. The
+  exclusion constraint stays on the line; a line stores its visit's state for the constraint and
+  changes only with the visit, in one transaction. A visit is placed whole or not at all.
+- The state machine gains `undo-arrive` and `undo-start`, a late `arrive` with `booking.correct`
+  and a reason, a note on any change, and a staff `release` from `pending_payment`; an abandoned
+  payment returns to a hold lasting at least the hold length from that moment.
+- Money is `shared`'s money type (minor units and currency, checked arithmetic). One deposit
+  calculator in `booking.domain` turns a rule into an amount. Tax and service-charge rates are
+  stored in basis points. A booking keeps no tax version; the charge on the payment record does.
+- `booking` provides a read interface for visits and publishes an event for every change of a visit.
+- A customer's mobile may be any country's, and is optional for a walk-in.
 
 - A hold and a booking are one table, `booking_appointment`, with a state; its history is
   `booking_state_change`, one row per change, the placing included. The time a booking occupies

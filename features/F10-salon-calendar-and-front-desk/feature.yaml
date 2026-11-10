@@ -8,7 +8,7 @@ qa_status: not-run
 released_in: null
 depends_on: [F08]
 surfaces: [api, web]
-requirements: [BKG-10, BKG-12, BKG-13, STF-06, PAY-06, PAY-10, IAM-14, REP-01]
+requirements: [BKG-10, BKG-12, BKG-13, STF-06, PAY-06, PAY-10, IAM-14, REP-01, BKG-25, PAY-13, PAY-17, PAY-18]
 nfr_focus: []
 cases: []
 verification:

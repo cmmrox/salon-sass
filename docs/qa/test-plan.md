@@ -175,8 +175,8 @@ of NFR-04's production scale. QA creates synthetic fixtures through local hooks 
 
 ## Platforms
 
-- **Web (`M1-web`):** salon owner/admin/staff workspace and operator console only. There is no
-  customer booking site. Test the full width matrix in `docs/design/ui-ux-standards.md`, including
+- **Web (`M1-web`):** salon owner/admin/staff workspace, operator console and, from F24, the
+  customer booking page (tested first at phone widths, on a throttled connection). Test the full width matrix in `docs/design/ui-ux-standards.md`, including
   staff access on phones and the workspace at 768.
 - **Customer app (from `M2-mobile`):** Android is the primary platform for the launch market and
   every feature with a mobile surface passes there. iOS is run when a feature touches something that differs by
@@ -190,7 +190,7 @@ and its time budget on the local machine:
 | Suite | Holds | Budget |
 | --- | --- | --- |
 | `smoke` | 10 to 15 critical checks: the API and web start and answer their health checks; staff and operator sign-in; one request from salon A refused on salon B; one key journey per delivered feature (today: a staff account journey, the operator lifecycle; from F07, the desk books a customer with "No preference", confirms and starts the booking; once payment and the calendar exist (F08, F10), book and pay in the sandbox and see the booking on the salon's calendar) | Under 5 minutes |
-| `regression` | Every test that must keep working, including every tenant-isolation test and every concurrency test on bookings; Playwright runs fully parallel across workers | Under 20 minutes |
+| `regression` | Every test that must keep working, including every tenant-isolation test and every concurrency test on bookings. It runs at every feature close while the pull request waits, and must pass on `main` (decision 122) | Under 20 minutes is the target. On 2026-11-08 it took 78 minutes: the runner uses one worker and one entry at a time because tests share one local test clock. Until the clock is per salon it is sharded across QA instances; the handover of the 2026-11-10 review lists the work |
 | `release` | The slow checks: k6 load baselines, the production-like stack with its rolling deploy, image builds and scans | Only when the owner asks (before a deploy they request, or `release-verify`); never during a fix or re-verification (decision 069). No budget |
 
 A test that would take a suite past its budget is made faster (arrange through the API, reuse

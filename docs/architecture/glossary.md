@@ -26,7 +26,9 @@ everywhere.
 | Deposit | A part payment taken at booking, set by the salon's policy |
 | Policy | A salon's own rules: deposit, free-cancellation window, what is kept on a late cancellation |
 | Walk-in | A customer who arrives without a booking |
-| Booking site | A salon's public pages at its own web address |
+| Booking page | A salon's public page at its own web address where a customer books, and each booking's own page behind its secure link (F24) |
+| Visit | One booking: one customer's one or more services on one occasion, with one reference and one state (decision 114) |
+| Service line | One service of a visit, with its own professional, time and price |
 | Workspace | The staff side of the web app, under the same web address |
 | Console | The operator's side of the web app, on a reserved hostname |
 | Container app | The shared customer app in the operator's store accounts; a link, QR code or short code opens one salon inside it |

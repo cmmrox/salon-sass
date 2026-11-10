@@ -71,10 +71,11 @@ time, and keep the owner informed as [references/progress.md](references/progres
 
 | Command | Role | Status afterwards |
 | --- | --- | --- |
-| `feature-new <F>` | Lead | Feature `planned`, stages `outlined`, design confirmed |
+| `feature-new <F>` | Lead | Feature `planned`, stages `outlined`, design and market checks done, design confirmed |
 | `stage-plan <F-S>` | Lead | Stage `planned` |
 | `stage-build <F-S>` | Developer | `in-progress`, then `built` at handoff |
 | `stage-close <F-S>` | Lead | `complete`, merged into the feature branch |
+| `feature-review <F>` | Lead | Every finding on the feature's code answered, before QA starts |
 | `feature-verify <F>` | QA | Feature `in-qa`; `qa_status` `failing`, `blocked` or `pass` |
 | `bug-fix <F>` | Developer | Bugs `fixed`; back to QA |
 | `feature-close <F>` | Lead | `complete`, ready for its PR |
@@ -91,7 +92,7 @@ A refactor or upgrade has no command: "Refactors and upgrades" in `references/li
 | --- | --- | --- |
 | Feature QA | The feature's acceptance criteria, tenant isolation, a hands-on check of its new screens | Once per feature, after its stages close (`feature-verify`). QA dry-runs its tests against each closed stage during the build; a dry run certifies nothing |
 | Smoke (`suites: [smoke]`) | The few critical checks that prove each delivered feature is alive | Every PR, after every merge, before and after any deploy |
-| Regression (`suites: [regression]`) | Everything that must keep working, in parallel | Before a release, and for a refactor or upgrade that touches delivered features (the lead runs it unasked then); otherwise when the owner asks |
+| Regression (`suites: [regression]`) | Everything that must keep working, in parallel | At every feature close while its PR waits, before a release, and for a refactor or upgrade that touches delivered features (the lead runs it unasked then); otherwise when the owner asks |
 | Release (`suites: [release]`) | The slow checks: load, the production-like stack, image scans | Only when the owner asks: before a deploy they request, and at `release-verify`. Never part of building, a fix or re-verification |
 | Stage pass | One stage's tests | Only when the owner asks |
 
@@ -104,7 +105,7 @@ QA through `qa/scripts/sdlc run`; running more than the scope asked for is as wr
 - **Requirements change through a change request** ([references/change-requests.md](references/change-requests.md)); never edit a spec or the register to match what was built. A QA suggestion is not a requirement until the owner approves it.
 - **Refusals are the point.** When a command refuses, print why and stop.
 - **Local by default.** Staging, production, real payments and real messages only when the owner's current message says so.
-- **One PR per feature or refactor, merged by the owner** ([references/git-workflow.md](references/git-workflow.md), `docs/operations/git-delivery.md`). Never merge it yourself, push a tag, deploy or publish without the request. Merge and deployment are separate facts.
+- **One PR per feature or refactor, merged by the owner** ([references/git-workflow.md](references/git-workflow.md), `docs/operations/git-delivery.md`). A feature's PR is opened as a draft at its first stage close, so each stage is built and reviewed by CI as it lands. Never merge it yourself, push a tag, deploy or publish without the request. Merge and deployment are separate facts.
 - **No secrets** in code, logs, evidence, bug files or skills.
 - **Research before calling something a blocker:** the dependency's documentation and issue tracker, recorded.
 - **Ask the owner** when a business rule is ambiguous, requirements conflict or an open decision blocks; otherwise the lead decides and records it in `docs/decisions/DECISION_LOG.md`.

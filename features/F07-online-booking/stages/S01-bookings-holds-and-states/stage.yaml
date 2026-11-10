@@ -10,7 +10,7 @@ blocked_reason: null        # QA: what stops a stage pass, when qa_status is blo
 released_in: null
 reopened_by: null           # lead: the change request that reopened a closed stage, for example CR-004
 depends_on: []              # stage ids, of this or another feature
-requirements: [BKG-04, BKG-05, BKG-06, BKG-14, BKG-16]            # requirement ids of the feature that this stage delivers
+requirements: [BKG-04, BKG-05, BKG-06, BKG-14, BKG-16, BKG-24, BKG-26]            # requirement ids of the feature that this stage delivers
 nfr_focus: [NFR-05]               # non-functional requirements of the feature that this stage proves
 
 # Written by the developer at handoff. The stage is closed on it, and QA starts the feature pass
