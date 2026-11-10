@@ -72,8 +72,10 @@ class ModuleBoundariesTest {
      * platform calls it in the transaction that creates a salon, and it never becomes a remote call either. And
      * besides staff (decision 100(e)), which uses {@code identity.inprocess} for the seat check under the salon's lock
      * and for clearing a link when an account is removed, and {@code platform.inprocess} for the seat count: a seat's
-     * count and the write that takes it must commit together under one lock. The list stays exact, so any other module
-     * still fails here.
+     * count and the write that takes it must commit together under one lock. And besides booking (decision 119), which
+     * uses {@code staff.inprocess} and {@code catalogue.inprocess} for the guard re-checks it makes under the guard
+     * locks inside its own writing transactions, where staff also uses {@code catalogue.inprocess} to answer the
+     * catalogue's. The list stays exact, so any other module still fails here.
      */
     @Test
     void everyModuleDeclaresWhatItMayUse() {
@@ -90,7 +92,7 @@ class ModuleBoundariesTest {
                                 .anyMatch(dependency -> dependency.endsWith(":: inprocess")))
                         .map(Map.Entry::getKey))
                 .as("the modules that may use an inprocess contract")
-                .containsExactlyInAnyOrder("platform", "catalogue", "staff");
+                .containsExactlyInAnyOrder("platform", "catalogue", "staff", "booking");
     }
 
     @Test

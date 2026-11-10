@@ -2,9 +2,9 @@ package com.salonplatform.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salonplatform.catalogue.UpcomingServiceBookings;
+import com.salonplatform.catalogue.inprocess.UpcomingServiceBookings;
 import com.salonplatform.shared.persistence.TransactionLocks;
-import com.salonplatform.staff.UpcomingMemberBookings;
+import com.salonplatform.staff.inprocess.UpcomingMemberBookings;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.TestPostgres;
 import java.sql.Connection;

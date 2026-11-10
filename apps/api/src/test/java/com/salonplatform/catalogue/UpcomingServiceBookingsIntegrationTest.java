@@ -6,6 +6,7 @@ import static com.salonplatform.catalogue.CatalogueFixture.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.branding.SettingsTestSupport;
+import com.salonplatform.catalogue.inprocess.UpcomingServiceBookings;
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.StaffRole;
 import com.salonplatform.platform.OperatorTestSupport;

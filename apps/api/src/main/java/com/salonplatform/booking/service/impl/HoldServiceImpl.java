@@ -12,18 +12,21 @@ import com.salonplatform.booking.service.BookingReadService.BookingView;
 import com.salonplatform.booking.service.HoldService;
 import com.salonplatform.booking.service.impl.BookingCallers.Caller;
 import com.salonplatform.booking.service.impl.HoldRequests.Checked;
+import com.salonplatform.catalogue.CatalogueListing;
 import com.salonplatform.catalogue.CatalogueListings;
 import com.salonplatform.catalogue.ServiceTerms;
 import com.salonplatform.catalogue.ServiceTermsVersion;
 import com.salonplatform.catalogue.ServiceVariant;
-import com.salonplatform.catalogue.UpcomingServiceBookings;
+import com.salonplatform.catalogue.inprocess.CatalogueUnderGuard;
+import com.salonplatform.catalogue.inprocess.UpcomingServiceBookings;
 import com.salonplatform.shared.persistence.TransactionLocks;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.NotFoundException;
 import com.salonplatform.staff.TeamMember;
 import com.salonplatform.staff.TeamMembers;
-import com.salonplatform.staff.UpcomingMemberBookings;
+import com.salonplatform.staff.inprocess.TeamUnderGuard;
+import com.salonplatform.staff.inprocess.UpcomingMemberBookings;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -72,6 +75,8 @@ class HoldServiceImpl implements HoldService {
     private final BookingRepository bookings;
     private final BookingChanges changes;
     private final TransactionLocks locks;
+    private final TeamUnderGuard teamUnderGuard;
+    private final CatalogueUnderGuard catalogueUnderGuard;
     private final RandomGenerator random;
     private final Clock clock;
     private final TransactionTemplate writing;
@@ -89,6 +94,8 @@ class HoldServiceImpl implements HoldService {
             BookingRepository bookings,
             BookingChanges changes,
             TransactionLocks locks,
+            TeamUnderGuard teamUnderGuard,
+            CatalogueUnderGuard catalogueUnderGuard,
             RandomGenerator random,
             Clock clock,
             PlatformTransactionManager transactions) {
@@ -103,6 +110,8 @@ class HoldServiceImpl implements HoldService {
         this.bookings = bookings;
         this.changes = changes;
         this.locks = locks;
+        this.teamUnderGuard = teamUnderGuard;
+        this.catalogueUnderGuard = catalogueUnderGuard;
         this.random = random;
         this.clock = clock;
         this.writing = new TransactionTemplate(transactions);
@@ -273,14 +282,18 @@ class HoldServiceImpl implements HoldService {
         if (bookings.findByKey(prepared.request().key()).isPresent()) {
             throw new Replay();
         }
-        // Under the guard locks, a removal or delete that won the race has committed, and is seen here.
-        if (listings.current().services().stream()
-                .noneMatch(listed -> listed.id().equals(booked.serviceId()))) {
+        // Under the guard locks, a removal or delete that won the race has committed, and is seen here: in this
+        // transaction, through the in-process contracts (decision 119).
+        CatalogueListing listing = catalogueUnderGuard.current(prepared.at().branch());
+        if (listing.services().stream().noneMatch(listed -> listed.id().equals(booked.serviceId()))) {
             throw new NotFoundException();
         }
-        boolean onTeam =
-                team.member(booked.memberId()).filter(found -> !found.removed()).isPresent();
-        boolean performs = onTeam && team.servicesOf(booked.memberId()).contains(booked.serviceId());
+        boolean onTeam = teamUnderGuard
+                .member(booked.memberId())
+                .filter(found -> !found.removed())
+                .isPresent();
+        boolean performs =
+                onTeam && teamUnderGuard.servicesOf(booked.memberId(), listing).contains(booked.serviceId());
         if (!performs) {
             if (prepared.assigned()) {
                 throw new Unassignable();

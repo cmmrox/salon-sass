@@ -2,6 +2,7 @@ package com.salonplatform.staff.service.impl;
 
 import com.salonplatform.branding.SalonBranches;
 import com.salonplatform.platform.PublishedHoliday;
+import com.salonplatform.shared.persistence.ReadOnlyWork;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
 import com.salonplatform.staff.OpeningDay;
@@ -12,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Resolves the salon first, checks the branch through {@link SalonBranches} and reads the published calendar,
@@ -26,18 +25,13 @@ class OpeningScheduleImpl implements OpeningSchedule {
     private final SalonBranches branches;
     private final StaffScope scope;
     private final OpeningCalendar calendar;
-    private final TransactionTemplate reading;
+    private final ReadOnlyWork reading;
 
-    OpeningScheduleImpl(
-            SalonBranches branches,
-            StaffScope scope,
-            OpeningCalendar calendar,
-            PlatformTransactionManager transactions) {
+    OpeningScheduleImpl(SalonBranches branches, StaffScope scope, OpeningCalendar calendar, ReadOnlyWork reading) {
         this.branches = branches;
         this.scope = scope;
         this.calendar = calendar;
-        this.reading = new TransactionTemplate(transactions);
-        this.reading.setReadOnly(true);
+        this.reading = reading;
     }
 
     @Override
@@ -55,6 +49,6 @@ class OpeningScheduleImpl implements OpeningSchedule {
             throw new NotFoundException();
         }
         Map<LocalDate, PublishedHoliday> holidays = scope.holidays(from, to);
-        return reading.execute(status -> calendar.between(branchId, from, to, holidays));
+        return reading.read(() -> calendar.between(branchId, from, to, holidays));
     }
 }

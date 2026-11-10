@@ -1,6 +1,7 @@
 package com.salonplatform.booking.service.impl;
 
 import com.salonplatform.booking.entity.Booking;
+import com.salonplatform.shared.persistence.ReadOnlyWork;
 import com.salonplatform.shared.time.SalonTime;
 import com.salonplatform.staff.AffectedBooking;
 import java.time.Instant;
@@ -16,7 +17,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * What the contracts booking implements for {@code staff} and {@code catalogue} share: a read-only tenant transaction
- * of their own that never joins the caller's, and the salon's local dates and times of a booking.
+ * of their own that never joins the caller's ({@link ReadOnlyWork}) for a provided read interface, the caller's
+ * transaction for an in-process one, and the salon's local dates and times of a booking.
  */
 @Component
 class BookingReads {
@@ -24,16 +26,27 @@ class BookingReads {
     /** Later than any booking: the end of an open-ended range. */
     static final Instant FAR = Instant.parse("9999-12-31T00:00:00Z");
 
-    private final TransactionTemplate reading;
+    private final ReadOnlyWork reading;
 
-    BookingReads(PlatformTransactionManager transactions) {
-        this.reading = new TransactionTemplate(transactions);
-        this.reading.setReadOnly(true);
-        this.reading.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+    private final TransactionTemplate joining;
+
+    BookingReads(ReadOnlyWork reading, PlatformTransactionManager transactions) {
+        this.reading = reading;
+        this.joining = new TransactionTemplate(transactions);
+        this.joining.setReadOnly(true);
     }
 
+    /** A provided read interface's read: a read-only transaction of its own, refused inside a writing one. */
     <T> T read(Supplier<T> work) {
-        return reading.execute(status -> work.get());
+        return reading.read(work);
+    }
+
+    /**
+     * An in-process contract's read (decision 119): in the caller's transaction, a read-only one of its own when
+     * there is none.
+     */
+    <T> T joining(Supplier<T> work) {
+        return joining.execute(status -> work.get());
     }
 
     /** The salon's midnight at the start of the date. */

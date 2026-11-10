@@ -1,13 +1,13 @@
 package com.salonplatform.booking.service.impl;
 
 import com.salonplatform.booking.repository.BookingRepository;
-import com.salonplatform.catalogue.UpcomingServiceBookings;
+import com.salonplatform.catalogue.inprocess.UpcomingServiceBookings;
 import com.salonplatform.shared.tenancy.TenantContext;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
-/** The catalogue's guard before a service is deleted (CAT-01, AC-13). */
+/** The catalogue's guard before a service is deleted (CAT-01, AC-13), in the caller's transaction. */
 @Service
 class UpcomingServiceBookingsImpl implements UpcomingServiceBookings {
 
@@ -24,6 +24,6 @@ class UpcomingServiceBookingsImpl implements UpcomingServiceBookings {
     @Override
     public boolean anyFor(UUID serviceId) {
         TenantContext.require();
-        return Boolean.TRUE.equals(reads.read(() -> bookings.anyUpcomingForService(serviceId, clock.instant())));
+        return Boolean.TRUE.equals(reads.joining(() -> bookings.anyUpcomingForService(serviceId, clock.instant())));
     }
 }

@@ -3,12 +3,11 @@ package com.salonplatform.branding.service.impl;
 import com.salonplatform.branding.SalonBranch;
 import com.salonplatform.branding.SalonBranches;
 import com.salonplatform.branding.repository.BranchRepository;
+import com.salonplatform.shared.persistence.ReadOnlyWork;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.tenancy.TenantNotFoundException;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Opens its own read-only tenant transaction, with the salon resolved first, as a provided interface
@@ -19,18 +18,17 @@ import org.springframework.transaction.support.TransactionTemplate;
 class SalonBranchesImpl implements SalonBranches {
 
     private final BranchRepository branches;
-    private final TransactionTemplate readOnly;
+    private final ReadOnlyWork reading;
 
-    SalonBranchesImpl(BranchRepository branches, PlatformTransactionManager transactions) {
+    SalonBranchesImpl(BranchRepository branches, ReadOnlyWork reading) {
         this.branches = branches;
-        this.readOnly = new TransactionTemplate(transactions);
-        this.readOnly.setReadOnly(true);
+        this.reading = reading;
     }
 
     @Override
     public SalonBranch defaultBranch() {
         TenantContext.require();
-        return readOnly.execute(status -> branches.findDefault()
+        return reading.read(() -> branches.findDefault()
                 .map(branch -> new SalonBranch(branch.getId(), branch.getName(), branch.isDefault()))
                 .orElseThrow(TenantNotFoundException::new));
     }
@@ -41,6 +39,6 @@ class SalonBranchesImpl implements SalonBranches {
         if (branchId == null) {
             return false;
         }
-        return Boolean.TRUE.equals(readOnly.execute(status -> branches.existsById(branchId)));
+        return Boolean.TRUE.equals(reading.read(() -> branches.existsById(branchId)));
     }
 }

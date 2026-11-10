@@ -445,7 +445,8 @@ final class ModuleRules {
     private static final String IN_PROCESS = "inprocess";
 
     /**
-     * The interfaces a module declares in its root package for one other module to implement, so that dependencies
+     * The interfaces a module declares (in its root package, or in its {@code inprocess} package for a guard asked under
+     * a lock inside a writing transaction, decision 119) for one other module to implement, so that dependencies
      * point one way (decision 087's pattern): {@code staff} and {@code catalogue} ask about bookings, and {@code booking}
      * answers (decisions 087, 093, 095, 100, 102; F07-S01); {@code catalogue} asks {@code staff} who a category move
      * would stop performing a booked service (BUG-F06-002). Named relative to the base package, each with the one
@@ -453,11 +454,11 @@ final class ModuleRules {
      */
     private static final java.util.Map<String, String> DECLARED_FOR_ANOTHER_MODULE = java.util.Map.of(
             "staff.BookingsOnDate", "booking",
-            "staff.UpcomingMemberBookings", "booking",
+            "staff.inprocess.UpcomingMemberBookings", "booking",
             "staff.MemberBookingsAffected", "booking",
-            "catalogue.UpcomingServiceBookings", "booking",
+            "catalogue.inprocess.UpcomingServiceBookings", "booking",
             "catalogue.ServiceBookingCounts", "booking",
-            "catalogue.ServiceMoveBookings", "staff");
+            "catalogue.inprocess.ServiceMoveBookings", "staff");
 
     private String localHooks() {
         return base + "." + SHARED + ".local..";

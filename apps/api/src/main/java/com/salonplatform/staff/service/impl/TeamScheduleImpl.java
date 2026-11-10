@@ -1,5 +1,6 @@
 package com.salonplatform.staff.service.impl;
 
+import com.salonplatform.shared.persistence.ReadOnlyWork;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
 import com.salonplatform.staff.MemberWorkingDay;
@@ -23,9 +24,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Reads the member, their week and the range's date changes, leave and blocks in one read-only tenant transaction of its own,
@@ -41,7 +39,7 @@ class TeamScheduleImpl implements TeamSchedule {
     private final MemberLeaveRepository leaves;
     private final MemberBlockedTimeRepository blocks;
     private final ScheduleRows rows;
-    private final TransactionTemplate reading;
+    private final ReadOnlyWork reading;
 
     TeamScheduleImpl(
             MemberRepository members,
@@ -49,15 +47,13 @@ class TeamScheduleImpl implements TeamSchedule {
             MemberLeaveRepository leaves,
             MemberBlockedTimeRepository blocks,
             ScheduleRows rows,
-            PlatformTransactionManager transactions) {
+            ReadOnlyWork reading) {
         this.members = members;
         this.changes = changes;
         this.leaves = leaves;
         this.blocks = blocks;
         this.rows = rows;
-        this.reading = new TransactionTemplate(transactions);
-        this.reading.setReadOnly(true);
-        this.reading.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        this.reading = reading;
     }
 
     @Override
@@ -71,7 +67,7 @@ class TeamScheduleImpl implements TeamSchedule {
             throw new IllegalArgumentException("a range of 1 to " + MAX_DAYS + " days, the last not before the first");
         }
         TenantContext.require();
-        return reading.execute(status -> {
+        return reading.readOneSnapshot(() -> {
             Member member = members.findAny(memberId).orElseThrow(NotFoundException::new);
             boolean removed = member.isRemoved();
             List<WorkDay> week = removed ? ScheduleRules.noWorkingDays() : rows.week(memberId);

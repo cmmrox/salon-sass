@@ -4,9 +4,7 @@ import static com.salonplatform.catalogue.service.impl.CategoryServiceImpl.chang
 import static com.salonplatform.catalogue.service.impl.CategoryServiceImpl.requiredVersion;
 
 import com.salonplatform.catalogue.ServiceDeposit;
-import com.salonplatform.catalogue.ServiceMoveBookings;
 import com.salonplatform.catalogue.ServiceVariant;
-import com.salonplatform.catalogue.UpcomingServiceBookings;
 import com.salonplatform.catalogue.domain.CatalogueLimits;
 import com.salonplatform.catalogue.domain.CopyNames;
 import com.salonplatform.catalogue.domain.MinorUnits;
@@ -14,6 +12,8 @@ import com.salonplatform.catalogue.domain.Segments;
 import com.salonplatform.catalogue.entity.SalonService;
 import com.salonplatform.catalogue.entity.ServicePhoto;
 import com.salonplatform.catalogue.entity.TermsVersion;
+import com.salonplatform.catalogue.inprocess.ServiceMoveBookings;
+import com.salonplatform.catalogue.inprocess.UpcomingServiceBookings;
 import com.salonplatform.catalogue.repository.CategoryListRepository;
 import com.salonplatform.catalogue.repository.CategoryRepository;
 import com.salonplatform.catalogue.repository.PopularSettingRepository;
@@ -172,7 +172,7 @@ class SalonServicesImpl implements SalonServices {
             refuseTakenName(valid.name(), id, at);
             return service.getCategoryId();
         });
-        refuseLosingBookedPerformers(id, heldCategory, valid.categoryId());
+        refuseLosingBookedPerformers(at.branch(), id, heldCategory, valid.categoryId());
         return changing(() -> writing.execute(status -> {
             SalonService service = live(id, at);
             if (service.getVersion() != expected) {
@@ -182,7 +182,7 @@ class SalonServicesImpl implements SalonServices {
             refuseTakenName(valid.name(), id, at);
             if (!Objects.equals(valid.categoryId(), service.getCategoryId())) {
                 locks.hold(UpcomingServiceBookings.GUARD_LOCK, id);
-                refuseLosingBookedPerformers(id, service.getCategoryId(), valid.categoryId());
+                refuseLosingBookedPerformers(at.branch(), id, service.getCategoryId(), valid.categoryId());
             }
             TermsRows.Read current = terms.require(service.getCurrentTermsId());
             TermsVersion.Terms saved =
@@ -346,11 +346,12 @@ class SalonServicesImpl implements SalonServices {
     }
 
     /** Refused as a team save is (F06-S01 AC-8): one item per person who would lose a service they are booked for. */
-    private void refuseLosingBookedPerformers(UUID id, UUID fromCategoryId, UUID toCategoryId) {
+    private void refuseLosingBookedPerformers(UUID branch, UUID id, UUID fromCategoryId, UUID toCategoryId) {
         if (fromCategoryId == null || fromCategoryId.equals(toCategoryId)) {
             return;
         }
-        List<ServiceMoveBookings.BookedMember> losing = moves.losingBookedService(id, fromCategoryId, toCategoryId);
+        List<ServiceMoveBookings.BookedMember> losing =
+                moves.losingBookedService(branch, id, fromCategoryId, toCategoryId);
         if (!losing.isEmpty()) {
             throw new ApplicationProblemException(
                     409,

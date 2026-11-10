@@ -6,13 +6,12 @@ import com.salonplatform.booking.DepositRule;
 import com.salonplatform.booking.entity.BookingRulesVersion;
 import com.salonplatform.booking.repository.BookingRulesVersionRepository;
 import com.salonplatform.booking.service.impl.BookingScope.Scope;
+import com.salonplatform.shared.persistence.ReadOnlyWork;
 import com.salonplatform.shared.tenancy.TenantContext;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Reads versions in a read-only tenant transaction of its own; another salon's version is not seen, because
@@ -23,21 +22,18 @@ class BookingPoliciesImpl implements BookingPolicies {
 
     private final BookingScope scope;
     private final BookingRulesVersionRepository versions;
-    private final TransactionTemplate reading;
+    private final ReadOnlyWork reading;
 
-    BookingPoliciesImpl(
-            BookingScope scope, BookingRulesVersionRepository versions, PlatformTransactionManager transactions) {
+    BookingPoliciesImpl(BookingScope scope, BookingRulesVersionRepository versions, ReadOnlyWork reading) {
         this.scope = scope;
         this.versions = versions;
-        this.reading = new TransactionTemplate(transactions);
-        this.reading.setReadOnly(true);
-        this.reading.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+        this.reading = reading;
     }
 
     @Override
     public Optional<BookingRules> current() {
         Scope at = scope.publicly();
-        return reading.execute(status ->
+        return reading.read(() ->
                 versions.findFirstByBranchIdOrderByVersionDesc(at.branch()).map(BookingRulesVersion::rules));
     }
 
@@ -47,7 +43,7 @@ class BookingPoliciesImpl implements BookingPolicies {
         if (versionId == null) {
             return Optional.empty();
         }
-        return reading.execute(status -> versions.findVersion(versionId).map(BookingRulesVersion::rules));
+        return reading.read(() -> versions.findVersion(versionId).map(BookingRulesVersion::rules));
     }
 
     @Override

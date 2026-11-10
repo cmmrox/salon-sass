@@ -1,4 +1,4 @@
-package com.salonplatform.catalogue;
+package com.salonplatform.catalogue.inprocess;
 
 import java.util.UUID;
 
@@ -14,7 +14,11 @@ import java.util.UUID;
  * ({@code shared.persistence.TransactionLocks}, this purpose and the service's id) and asks again inside it;
  * {@code booking}'s transaction that places a hold for the service holds the same lock and checks again, under it, that
  * the service is still listed. Of the two, the second waits for the first to commit and then sees it, so never both
- * succeed. An implementation reads the request's salon, opens its own transaction and does not join the caller's.
+ * succeed.
+ *
+ * <p><strong>In-process only</strong> (decision 119): the catalogue asks again inside its own writing transaction,
+ * under the lock, so an implementation joins the caller's transaction (a read-only one of its own when there is none)
+ * rather than holding a second pooled connection while the lock is held.
  */
 public interface UpcomingServiceBookings {
 

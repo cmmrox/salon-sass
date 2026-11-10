@@ -3,11 +3,11 @@ package com.salonplatform.booking;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.catalogue.ServiceBookingCounts;
-import com.salonplatform.catalogue.UpcomingServiceBookings;
+import com.salonplatform.catalogue.inprocess.UpcomingServiceBookings;
 import com.salonplatform.staff.BookingsOnDate;
 import com.salonplatform.staff.MemberBookingsAffected;
 import com.salonplatform.staff.MemberPeriod;
-import com.salonplatform.staff.UpcomingMemberBookings;
+import com.salonplatform.staff.inprocess.UpcomingMemberBookings;
 import com.salonplatform.testing.Http;
 import java.time.Duration;
 import java.time.Instant;
@@ -114,7 +114,7 @@ class BookingIsolationIntegrationTest extends BookingTestBase {
         UUID alphasBranch = salons.defaultBranch(alpha.salon());
         UUID betasBranch = salons.defaultBranch(beta.salon());
 
-        inSalon(alpha, () -> {
+        askedBySalon(alpha, () -> {
             assertThat(upcomingMembers.countFor(beta.kasun())).isZero();
             assertThat(upcomingMembers.servicesBookedFor(beta.kasun(), Set.of(beta.service())))
                     .isEmpty();
@@ -126,7 +126,7 @@ class BookingIsolationIntegrationTest extends BookingTestBase {
             assertThat(affected.outsideDate(beta.kasun(), tomorrow, List.of())).isEmpty();
             return null;
         });
-        inSalon(beta, () -> {
+        askedBySalon(beta, () -> {
             assertThat(upcomingMembers.countFor(beta.kasun())).isEqualTo(1);
             assertThat(upcomingServices.anyFor(beta.service())).isTrue();
             assertThat(onDate.on(betasBranch, tomorrow)).hasSize(1);
@@ -136,8 +136,8 @@ class BookingIsolationIntegrationTest extends BookingTestBase {
 
         // "Most booked" counts bookings that have started (BUG-F07-005): once beta's has, it counts for beta only.
         moveClock(Duration.ofDays(2));
-        assertThat(inSalon(alpha, () -> counts.countsSince(Instant.EPOCH))).isEmpty();
-        assertThat(inSalon(beta, () -> counts.countsSince(Instant.EPOCH)))
+        assertThat(askedBySalon(alpha, () -> counts.countsSince(Instant.EPOCH))).isEmpty();
+        assertThat(askedBySalon(beta, () -> counts.countsSince(Instant.EPOCH)))
                 .containsExactly(Map.entry(beta.service(), 1L));
     }
 

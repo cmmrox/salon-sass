@@ -408,6 +408,20 @@ abstract class BookingTestBase extends IntegrationTest {
         }
     }
 
+    /**
+     * Another module's question asked for the salon outside a request, with no transaction open, as a caller asks a
+     * provided read interface (decision 119): it reads in a transaction of its own and is refused inside a writing one.
+     */
+    <T> T askedBySalon(Salon salon, Callable<T> work) {
+        try {
+            return TenantContext.callAs(salons.asCurrent(salon.salon()), work);
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
     /** Requests sent all at once from their own threads; their answers in the order given. */
     List<Http.Exchange> atOnce(List<Callable<Http.Exchange>> requests) throws Exception {
         try (var threads = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
