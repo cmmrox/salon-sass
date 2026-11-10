@@ -55,6 +55,15 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | F07-S01 | TC-F07-S01-038 | Only AC-8's payment and checkout routes are deferred. The in-process contracts that move a hold to pending payment and back, and that complete a booking, have no route until F08 (payment) and F10 (checkout); the same holds for AC-6's one clause that the job never ends a hold in pending payment. AC-6 itself (the job ending run-out holds as the system, with history and audit) is automated in TC-F07-S01-014 and -015, and AC-8's confirmation event in TC-F07-S01-021, with TC-F07-S01-018 proving that no route reaches pending payment or completed. The developer's integration tests through the domain hold the payment and checkout paths until then. | F08 and F10 |
 | F07-S02 | TC-F07-S02-018 | load test; the release suite runs only when the owner asks (decision 068). The developer measured p95 99 ms on 200 sequential calls (F07-S02 handoff). The scenario is qa/api/F07/S02-availability-load.spec.ts with qa/load/F07/S02-availability.js, unregistered (the lead's ruling). | release-prepare, where the lead adds it to the release manifest's gates |
 
+## Pending criteria
+
+Criteria a change request added to a stage's spec, in its `## CR-nnn` section, while the request
+is `approved`. They need no case yet; once the request is `implemented` they are required.
+
+| Stage | Criterion | Change request |
+| --- | --- | --- |
+| - | none | - |
+
 ## Requirements
 
 | Requirement | Release | Priority | Feature | Stages |

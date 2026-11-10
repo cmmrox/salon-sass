@@ -77,10 +77,27 @@ def _spec(text):
     return {
         "headings": H2_RE.findall(text),
         "acs": AC_RE.findall(text),
+        "cr_criteria": _cr_criteria(text),
         "read_first": named,
         "missing_docs": [path for path in named if not os.path.exists(path)],
         "commands": _commands(text),
     }
+
+
+# A section a change request added to a merged stage's spec (decision 098): "## CR-028 ...".
+CR_SECTION_RE = re.compile(r"^##\s+(CR-\d{3})\b[^\n]*$(.*?)(?=^## |\Z)", re.M | re.S)
+
+
+def _cr_criteria(text):
+    """The criteria declared under a '## CR-nnn' heading, each with the change request that added it.
+
+    Whether such a criterion must already be covered depends on that request's status, which
+    validate.py decides; the reader only records where each criterion was declared."""
+    found = {}
+    for request, body in CR_SECTION_RE.findall(text):
+        for criterion in AC_RE.findall(body):
+            found.setdefault(criterion, request)
+    return found
 
 
 def _commands(text):

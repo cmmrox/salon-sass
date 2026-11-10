@@ -276,15 +276,37 @@ def check_handed_over(stage, sid):
     return findings
 
 
-def check_feature_covers_stages(feature, fid, stages):
+# A change request's criteria wait for their cases while the request is approved and not yet
+# implemented (decision 098): the lead adds them to a merged stage's spec, in a '## CR-nnn'
+# section, before QA writes their cases, and main must still validate in between.
+PENDING_CR_STATUSES = ("approved",)
+
+
+def pending_criteria(stage, bundle):
+    """{criterion: change request} for the criteria of a stage's spec that are not yet required."""
+    spec = stage.get("_spec") or {}
+    statuses = {r.get("id"): r.get("status") for r in bundle.get("change_requests") or []}
+    return {criterion: request for criterion, request in (spec.get("cr_criteria") or {}).items()
+            if statuses.get(request) in PENDING_CR_STATUSES}
+
+
+def required_criteria(stage, bundle):
+    """The criteria a stage's cases must cover now: every criterion of its spec but the pending ones."""
+    spec = stage.get("_spec")
+    if not spec:
+        return []
+    pending = pending_criteria(stage, bundle)
+    return [criterion for criterion in spec["acs"] if criterion not in pending]
+
+
+def check_feature_covers_stages(feature, fid, stages, bundle):
     """A feature pass is the QA of every stage in it: each stage's criteria are covered by
     that stage's cases, written at the feature pass or at a stage pass the owner asked for."""
     findings = []
     for stage in stages:
         if stage.get("qa_status") == "pass":
             continue  # already held to the full gate as a stage
-        spec = stage.get("_spec")
-        for finding in check_coverage(stage, spec["acs"] if spec else []):
+        for finding in check_coverage(stage, required_criteria(stage, bundle)):
             findings.append(f"{finding} ({fid} cannot pass QA until it is)")
     return findings
 
@@ -432,7 +454,7 @@ def check_features(bundle):
                     _add(findings, feature, f"{fid} is '{status}' but stage {stage.get('id')} is '{stage.get('status')}'")
         if status in S.CLAIMED or feature.get("qa_status") == "pass":
             findings += check_qa_gate(feature, fid, None)
-            findings += check_feature_covers_stages(feature, fid, stages)
+            findings += check_feature_covers_stages(feature, fid, stages, bundle)
         if (status == "released") != bool(feature.get("released_in")):
             _add(findings, feature, "released_in must be set exactly when status is 'released'")
 
@@ -542,7 +564,7 @@ def check_stages(bundle):
         if status in S.HANDED_OVER:
             findings += check_handed_over(stage, sid)
         if stage.get("qa_status") == "pass":
-            findings += check_qa_gate(stage, sid, criteria)
+            findings += check_qa_gate(stage, sid, required_criteria(stage, bundle))
         if (status == "released") != bool(stage.get("released_in")):
             _add(findings, stage, "released_in must be set exactly when status is 'released'")
     return findings
