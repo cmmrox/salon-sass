@@ -30,3 +30,4 @@ export {
   withOperatorLock,
 } from './client/operator-session';
 export type { Entitlements } from './types';
+export { useEntitlements, useInvoices, useSalonAccountChanges, useSupportSessions } from './client/salon-account-data';

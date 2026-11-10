@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts/platform';
@@ -16,17 +16,9 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { formatDate, formatMoney } from '@salon/format';
-import {
-  ensurePrincipal,
-  leaveEndedSession,
-  identityRequest,
-  IdentityFailure,
-  AccountLoading,
-  Button,
-  Section,
-} from '@/features/identity';
-import type { Kind } from '@/features/identity/server';
-import type { Entitlements } from '@/features/platform';
+import { leaveEndedSession, AccountLoading, Button, Section, type Kind } from '@/features/identity';
+import { useEntitlements, useInvoices, type Entitlements } from '@/features/platform';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 
 type InvoicePage = components['schemas']['InvoicePage'];
 
@@ -42,46 +34,30 @@ const PAGE = 10;
 export function BillingScreen({ kind, timeZone }: { kind: Kind; timeZone: string }) {
   const t = useTranslations('billing');
   const router = useRouter();
-  const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
-  const [invoices, setInvoices] = useState<InvoicePage | null>(null);
+  // The page asked for, and the page whose invoices are on screen: the pager moves once the new page has arrived.
   const [page, setPage] = useState(0);
-  const [busy, setBusy] = useState(true);
-  const [error, setError] = useState<IdentityFailure | null>(null);
-  const load = useCallback(
-    async (next: number) => {
-      setBusy(true);
-      setError(null);
-      try {
-        await ensurePrincipal(kind);
-        const [plan, list] = await Promise.all([
-          identityRequest<Entitlements>(kind, 'entitlements'),
-          identityRequest<InvoicePage>(kind, `invoices?page=${next}`),
-        ]);
-        setEntitlements(plan);
-        setInvoices(list);
-        setPage(next);
-      } catch (failure) {
-        const f = failure instanceof IdentityFailure ? failure : new IdentityFailure('service_unavailable');
-        if (f.code === 'invalid_session') {
-          leaveEndedSession(kind, router);
-          return;
-        }
-        setError(f);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [kind, router],
-  );
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load(0);
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  const plan = useEntitlements(kind);
+  const list = useInvoices(kind, page);
+  const ready = Boolean(plan.data && list.data && !list.isPlaceholderData);
+  const [shown, setShown] = useState<{ entitlements: Entitlements; invoices: InvoicePage; page: number } | null>(null);
+  if (ready && plan.data && list.data && (shown?.invoices !== list.data || shown.entitlements !== plan.data))
+    setShown({ entitlements: plan.data, invoices: list.data, page });
+  const entitlements = shown?.entitlements ?? null;
+  const invoices = shown?.invoices ?? null;
+  const shownPage = shown?.page ?? 0;
+  const busy = plan.isFetching || list.isFetching;
+  const failed = plan.error ?? list.error;
+  const error = failed && failed.code !== 'invalid_session' ? failed : null;
+  useReadFailure([plan, list], (failure) => {
+    if (failure.code === 'invalid_session') leaveEndedSession(kind, router);
+  });
+  /** Reads the page asked for again (after a failure), or another page. */
+  const load = (next: number) => {
+    if (next === page) {
+      void plan.refetch();
+      void list.refetch();
+    } else setPage(next);
+  };
   const date = (value: string) => formatDate(value, timeZone, LOCALE);
   const subscription = entitlements?.subscription ?? null;
   return (
@@ -97,7 +73,7 @@ export function BillingScreen({ kind, timeZone }: { kind: Kind; timeZone: string
               ? t(error.code as 'service_unavailable')
               : t('service_unavailable')}
           </p>
-          <Button testId="billing-retry" secondary disabled={busy} onClick={() => void load(page)}>
+          <Button testId="billing-retry" secondary disabled={busy} onClick={() => load(page)}>
             {t('retry')}
           </Button>
         </Alert>
@@ -267,22 +243,22 @@ export function BillingScreen({ kind, timeZone }: { kind: Kind; timeZone: string
                     <PaginationItem>
                       <PaginationPrevious
                         data-testid="billing-page-previous"
-                        disabled={busy || page === 0}
-                        onClick={() => void load(page - 1)}
+                        disabled={busy || shownPage === 0}
+                        onClick={() => load(shownPage - 1)}
                       >
                         {t('previous')}
                       </PaginationPrevious>
                     </PaginationItem>
                     <PaginationItem>
                       <PaginationCurrent data-testid="billing-page">
-                        {t('page', { page: page + 1, pages: Math.max(1, Math.ceil(invoices.total / PAGE)) })}
+                        {t('page', { page: shownPage + 1, pages: Math.max(1, Math.ceil(invoices.total / PAGE)) })}
                       </PaginationCurrent>
                     </PaginationItem>
                     <PaginationItem>
                       <PaginationNext
                         data-testid="billing-page-next"
-                        disabled={busy || (page + 1) * PAGE >= invoices.total}
-                        onClick={() => void load(page + 1)}
+                        disabled={busy || (shownPage + 1) * PAGE >= invoices.total}
+                        onClick={() => load(shownPage + 1)}
                       >
                         {t('next')}
                       </PaginationNext>
