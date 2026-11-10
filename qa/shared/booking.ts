@@ -337,8 +337,11 @@ const T = PENDING_F07_S01.tables;
 
 /** A digest of every booking and history row of a salon, to prove a refused call changed nothing. */
 export function bookingSnapshot(salonId: string): string {
-  return [T.booking, T.history].map(t => identitySql(
-    `SELECT count(*) || ':' || coalesce(md5(string_agg(row_to_json(x)::text, '|' ORDER BY row_to_json(x)::text)), 'none') FROM ${t} x WHERE tenant_id = ${sqlLiteral(salonId)}`)).join(',');
+  // One statement, so both tables are read at one moment: two reads could straddle a job's commit (the hold-expiry job
+  // runs as the test clock moves) and pair one table's old rows with the other's new ones.
+  const part = (t: string) =>
+    `(SELECT count(*) || ':' || coalesce(md5(string_agg(row_to_json(x)::text, '|' ORDER BY row_to_json(x)::text)), 'none') FROM ${t} x WHERE tenant_id = ${sqlLiteral(salonId)})`;
+  return identitySql(`SELECT ${part(T.booking)} || ',' || ${part(T.history)}`);
 }
 export const bookingRows = (salonId: string) => Number(identitySql(`SELECT count(*) FROM ${T.booking} WHERE tenant_id = ${sqlLiteral(salonId)}`));
 

@@ -5,7 +5,8 @@
  *
  * Expected results are the F07-S01 spec's AC-13 and its handoff (note 11: upcoming means held and not run out, pending
  * payment, confirmed, arrived or in service, whose end has not passed; the affected lists hold held, pending payment,
- * confirmed, arrived and in service; "Most booked" counts confirmed, arrived, in service and completed). How each earlier
+ * confirmed, arrived and in service; "Most booked" counts confirmed, arrived, in service and completed bookings that have
+ * started, the 90 days ending at now, decision 092 and the owner's ruling for PR #26 over note 11's "future included"). How each earlier
  * feature words its refusal and its lists on screen is that feature's deferred case (TC-F04-S03-031, TC-F05-S01-020,
  * TC-F05-S02-015, TC-F06-S01-011, -012, TC-F06-S02-029, TC-F06-S03-031), run with F07's feature pass.
  * A race sweeps the gaps in both orders and asserts that each side won at least once and that requests really overlapped.
@@ -217,7 +218,11 @@ test('TC-F07-S01-035 AC-13: "Most booked" ranks services by their real bookings,
     await s.bookings.act(s.salon, s.owner.tokens, b.id, 'cancel', { reason: 'customer_asked' });
   }
   for (const time of ['14:00', '15:00', '16:00']) await book(m2, y, time);
-  const setting = await s.catalogue.setMode(s.salon, s.owner.tokens, 'most_booked');
+  // The 90 days end at now (decision 092; the owner's ruling for PR #26, BUG-F07-005): read the list once every booking
+  // above has taken place.
+  await clock.set(utcOf(s.today, '17:31'));
+  const owner = await again(identity, s.owner);
+  const setting = await s.catalogue.setMode(s.salon, owner.tokens, 'most_booked');
   expect(setting.popular.slice(0, 2), 'Blow-dry, with three bookings, before Head massage with one').toEqual([x.id, y.id]);
 });
 

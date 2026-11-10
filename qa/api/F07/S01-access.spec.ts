@@ -16,7 +16,7 @@ import type { APIResponse } from '@playwright/test';
 import { readOnlySalon } from '../../shared/billing';
 import { refused } from '../../shared/booking-rules';
 import {
-  ACTIONS, BOOKINGS, again, bookingPath, bookingSalon, bookingSnapshot, holdInput, staffAt, utcOf, type Booking, type BookingSalon,
+  ACTIONS, BOOKINGS, again, bookingPath, bookingSalon, bookingSnapshot, holdInput, staffAt, storedBooking, utcOf, type Booking, type BookingSalon,
 } from '../../shared/booking';
 import type { SignedStaff, Tokens } from '../../shared/identity';
 import { plusDays } from '../../shared/salon-hours';
@@ -94,6 +94,10 @@ test('TC-F07-S01-026 AC-12: the Owner, a Manager and a Receptionist each place, 
   });
 
   await clock.set(utcOf(s.today, '09:05'));
+  // The clock now passes the Professional's hold's expiry (08:10), and the hold-expiry job, which runs as the clock moves,
+  // ends it (AC-6). Settle that before the refusals below compare what is stored, as docs/qa/test-plan.md asks of a test
+  // that moves the clock: the job's change is not the refusal's.
+  await expect.poll(() => storedBooking(s.created.id, pHold.id).state, { message: 'the job has ended the run-out hold', timeout: 90_000 }).toBe('expired');
   for (const [who, actor, booking] of noShowLater) {
     await test.step(`${who}: no-show and undo`, async () => {
       const now = await again(identity, actor);
