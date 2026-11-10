@@ -331,15 +331,17 @@ export function createIdentityWeb(
   salonBookingsFor: SalonBookingsFor,
 ) {
   return (request: NextRequest, kind: Kind, action: string) =>
-    handleIdentity(request, kind, action, {
-      salonAccountFor,
-      salonSettingsFor,
-      salonHoursFor,
-      salonBookingRulesFor,
-      salonCatalogueFor,
-      salonTeamFor,
-      salonBookingsFor,
-    });
+    answeredForSession(request, kind, action, () =>
+      handleIdentity(request, kind, action, {
+        salonAccountFor,
+        salonSettingsFor,
+        salonHoursFor,
+        salonBookingRulesFor,
+        salonCatalogueFor,
+        salonTeamFor,
+        salonBookingsFor,
+      }),
+    );
 }
 
 /**
@@ -365,6 +367,55 @@ const IDENTITY_ACTIONS = new Set([
   'staff-change',
   'staff-remove',
 ]);
+
+/**
+ * Reads whose API endpoint answers anyone on the salon's host (the published tax and booking rules, the opening
+ * week, the API's clock): the BFF's own session and permission check is their only gate.
+ */
+const OPEN_UPSTREAM = new Set(['catalogue-tax-public', 'booking-rules-public', 'team-opening-hours', 'booking-clock']);
+
+/**
+ * Whether the principal is read (`/identity/me`) and the session and permission checked here before the call (the
+ * lead's ruling on web H3). A module's read is not: its endpoint authenticates the credential itself, refuses another
+ * salon's (the API resolves the salon by `Host`) and requires the same permission (`SessionAccess.auth()` and each use
+ * case's `principals.require`), so the refusal is the API's, 403 `permission_denied`. Every change keeps the re-check
+ * before its call, as do the identity module's own actions, the reads whose endpoint answers anyone, and uploads,
+ * whose form is read only after the session is known (BUG-F04-001).
+ */
+function checksPrincipalFirst(method: string, action: string): boolean {
+  return method !== 'GET' || IDENTITY_ACTIONS.has(action) || OPEN_UPSTREAM.has(action) || UPLOAD_FIELDS.has(action);
+}
+
+/**
+ * A module's read answered from the API's own refusals, now that no principal is read first: a credential the API
+ * refused is `invalid_session` with whether the refresh credential may renew it, as the principal read said before;
+ * a suspended salon is unavailable, as the proxy's lookup said before.
+ */
+async function answeredForSession(
+  request: NextRequest,
+  kind: Kind,
+  action: string,
+  handle: () => Promise<NextResponse>,
+): Promise<NextResponse> {
+  const response = await handle();
+  if (kind !== 'staff' || checksPrincipalFirst(request.method, action)) return response;
+  if (response.status !== 401 && response.status !== 403) return response;
+  const body = (await response
+    .clone()
+    .json()
+    .catch(() => ({}))) as { code?: string; renewable?: boolean };
+  if (response.status === 403 && body.code === 'salon_suspended') return problem('service_unavailable', 503);
+  if (response.status !== 401 || body.code !== 'invalid_session' || body.renewable !== undefined) return response;
+  const host = requestHost(request.headers.get('host'));
+  if (!host) return response;
+  const credentials = {
+    access: request.cookies.get(cookieName(kind, 'access'))?.value,
+    refresh: request.cookies.get(cookieName(kind, 'refresh'))?.value,
+    expiry: request.cookies.get(cookieName(kind, 'expires'))?.value,
+  };
+  const renewable = (await renewal(host.hostname, credentials, 401).catch(() => 'unknown')) === 'renewable';
+  return problem('invalid_session', 401, { renewable });
+}
 
 /**
  * Whether a request to the workspace BFF is answered without the proxy's salon lookup: a module's action. The
@@ -463,7 +514,10 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     const options = { headers, signal };
     const publicActions = ['sign-in', 'mfa-enroll', 'mfa-verify'];
     let principal: Principal | undefined;
-    if (!publicActions.includes(action) && action !== 'clear') {
+    const checked = checksPrincipalFirst(request.method, action);
+    // A module's read without an access credential is refused here, without asking the API.
+    if (!checked && !access) return problem('invalid_session', 401);
+    if (checked && !publicActions.includes(action) && action !== 'clear') {
       const answer = await client.GET('/api/v1/identity/me', options);
       principal = answer.data;
       if (!principal || principal.kind !== kind) {
