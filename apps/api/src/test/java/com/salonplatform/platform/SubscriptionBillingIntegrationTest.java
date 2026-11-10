@@ -481,7 +481,7 @@ class SubscriptionBillingIntegrationTest extends IntegrationTest {
                 .isEqualTo(recipient);
         assertThat(attempt(open, "issue")).containsEntry("status", "failed");
 
-        // Retried on each reminder day while unpaid.
+        // Retried on each reminder day while unpaid, each retry once the one before it has failed (BUG-F03-010).
         Instant due = instant(invoices(failedSalon).get(0).get("due_at"));
         CLOCK.set(due.minusSeconds(1));
         job.run(CLOCK.instant());
@@ -491,8 +491,10 @@ class SubscriptionBillingIntegrationTest extends IntegrationTest {
         CLOCK.set(due);
         job.run(CLOCK.instant());
         job.run(CLOCK.instant());
+        failCharge(open, "due");
         CLOCK.set(due.plus(Duration.ofDays(3)));
         job.run(CLOCK.instant());
+        failCharge(open, "due_3");
         CLOCK.set(due.plus(Duration.ofDays(10)));
         job.run(CLOCK.instant());
         assertThat(owner.queryForList(
@@ -500,6 +502,56 @@ class SubscriptionBillingIntegrationTest extends IntegrationTest {
                         String.class,
                         open))
                 .containsExactly("issue", "due", "due_3", "due_10");
+    }
+
+    /** The provider's failure of an invoice's attempt on that occasion. */
+    private void failCharge(UUID invoice, String occasion) {
+        Object key = attempt(invoice, occasion).get("attempt_key");
+        String failure = event("evt-fail-" + occasion + "-" + invoice, invoice, key, "failure");
+        assertThat(body(postEvent(failure, sign(failure)))).containsEntry("result", "failed");
+    }
+
+    private List<String> occasions(UUID invoice) {
+        return owner.queryForList(
+                "SELECT occasion FROM charge_attempt WHERE invoice_id = ? ORDER BY requested_at",
+                String.class,
+                invoice);
+    }
+
+    /** BUG-F03-010, NFR-11: one charge in flight for an invoice at a time. */
+    @Test
+    void aReminderRequestsNoChargeWhileAnEarlierAttemptForTheInvoiceIsUnsettled() {
+        UUID salon = cardSalonWithInvoice();
+        UUID invoice = (UUID) invoices(salon).get(0).get("id");
+        assertThat(attempt(invoice, "issue")).containsEntry("status", "requested");
+        Instant due = instant(invoices(salon).get(0).get("due_at"));
+
+        // The issue attempt is still waiting on the due date: no second charge for the same invoice.
+        CLOCK.set(due);
+        job.run(CLOCK.instant());
+        assertThat(occasions(invoice)).containsExactly("issue");
+
+        // Once it has failed, the next reminder day retries; that retry, still waiting, blocks the one after.
+        failCharge(invoice, "issue");
+        CLOCK.set(due.plus(Duration.ofDays(3)));
+        job.run(CLOCK.instant());
+        CLOCK.set(due.plus(Duration.ofDays(10)));
+        job.run(CLOCK.instant());
+
+        // The first reminder day after the failure retries under the earliest occasion not yet used (a late pass
+        // catches up on every passed reminder, decision 051); nothing more while that retry waits.
+        assertThat(occasions(invoice)).containsExactly("issue", "due");
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id = ? AND channel = 'billing-charge'",
+                        Integer.class,
+                        salon))
+                .isEqualTo(2);
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM billing_reminder WHERE invoice_id = ? AND kind IN ('due', 'due_3', 'due_10')",
+                        Integer.class,
+                        invoice))
+                .as("the reminder emails still go out once each")
+                .isEqualTo(3);
     }
 
     @Test
