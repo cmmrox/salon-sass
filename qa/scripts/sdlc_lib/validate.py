@@ -324,7 +324,7 @@ def check_integration(scope, shared_branch=None):
     if not isinstance(integration, dict):
         _add(findings, scope, "integration must be a mapping")
         return findings
-    for key in ("qa_revision", "merged_commit"):
+    for key in ("reviewed_revision", "qa_revision", "merged_commit"):
         value = integration.get(key)
         if value and not S.COMMIT_RE.fullmatch(str(value)):
             _add(findings, scope, f"integration.{key} must be a full Git commit SHA")

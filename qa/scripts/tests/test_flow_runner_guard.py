@@ -49,9 +49,32 @@ class FlowTest(unittest.TestCase):
                          ("lead", "feature-new F15"))
         self.assertEqual(flow.feature_turn(fx.feature(), [fx.stage(status="planned")]),
                          ("developer", "stage-build F07-S01"))
-        self.assertEqual(flow.feature_turn(fx.feature(), [fx.stage()]), ("qa", "feature-verify F07"))
-        self.assertEqual(flow.feature_turn(fx.feature(), [fx.unverified_stage()]), ("qa", "feature-verify F07"))
+        reviewed = fx.feature()
+        reviewed["integration"]["reviewed_revision"] = "c" * 40
+        self.assertEqual(flow.feature_turn(reviewed, [fx.stage()]), ("qa", "feature-verify F07"))
+        self.assertEqual(flow.feature_turn(reviewed, [fx.unverified_stage()]), ("qa", "feature-verify F07"))
         self.assertEqual(flow.feature_turn(fx.feature(qa_status="pass"), [fx.stage()]), ("lead", "feature-close F07"))
+
+    def test_the_lead_reviews_the_feature_before_qa_verifies_it(self):
+        closed = [fx.unverified_stage(), fx.unverified_stage(id="F07-S02", sequence=2)]
+        self.assertEqual(flow.feature_turn(fx.feature(), closed), ("lead", "feature-review F07"))
+        self.assertEqual(flow.feature_turn(fx.feature(), closed[:1] + [fx.unverified_stage(id="F07-S02", status="built")]),
+                         ("lead", "stage-close F07-S02"))
+        reviewed = fx.feature()
+        reviewed["integration"]["reviewed_revision"] = "c" * 40
+        self.assertEqual(flow.feature_turn(reviewed, closed), ("qa", "feature-verify F07"))
+        # A feature QA has already worked on, or one that passed, keeps its turn.
+        self.assertEqual(flow.feature_turn(fx.feature(qa_status="pass"), closed), ("lead", "feature-close F07"))
+        self.assertEqual(flow.feature_turn(fx.feature(status="in-qa", qa_status="failing"), closed),
+                         ("qa", "feature-verify F07"))
+
+    def test_validate_accepts_a_reviewed_revision_only_as_a_full_sha(self):
+        from sdlc_lib import validate
+        for value, ok in ((None, True), ("c" * 40, True), ("c" * 7, False), ("HEAD", False)):
+            scope = fx.feature()
+            scope["integration"]["reviewed_revision"] = value
+            found = [f for f in validate.check_integration(scope) if "reviewed_revision" in f]
+            self.assertEqual(not found, ok, (value, found))
 
     def test_feature_pass_settles_a_bug_carried_from_a_stage(self):
         carried = fx.unverified_stage(_bugs=[fx.bug(severity="minor")])

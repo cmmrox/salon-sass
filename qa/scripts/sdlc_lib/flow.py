@@ -90,6 +90,10 @@ def feature_turn(feature, stages, features=()):
             return stage_turn(stage)
     if not stages:
         return ("lead", f"feature-new {fid}")
+    # feature-review: the lead reads the whole feature's code once its stages are closed and
+    # before QA starts, and records the commit it reviewed.
+    if feature.get("qa_status") == "not-run" and not (feature.get("integration") or {}).get("reviewed_revision"):
+        return ("lead", f"feature-review {fid}")
     # The feature pass is where every bug is settled, including one carried from a stage.
     carried = [bug for stage in stages for bug in stage.get("_bugs") or []]
     return _qa_turn({**feature, "_stage_bugs": carried}, f"feature-verify {fid}", f"feature-close {fid}")
