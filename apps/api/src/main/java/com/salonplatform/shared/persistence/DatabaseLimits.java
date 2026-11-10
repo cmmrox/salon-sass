@@ -37,7 +37,7 @@ public final class DatabaseLimits {
     private static final Duration DRIVER_MARGIN = Duration.ofSeconds(10);
 
     /** The limits the server keeps on one session or transaction. */
-    record ServerLimits(Duration statement, Duration lock, Duration idleInTransaction) {
+    private record ServerLimits(Duration statement, Duration lock, Duration idleInTransaction) {
 
         ServerLimits {
             if (lock.compareTo(statement) > 0) {
