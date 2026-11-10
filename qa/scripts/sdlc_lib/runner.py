@@ -71,15 +71,27 @@ def _reference(entry):
     return f"{entry.get('scope')}:{entry.get('id')}"
 
 
-def failed_in(report_dir):
-    """The 'scope:id' of every entry that did not pass in an earlier run's summary.json."""
+def failed_in(report_dir, entries=()):
+    """The 'scope:id' of every entry an earlier run did not pass, from its summary.json.
+
+    That is each entry it selected and did not record as passed: a failure, a timeout, a missing
+    tool, the entry that was current when the run was interrupted, and every entry it never
+    reached. A summary from before the runner recorded its selection lists only finished entries;
+    for one whose run did not complete, every entry of `entries` (the scope chosen now) that it
+    did not pass is taken instead, since what it never reached cannot be read from it."""
     path = os.path.join(report_dir, "summary.json")
     try:
         with open(path, encoding="utf-8") as handle:
             summary = json.load(handle)
     except (OSError, ValueError) as error:
         raise SelectionError(f"cannot read {path}: {error}")
-    return [_reference(r) for r in summary.get("entries") or [] if r.get("outcome") != "pass"]
+    finished = summary.get("entries") or []
+    passed = {_reference(r) for r in finished if r.get("outcome") == "pass"}
+    if isinstance(summary.get("selected"), list):
+        return [ref for ref in summary["selected"] if ref not in passed]
+    if summary.get("state") == "complete":
+        return [_reference(r) for r in finished if r.get("outcome") != "pass"]
+    return [_reference(e) for e in entries if _reference(e) not in passed]
 
 
 def narrow(entries, names=(), rerun_report=None):
@@ -89,7 +101,7 @@ def narrow(entries, names=(), rerun_report=None):
     'scope:id' ('F05-S01:catalogue-api'). Narrowing never reaches outside the chosen scope."""
     wanted = list(names or ())
     if rerun_report:
-        failed = failed_in(rerun_report)
+        failed = failed_in(rerun_report, entries)
         if not failed:
             raise SelectionError(f"{rerun_report} records no failed entry; there is nothing to run again")
         wanted += failed
@@ -443,6 +455,9 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
     started = time.monotonic()
     summary = {"label": label, "run_id": run_id, "source_revision": _revision(), **_source_state(),
                "state": "running", "result": "running", "selected_count": len(entries),
+               # Every entry this run was asked to run, in order: --rerun-failed reruns those it
+               # did not pass, including one it was interrupted in and those it never reached.
+               "selected": [_reference(e) for e in entries],
                "entries": [], "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     if summary["source_dirty"]:
         print(f"WARNING: the checkout has {len(summary['source_changes'])} uncommitted change(s); "
