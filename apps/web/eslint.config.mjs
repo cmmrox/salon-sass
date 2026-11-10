@@ -106,9 +106,41 @@ const ELEMENTS = [
 
 const element = (type, extra = {}) => ({ to: { element: { type, ...extra } } });
 const CROSS_CUTTING = ['shared-component', 'ui', 'lib'].map((type) => element(type));
-// Another folder is reached through its entries only: a feature's index.ts and server.ts, a surface's index.ts.
+// Another folder is reached through its entries only: a feature's index.ts and server.ts, a surface's index.ts and
+// its route table, routes.ts (decision 121), which the proxy and the BFF route read without the surface's screens.
 const FEATURE_ENTRIES = element('feature', { fileInternalPath: ['index.ts', 'server.ts'] });
-const SURFACE_ENTRY = element('surface', { fileInternalPath: 'index.ts' });
+const SURFACE_ENTRY = element('surface', { fileInternalPath: ['index.ts', 'routes.ts'] });
+
+/**
+ * Routes are registered per module (decision 121, docs/engineering/web.md, "Structure"): `moduleRoutes('<module>', …)`
+ * is called only in that module's own `src/features/<module>/server/routes.ts`, so no module declares another's pages,
+ * actions or permissions, and nothing outside the modules declares any.
+ */
+const ownRoutes = {
+  meta: {
+    type: 'problem',
+    messages: {
+      elsewhere: "A module's routes are declared in its own src/features/<module>/server/routes.ts.",
+      another: "The {{module}} module's routes are declared by the {{module}} module, not here.",
+    },
+  },
+  create(context) {
+    const owner = /\/src\/features\/([^/]+)\/server\/routes\.ts$/.exec(context.filename.replaceAll('\\', '/'))?.[1];
+    return {
+      CallExpression(node) {
+        if (node.callee.type !== 'Identifier' || node.callee.name !== 'moduleRoutes') return;
+        if (!owner) return context.report({ node, messageId: 'elsewhere' });
+        const [first] = node.arguments;
+        if (first?.type !== 'Literal' || first.value !== owner)
+          context.report({
+            node,
+            messageId: 'another',
+            data: { module: first?.type === 'Literal' ? String(first.value) : 'another' },
+          });
+      },
+    };
+  },
+};
 
 /**
  * Imports point one way: app -> surfaces -> features -> components and lib. A feature never imports
@@ -150,6 +182,12 @@ const eslintConfig = defineConfig([
     rules: {
       'boundaries/dependencies': ['error', { default: 'disallow', policies: IMPORT_POLICIES }],
     },
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.{ts,tsx}'],
+    plugins: { local: { rules: { 'own-routes': ownRoutes } } },
+    rules: { 'local/own-routes': 'error' },
   },
   {
     files: ['src/**/*.{ts,tsx}'],
