@@ -369,10 +369,12 @@ test(`${id(18)} After deletion the tombstone keeps no name, contact or Owner ema
   expect(invoicesBefore, 'the salon has an invoice').toBe(1);
   const auditBefore = platformAudit(created.id).length;
 
+  // The scheduler's own deletion pass is due at the same instant and may be the one that deletes it (as in -011).
   await clock.set(closed.deleteAt!);
-  const pass = await operator.runDeletions();
-  expect(pass.salons.find(s => s.salonId === created.id)?.deleted, 'deleted in this pass').toBe(true);
+  await operator.runDeletions();
+  await schedulerSettled(operator);
   await operator.renew(admin);
+  expect(platformAudit(created.id).filter(e => e.action === 'salon.deleted').length, 'deleted, by whichever pass').toBe(1);
 
   const tombstone = await operator.salonDetail(admin, created.id);
   expect(tombstone).toMatchObject({ id: created.id, slug: created.slug, status: 'deleted', name: null, contactEmail: null, contactPhone: null, address: null, ownerEmail: null });
