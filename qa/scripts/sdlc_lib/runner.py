@@ -342,6 +342,8 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
               "summary.json lists them, and this run is not evidence for source_revision alone", flush=True)
     summary["runner"] = {"pid": os.getpid(), "process_start": _process_start(os.getpid()),
                          "started_at": summary["started_at"]}
+    # qa/shared/global-setup.ts refuses a build of another commit unless this is set.
+    summary["build_mismatch_allowed"] = os.environ.get("QA_ALLOW_BUILD_MISMATCH") == "1"
     summary["partial"] = bool(selection)
     if selection:
         summary["selection"] = selection

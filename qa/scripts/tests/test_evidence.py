@@ -64,6 +64,12 @@ class SourceStateTest(unittest.TestCase):
         self.assertEqual(summary["source_changes"], [])
         self.assertNotIn("uncommitted", out)
 
+    def test_a_run_allowed_to_test_another_build_says_so(self):
+        from unittest.mock import patch
+        self.assertIs(self.run_once()[0]["build_mismatch_allowed"], False)
+        with patch.dict(os.environ, {"QA_ALLOW_BUILD_MISMATCH": "1"}):
+            self.assertIs(self.run_once()[0]["build_mismatch_allowed"], True)
+
     def test_uncommitted_and_untracked_changes_are_recorded(self):
         Path("check.sh").write_text("exit 0 # repaired\n")
         Path("new.spec.ts").write_text("test('x', () => {});\n")
