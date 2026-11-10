@@ -21,6 +21,49 @@ const SPOKEN_LITERALS = [
   },
 ];
 
+// docs/engineering/web.md, "Styling", rules 1 and 4 (CR-016, CR-017): a control, table or dialog
+// is the shadcn/ui component from components/ui, never the raw element, and never Native Select;
+// no CSS Module. components/ui is where the raw elements live, so it alone may write them.
+const RAW_ELEMENTS = 'button|input|select|textarea|table|dialog';
+const SHADCN_ONLY = [
+  {
+    selector: `JSXOpeningElement[name.name=/^(${RAW_ELEMENTS})$/]`,
+    message:
+      'Use the shadcn/ui component from components/ui, not the raw element (docs/engineering/web.md, "Styling").',
+  },
+  {
+    selector: 'JSXOpeningElement[name.name=/^NativeSelect/]',
+    message: 'Use the shadcn/ui Select, never Native Select (CR-017).',
+  },
+];
+const NO_CSS_MODULES = [
+  {
+    selector:
+      ':matches(ImportDeclaration, ImportExpression, ExportAllDeclaration, ExportNamedDeclaration)[source.value=/\\.module\\.(css|scss|sass|less)(\\?.*)?$/]',
+    message: 'No CSS Modules: build it from shadcn/ui components and Tailwind utilities (CR-016).',
+  },
+  {
+    selector: ':matches(ImportDeclaration, ImportExpression)[source.value=/native-select$/]',
+    message: 'Use the shadcn/ui Select, never Native Select (CR-017).',
+  },
+];
+// Rule 4: no `style` prop for a visual value, except a value that exists only at run time and that
+// no utility can name. STYLE_PROP_ALLOWED lists the files that set one, and why; nothing else may.
+const NO_STYLE_PROP = [
+  {
+    selector: 'JSXAttribute[name.name="style"]',
+    message: 'No style prop: use Tailwind utilities on the theme (docs/engineering/web.md, "Styling", rule 4).',
+  },
+];
+const STYLE_PROP_ALLOWED = [
+  // The salon's own brand colour as it is typed, shown in its swatch and in each preset swatch.
+  'src/features/branding/components/ColourField.tsx',
+  // The draft brand's colours (brandPreviewStyle) and its uploaded cover image, previewed before publishing.
+  'src/features/branding/components/BrandPreview.tsx',
+  // The uploaded logo or cover image, previewed in its field.
+  'src/features/branding/components/ImageField.tsx',
+];
+
 // The API's modules, as the generated client exports them (`@salon/api-contracts/<module>`).
 const CONTRACTS = '@salon/api-contracts';
 const API_MODULES = Object.keys(
@@ -113,9 +156,19 @@ const eslintConfig = defineConfig([
     ignores: ['src/**/*.test.{ts,tsx}'],
     rules: {
       'react/jsx-no-literals': ['error', { noStrings: true, ignoreProps: true }],
-      'no-restricted-syntax': ['error', ...SPOKEN_LITERALS],
+      'no-restricted-syntax': ['error', ...SPOKEN_LITERALS, ...SHADCN_ONLY, ...NO_CSS_MODULES, ...NO_STYLE_PROP],
       '@typescript-eslint/no-restricted-imports': contractImports(),
     },
+  },
+  {
+    // The shadcn/ui components themselves are built from the raw elements.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    ignores: ['src/**/*.test.{ts,tsx}'],
+    rules: { 'no-restricted-syntax': ['error', ...SPOKEN_LITERALS, ...NO_CSS_MODULES, ...NO_STYLE_PROP] },
+  },
+  {
+    files: STYLE_PROP_ALLOWED,
+    rules: { 'no-restricted-syntax': ['error', ...SPOKEN_LITERALS, ...SHADCN_ONLY, ...NO_CSS_MODULES] },
   },
   ...API_MODULES.filter((module) => module !== 'shared').map((module) => ({
     files: [`src/features/${module}/server/**/*.ts`],
@@ -135,6 +188,7 @@ const eslintConfig = defineConfig([
       'no-restricted-syntax': [
         'error',
         ...SPOKEN_LITERALS,
+        ...NO_CSS_MODULES,
         {
           selector: 'Program > :first-child:not(ImportDeclaration[source.value="server-only"])',
           message: "Server code starts with import 'server-only'.",
