@@ -663,9 +663,12 @@ test uses them is in `docs/qa/test-plan.md`.
 - A scheduled job runs on its own thread, at most `salon.jobs.concurrent` (2) at once, and renews
   its claim every third of its hold, so a job that runs long is never run twice; a run that has
   lost its claim stops before its next salon.
-- Encrypted values carry the id of the key that wrote them (`shared.secrets.KeyRing`); earlier keys
-  are configured beside the current one, so a key can be rotated. A value written before ids
-  existed is tried with each key and never rewritten.
+- Encrypted values are written and read by `shared.secrets.KeyRing`; earlier keys are configured
+  beside the current one, so a key can be rotated. A new value carries the id of the key that wrote
+  it once `salon.secrets.write-key-ids` is on, which is done only when every running instance is a
+  version that reads ids (an older instance cannot read one, and a rolling deployment has both
+  versions serving). A value without an id is tried with each key, current first, and is never
+  rewritten.
 - Permission checks are in the use case and are based on the role's permissions, not on the role's
   name.
 - One-time-code requests are rate limited per number, device and address, with a tenant ceiling.

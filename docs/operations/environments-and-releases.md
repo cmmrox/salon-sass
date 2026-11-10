@@ -140,8 +140,16 @@ Do not print or commit keys or synthetic account fixture files; the one exceptio
 local account roster, `infra/local/accounts.json` (decision 105).
 The limit on failed sign-ins per address across salons is `SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS`
 (60); the `local` and test profiles set it to 100000, because every local sign-in comes from one
-address. Earlier encryption keys, for rotating a key, are `SALON_IDENTITY_ENCRYPTION_EARLIER_KEYS`,
-`SALON_OPERATOR_ENCRYPTION_EARLIER_KEYS` and `SALON_EXPORT_EARLIER_KEYS` (comma-separated). The
+address. **Key rotation (decision 120).** `SALON_IDENTITY_ENCRYPTION_EARLIER_KEYS`,
+`SALON_OPERATOR_ENCRYPTION_EARLIER_KEYS` and `SALON_EXPORT_EARLIER_KEYS` (default empty) list, newest
+first and comma-separated, the 64-hex keys that were the encryption key before the current one. They
+decrypt what they encrypted and never encrypt, and each must be independent of every other key. To
+rotate, put the old key here and a new one in its place. `SALON_SECRETS_WRITE_KEY_IDS` (default
+`false`) says whether new encrypted values carry their key's id: turn it on only once every running
+API instance is a version that reads key ids; until then values are written in the older format,
+which every version reads, and rotation works either way. The stack forwards each of these, and
+`infra/scripts/test-stack-settings.sh` fails when an API setting listed in `.env.stack.example` is
+not forwarded. The
 database's time limits are the `salon.database` settings, an unsubscribed event's life is
 `salon.outbox.unrouted-after` (7 days), and `salon.jobs.concurrent` (2) is how many jobs run at once.
 Customer code limits use `SALON_IDENTITY_CODE_NUMBER_LIMIT`, `SALON_IDENTITY_CODE_DEVICE_LIMIT`,

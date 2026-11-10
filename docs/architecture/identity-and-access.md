@@ -69,7 +69,8 @@ salons counts an attempt before its password is checked and gives it back when t
 correct, so staff of many salons sharing one carrier address do not use it up while password
 spraying does (decision 120). A sign-in refused 503 because password checks are at their limit
 counts toward none of these. A session is removed, with its refresh history, a week after it ended.
-Each encrypted secret carries its key's id, and earlier keys still decrypt. MFA challenges allow five attempts. Failed
+Earlier encryption keys still decrypt what they encrypted, and a new secret carries its key's id
+once `SALON_SECRETS_WRITE_KEY_IDS` is on (`docs/operations/environments-and-releases.md`). MFA challenges allow five attempts. Failed
 attempts, consumption, limits and security audit entries commit even when the HTTP outcome is an
 error; throwing inside a transaction must not undo these controls.
 Staff rate windows start on the first attempt and last fifteen minutes; a denied request returns
