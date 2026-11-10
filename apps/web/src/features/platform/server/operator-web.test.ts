@@ -91,8 +91,13 @@ beforeEach(async () => {
       };
       calls.push(call);
       const result = answer(call);
-      response.writeHead(result.status, { 'Content-Type': 'application/json', ...(result.headers ?? {}) });
-      response.end(JSON.stringify(result.data));
+      setTimeout(
+        () => {
+          response.writeHead(result.status, { 'Content-Type': 'application/json', ...(result.headers ?? {}) });
+          response.end(JSON.stringify(result.data));
+        },
+        call.path.endsWith('/export/archive') ? archiveDelay : 0,
+      );
     });
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
@@ -123,11 +128,13 @@ function request(
     ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
   });
 }
-function run(req: NextRequest, action: string) {
+/** How long the fake API takes to send an export archive, in milliseconds. */
+let archiveDelay = 0;
+function run(req: NextRequest, action: string, budget = 3000) {
   const context = {
     ...contextFromTraceparent(undefined),
     clientAddress: '127.0.0.9',
-    deadline: performance.now() + 3000,
+    deadline: performance.now() + budget,
   };
   return runInRequest(context, () => handleOperator(req, action));
 }
@@ -352,5 +359,30 @@ describe('the console BFF lifecycle actions (F03-S03)', () => {
     );
     expect(r.status).toBe(409);
     expect((await r.json()).code).toBe('invalid_state');
+  });
+});
+
+// Package 1's ruling, done in package 5: the operator's archive has the export's own stated limit too.
+describe('the operator’s export archive’s own time limit', () => {
+  it('waits for an archive that takes longer than the request’s ordinary budget to arrive', async () => {
+    archiveDelay = 400;
+    try {
+      answer = (call) =>
+        call.path === '/api/v1/operator/me'
+          ? { status: 200, data: principal }
+          : { status: 200, data: 'archive', headers: { 'Content-Disposition': 'attachment; filename="export.zip"' } };
+      const r = await run(
+        request('export-archive', {
+          method: 'GET',
+          cookies: 'salon_operator_access=private-operator-access',
+          query: `?id=${UUID}`,
+        }),
+        'export-archive',
+        250,
+      );
+      expect(r.status).toBe(200);
+    } finally {
+      archiveDelay = 0;
+    }
   });
 });

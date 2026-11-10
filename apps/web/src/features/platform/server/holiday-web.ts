@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { HOLIDAY_IMPORT_API_TIMEOUT_MS, requestSignal, restartRequestBudget } from '@/lib/api-core/client';
 import { readBoundedBytes } from '@/lib/http/bounded-json';
 
 import { platformClient } from './client';
@@ -135,8 +136,11 @@ async function importFile(
   if (!(file instanceof Blob)) return problem('bad_request', 400, { errors: [{ field: 'file' }] });
   const upstream = new FormData();
   upstream.append('file', file, 'calendar.csv');
+  // The import's own stated limit, from the end of reading its file (docs/engineering/web.md, "Structure").
+  restartRequestBudget(HOLIDAY_IMPORT_API_TIMEOUT_MS);
   const r = await client.POST('/api/v1/operator/holiday-calendars/{year}/import', {
     ...options,
+    signal: requestSignal(),
     params: { path: { year } },
     body: upstream as unknown as { file: string },
     bodySerializer: (value) => value as unknown as FormData,

@@ -14,8 +14,11 @@ let answer: (call: Call) => { status: number; data: unknown };
 const principal = { id: 'op', kind: 'operator', role: 'OPERATOR_ADMIN', permissions: [], mfaEnabled: true };
 const YEAR = { year: 2027, state: 'draft', revision: 0, version: 1, publishedAt: null, days: [], withdrawn: [] };
 
+/** How long the fake API takes to answer a call, in milliseconds. */
+let slow: (call: Call) => number;
 beforeEach(async () => {
   calls = [];
+  slow = () => 0;
   vi.stubEnv('SALON_PLATFORM_DOMAIN', 'localhost');
   vi.stubEnv('SALON_WEB_LOCAL_HTTP', 'true');
   vi.stubEnv('SALON_OPERATOR_PROXY_KEY', '34'.repeat(32));
@@ -36,8 +39,10 @@ beforeEach(async () => {
       };
       calls.push(call);
       const result = answer(call);
-      response.writeHead(result.status, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify(result.data));
+      setTimeout(() => {
+        response.writeHead(result.status, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify(result.data));
+      }, slow(call));
     });
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
@@ -56,7 +61,10 @@ const headers = {
   'Sec-Fetch-Site': 'same-origin',
   Cookie: 'salon_operator_access=private-operator-access',
 };
-function run(action: string, init: { method?: string; body?: BodyInit; type?: string; query?: string } = {}) {
+function run(
+  action: string,
+  init: { method?: string; body?: BodyInit; type?: string; query?: string; budget?: number } = {},
+) {
   const req = new NextRequest(`http://${host}/operator-web/${action}${init.query ?? ''}`, {
     method: init.method ?? 'POST',
     headers: { ...headers, ...(init.type ? { 'Content-Type': init.type } : {}) },
@@ -65,7 +73,7 @@ function run(action: string, init: { method?: string; body?: BodyInit; type?: st
   const context = {
     ...contextFromTraceparent(undefined),
     clientAddress: '127.0.0.9',
-    deadline: performance.now() + 3000,
+    deadline: performance.now() + (init.budget ?? 3000),
   };
   return runInRequest(context, () => handleOperator(req, action));
 }
@@ -153,5 +161,19 @@ describe('the console BFF’s holiday calendar', () => {
 
     expect(response.status).toBe(413);
     expect(apiCalls()).toEqual([]);
+  });
+});
+
+// Package 1's ruling, done in package 5: the import has a stated limit of its own, counted from the end of reading its
+// file (HOLIDAY_IMPORT_API_TIMEOUT_MS), as an upload does; the request's ordinary budget does not cut it off.
+describe('the holiday import’s own time limit', () => {
+  it('waits for an API that takes longer than the request’s ordinary budget to check the file', async () => {
+    slow = (call) => (call.path.endsWith('/import') ? 400 : 0);
+    const form = new FormData();
+    form.append('year', '2027');
+    form.append('file', new File(['2027-01-14,Thai Pongal,public\n'], 'calendar.csv', { type: 'text/csv' }));
+    const response = await run('holiday-import', { body: form, budget: 250 });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ year: 2027 });
   });
 });

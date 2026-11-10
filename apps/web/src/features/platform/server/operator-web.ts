@@ -2,7 +2,7 @@ import 'server-only';
 import { createHmac } from 'node:crypto';
 import type { components } from '@salon/api-contracts/platform';
 import { NextRequest, NextResponse } from 'next/server';
-import { requestSignal } from '@/lib/api-core/client';
+import { EXPORT_DOWNLOAD_API_TIMEOUT_MS, requestSignal, restartRequestBudget } from '@/lib/api-core/client';
 import { apiTime } from '@/lib/api-core/meta';
 import { strictInstant } from '@/lib/http/network';
 import { currentRequest } from '@/lib/observability/request-context';
@@ -310,8 +310,11 @@ export async function handleOperator(request: NextRequest, action: string): Prom
           const r = await client.GET('/api/v1/operator/salons/{id}/export', { ...options, params: { path: { id } } });
           return r.data ? output(r.data) : failure(r);
         }
+        // The archive's own stated limit, from the end of reading the request (docs/engineering/web.md, "Structure").
+        restartRequestBudget(EXPORT_DOWNLOAD_API_TIMEOUT_MS);
         const r = await client.GET('/api/v1/operator/salons/{id}/export/archive', {
           ...options,
+          signal: requestSignal(),
           params: { path: { id } },
           parseAs: 'arrayBuffer',
         });
