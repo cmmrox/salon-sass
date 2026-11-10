@@ -87,7 +87,8 @@ qa/
 
   Only a test that runs declares a case: a comment, `test.skip`, `test.fixme`, `test.only`, a test
   inside a skipped describe, or one whose body calls `test.skip()` (even conditionally) counts for
-  nothing. k6, shell and Maestro files title their cases in a header comment.
+  nothing. A `test.describe` title declares no case either: only the `test(...)` titles inside it
+  do. k6, shell and Maestro files title their cases in a header comment.
 
 ## Playwright: salons and sign-in
 
@@ -222,7 +223,7 @@ qa/scripts/sdlc run --feature F07              # the feature's QA pass: every st
 qa/scripts/sdlc run --feature F07 --dry-run    # show what would run
 qa/scripts/sdlc run --stage F07-S02            # one stage's automation, for a stage pass the owner asked for
 qa/scripts/sdlc run --feature F07 --entry catalogue-api          # one named entry of the scope (`scope:id` where ids repeat); repeatable
-qa/scripts/sdlc run --feature F07 --rerun-failed qa/reports/<folder>   # only the entries that did not pass there (decision 069)
+qa/scripts/sdlc run --feature F07 --rerun-failed qa/reports/<folder>   # the entries that did not pass there, an interrupted one and those never reached included (decision 069)
 ```
 
 Each entry stops at its time limit (30 minutes, or its own `timeout_minutes`) and is recorded as
