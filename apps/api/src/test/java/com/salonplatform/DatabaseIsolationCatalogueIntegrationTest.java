@@ -379,20 +379,23 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "catalogue_erase_salon_rows",
                 // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
                 "audit_record_support");
+        // Platform review M3: the trigger that keeps the outbox's index of waiting messages. No role may call it.
+        List<String> triggers = List.of("shared_outbox_due_track");
         assertThat(functions)
                 .extracting(function -> function.get("name"))
-                .containsExactlyInAnyOrderElementsOf(
-                        java.util.stream.Stream.concat(tenantPaths.stream(), bootstrap.stream())
-                                .toList());
+                .containsExactlyInAnyOrderElementsOf(java.util.stream.Stream.of(tenantPaths, bootstrap, triggers)
+                        .flatMap(List::stream)
+                        .toList());
         assertThat(functions).allSatisfy(function -> {
             assertThat((String) function.get("settings"))
                     .as("%s", function.get("name"))
                     .isEqualTo("search_path=pg_catalog, pg_temp");
             assertThat(function).as("%s", function.get("name")).containsEntry("public_may_run", false);
             boolean bootstraps = bootstrap.contains((String) function.get("name"));
+            boolean trigger = triggers.contains((String) function.get("name"));
             assertThat(function)
                     .as("%s", function.get("name"))
-                    .containsEntry("application_may_run", !bootstraps)
+                    .containsEntry("application_may_run", !bootstraps && !trigger)
                     .containsEntry("platform_may_run", bootstraps);
         });
     }

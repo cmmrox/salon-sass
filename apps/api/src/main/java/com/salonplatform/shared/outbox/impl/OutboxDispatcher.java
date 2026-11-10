@@ -62,6 +62,9 @@ final class OutboxDispatcher implements SmartLifecycle {
     /** The pause between polls while there is work, so that a backlog drains quickly. */
     private static final Duration BUSY_PAUSE = Duration.ofMillis(50);
 
+    /** How often the backlog meters are refreshed: a sample, not on every poll (platform review M3). */
+    private static final Duration BACKLOG_EVERY = Duration.ofSeconds(10);
+
     private final OutboxSettings settings;
 
     private final OutboxStore store;
@@ -89,6 +92,9 @@ final class OutboxDispatcher implements SmartLifecycle {
     private volatile boolean running;
 
     private volatile boolean pollFailing;
+
+    /** When the backlog meters were last refreshed ({@link System#nanoTime}), or null before the first time. */
+    private Long backlogReadAt;
 
     /**
      * Released on stop, so that the wait between polls ends at once and no claim is interrupted.
@@ -165,15 +171,21 @@ final class OutboxDispatcher implements SmartLifecycle {
     }
 
     /**
-     * One poll: refreshes the backlog meters, asks what is due across salons, and starts the
-     * delivery of each message it could claim. Returns how many it started.
+     * One poll: refreshes the backlog meters when they are due a sample, asks what is due across salons, and
+     * starts the delivery of each message it could claim. Returns how many it started. What is due is read from
+     * the outbox's index of waiting messages ({@code shared_outbox_due}), so a poll costs the same whatever the
+     * number of salons (platform review M3).
      */
     private int pollOnce() {
         Instant now = clock.instant();
-        try {
-            metrics.backlog(store.backlog(now, eventTypes), now);
-        } catch (RuntimeException ex) {
-            log.debug("The outbox backlog could not be read", ex);
+        long sampledAt = System.nanoTime();
+        if (backlogReadAt == null || sampledAt - backlogReadAt >= BACKLOG_EVERY.toNanos()) {
+            backlogReadAt = sampledAt;
+            try {
+                metrics.backlog(store.backlog(now, eventTypes), now);
+            } catch (RuntimeException ex) {
+                log.debug("The outbox backlog could not be read", ex);
+            }
         }
         List<OutboxStore.Due> due =
                 new ArrayList<>(store.due(now, channels, settings.perSalon(), settings.batchSize()));

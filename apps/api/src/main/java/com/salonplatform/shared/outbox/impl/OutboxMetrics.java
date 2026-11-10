@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
  * {@code event} to the subscribers of an event between modules), {@code channel} and {@code outcome}
  * ({@code sent}, {@code failed}, {@code timed_out}, {@code cancelled}).</li>
  * </ul>
- * The first three are refreshed by the dispatcher on each poll. {@value #WAITING}, {@value #OLDEST_DUE_AGE}
+ * The first three are refreshed by the dispatcher every ten seconds. {@value #WAITING}, {@value #OLDEST_DUE_AGE}
  * and {@value #DEAD} count events and provider messages together.
  */
 @Component
