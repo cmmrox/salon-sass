@@ -9,7 +9,7 @@ the request is implemented; the Requirements table names the request.
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 106 | 106 | 44 | 38 |
+| R1 | 106 | 106 | 44 | 35 |
 | R2 | 79 | 50 | 44 | 0 |
 | R3 | 18 | 8 | 8 | 0 |
 
@@ -34,13 +34,13 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F03-S03 | complete | - | PLT-06 | 12 | 18 | 18 | 0 | 0 |
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
 | F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 28 | 28 | 0 | 0 |
-| F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 35 | 35 | 0 | 0 |
+| F04-S02 | complete | - | BRD-01, BRD-04 | 13 (1 pending) | 35 | 35 | 0 | 0 |
 | F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 32 | 0 | 0 |
 | F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
-| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 20 | 51 | 51 | 0 | 0 |
+| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 21 (1 pending) | 51 | 51 | 0 | 0 |
 | F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 21 | 0 | 0 |
 | F05-S03 | complete | - | CAT-05, INV-01 | 15 | 27 | 27 | 0 | 0 |
-| F06-S01 | complete | - | STF-01 | 17 | 58 | 58 | 0 | 0 |
+| F06-S01 | complete | - | STF-01 | 18 (1 pending) | 58 | 58 | 0 | 0 |
 | F06-S02 | complete | - | STF-02 | 17 | 47 | 47 | 0 | 0 |
 | F06-S03 | complete | - | STF-03, STF-05 | 16 | 46 | 46 | 0 | 0 |
 | F07-S01 | complete | - | BKG-04, BKG-05, BKG-06, BKG-14, BKG-16, BKG-24, BKG-26, NFR-05 | 15 | 39 | 37 | 0 | 2 |
@@ -66,7 +66,9 @@ requirements such a request changes are marked pending in the Requirements table
 
 | Stage | Criterion | Change request |
 | --- | --- | --- |
-| - | none | - |
+| F04-S02 | AC-13 | CR-030 |
+| F05-S01 | AC-21 | CR-030 |
+| F06-S01 | AC-18 | CR-030 |
 
 ## Requirements
 
@@ -102,7 +104,7 @@ requirements such a request changes are marked pending in the Requirements table
 | IAM-12 | R2 | should | unowned | - |
 | IAM-13 | R3 | could | unowned | - |
 | IAM-14 | R1 | should | F10 | - |
-| CAT-01 | R1 | must | F05 | F05-S01 (complete) |
+| CAT-01 | R1 | must | F05 (pending CR-030) | F05-S01 (complete) |
 | CAT-02 | R1 | must | F05 | F05-S01 (complete) |
 | CAT-03 | R1 | should | F05 | F05-S02 (complete) |
 | CAT-04 | R1 | must | F05 | F05-S01 (complete) |
@@ -116,7 +118,7 @@ requirements such a request changes are marked pending in the Requirements table
 | CAT-12 | R2 | should | F17 | F17-S02 (outlined) |
 | CAT-13 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
 | CAT-14 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
-| STF-01 | R1 | must | F06 | F06-S01 (complete) |
+| STF-01 | R1 | must | F06 (pending CR-030) | F06-S01 (complete) |
 | STF-02 | R1 | must | F06 | F06-S02 (complete) |
 | STF-03 | R1 | must | F06 | F06-S03 (complete) |
 | STF-04 | R1 | must | F04 | F04-S03 (complete) |
@@ -232,7 +234,7 @@ requirements such a request changes are marked pending in the Requirements table
 | REP-08 | R2 | should | F25 | - |
 | REP-09 | R3 | could | unowned | - |
 | REP-10 | R1 | must | F13 | - |
-| BRD-01 | R1 | must | F04 | F04-S02 (complete) |
+| BRD-01 | R1 | must | F04 (pending CR-030) | F04-S02 (complete) |
 | BRD-02 | R1 | must | F04 | F04-S01 (complete) |
 | BRD-03 | R1 | must | F01 | F01-S03 (complete), F01-S05 (complete) |
 | BRD-04 | R1 | must | F04 | F04-S01 (complete), F04-S02 (complete) |

@@ -334,3 +334,13 @@ follow-up PR after F05's (decision 098). Read `docs/changes/CR-025-services-page
   size, and only then read its bytes. A caller without permission, or a file over the limit, is
   refused with the same answers as today, without the file being read into the application. Each is
   proved by a test that fails if the bytes are read first. (CAT-01, BRD-01)
+
+## CR-030 (follow-up after the merge of PR #19)
+
+Built and verified in the follow-up PR #31 (decision 098). Read
+`docs/changes/CR-030-public-photos-in-the-visitors-browser.md`.
+
+- AC-21: A service photo answered 200 on its salon's hostname carries `Cache-Control: private, max-age=86400,
+  immutable`, and never `public` or `s-maxage`. Any answer that is not 200, and any answer on a suspended or unknown
+  salon's hostname, is `no-store`. The same photo path asked on another salon's hostname is 404 and `no-store`.
+  (CAT-01, CR-030)

@@ -69,6 +69,7 @@ full before starting; this table is for everything the spec did not anticipate.
 | `reviews/2026-11-10-foundation-review/qa-and-delivery.md` | Reviewer report: QA automation, tooling, CI and delivery history |
 | `changes/CR-028-foundation-review-requirements.md` | Owner-approved: several services in one booking, the customer booking page (F24), R1 scope moves, F12 before F08, with F07's follow-up criteria |
 | `changes/CR-029-review-before-qa-and-leaner-verification.md` | Owner-approved: review before QA, design and market checks at planning, QA's scope, regression at every feature close |
+| `changes/CR-030-public-photos-in-the-visitors-browser.md` | Owner-approved: a salon's public photos may be kept by the visitor's own browser, a day for a service photo or brand image and an hour for a person's photo, never by a shared cache |
 | `changes/README.md` | Change requests: how a requirement changes after the baseline |
 | `changes/CR-007-prototype-design-fidelity.md` | Owner-approved HTML design authority and existing UI repair |
 | `changes/CR-008-skill-productivity-and-progress.md` | Owner-approved shared skill upgrades, progress visibility and guarded evidence reuse |

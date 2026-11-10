@@ -45,7 +45,8 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
   nonce reaches every script; nothing is prerendered). The one exception is a salon's public
   photos, which the visitor's own browser may keep under the salon's own address: a service photo
   or a published brand image for a day, a person's photo for an hour, `private` and `immutable`,
-  because each is addressed by an id that a new upload replaces (`lib/http/photo-cache.ts`). Never
+  because each is addressed by an id that a new upload replaces (`lib/http/photo-cache.ts`; CR-030, approved by the
+  owner). Never
   `public`, never `s-maxage`; a draft brand image, any answer that is not 200 and a suspended or
   unknown salon stay `no-store`. The platform's own static files (`/images`, `/icons`, `/brand`,
   `/fonts`) are the same on every hostname, hold nothing of a salon, and may be cached for a day.
