@@ -18,7 +18,7 @@ Requirement text is in `docs/brd/requirements.yaml`.
 | Customer app extras: Sinhala and Tamil, favourites, gallery, saved payment method | APP-12, APP-14, APP-17, APP-19 |
 | Payment operations: reconciliation and late fees (payment links and the day-end close moved to R1 under CR-023) | PAY-11, PAY-12 |
 | Customer insight: segments and blocking | CRM-07, CRM-08 |
-| Deeper reports | REP-05, REP-06 |
+| Deeper reports (tax, discount and refund reports moved to R1 and F13 under CR-028) | REP-05 |
 | Staff workspace in Sinhala and Tamil (CR-023) | PLT-15 |
 | Custom domains and app links (design approved in CR-021: `docs/architecture/multi-tenancy.md`, "Domains a salon owns") | BRD-11, BRD-12 |
 | Notification centre in the workspace and the app (moved from R1 under CR-028) | NOT-08 |
