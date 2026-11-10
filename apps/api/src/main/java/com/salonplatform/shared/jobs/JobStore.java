@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /**
- * The scheduler's bookkeeping, reached only through {@code job_claim()} and {@code job_finish()}:
+ * The scheduler's bookkeeping, reached only through {@code job_claim()}, {@code job_renew()} and {@code job_finish()}:
  * the application's role cannot read the table itself. Calls to {@code SECURITY DEFINER} functions and job
  * leasing, named direct-SQL exceptions; the table holds no salon's data.
  */
@@ -29,6 +29,17 @@ class JobStore {
                 .query((row, number) -> row.getObject(1, OffsetDateTime.class))
                 .optional()
                 .map(OffsetDateTime::toInstant);
+    }
+
+    /**
+     * Extends the claim this instance holds on a running job until that instant; false when it no longer holds it
+     * (its hold ran out and another instance claimed the job).
+     */
+    boolean renew(String job, String holder, Instant holdUntil) {
+        return Boolean.TRUE.equals(jdbc.sql("SELECT job_renew(?, ?, ?)")
+                .params(job, holder, utc(holdUntil))
+                .query(Boolean.class)
+                .single());
     }
 
     void finish(String job, String holder, Instant now) {

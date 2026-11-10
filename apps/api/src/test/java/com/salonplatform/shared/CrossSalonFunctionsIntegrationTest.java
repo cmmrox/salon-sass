@@ -260,6 +260,28 @@ class CrossSalonFunctionsIntegrationTest {
                             .queryForObject("SELECT locked_by FROM scheduled_job WHERE name = ?", String.class, job))
                     .as("only the holder lets go of it")
                     .isEqualTo("one");
+            assertThat(renew(connection, job, "two", "2026-10-12T09:00:00Z"))
+                    .as("only the holder renews it")
+                    .isFalse();
+            assertThat(renew(connection, job, "one", "2026-10-12T09:00:00Z")).isTrue();
+            assertThat(fixture.database()
+                            .asOwner()
+                            .queryForObject(
+                                    "SELECT locked_until FROM scheduled_job WHERE name = ?", Timestamp.class, job)
+                            .toInstant())
+                    .isEqualTo(Instant.parse("2026-10-12T09:00:00Z"));
+        }
+    }
+
+    private static boolean renew(Connection connection, String job, String holder, String until) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT job_renew(?, ?, ?::timestamptz)")) {
+            statement.setString(1, job);
+            statement.setString(2, holder);
+            statement.setString(3, until);
+            try (ResultSet row = statement.executeQuery()) {
+                row.next();
+                return row.getBoolean(1);
+            }
         }
     }
 

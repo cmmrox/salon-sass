@@ -344,6 +344,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "outbox_backlog",
                 "job_claim",
                 "job_finish",
+                // Platform review M3: a running job renews its claim.
+                "job_renew",
                 "salon_entitlements",
                 "suspended_tenant_ids",
                 // F23-S05: the due events of the types the asking instance knows.

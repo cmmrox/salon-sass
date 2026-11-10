@@ -213,9 +213,13 @@ salon:
   jobs:
     enabled: true
     poll-interval: 1s
-    # How long a job stays claimed by an instance that stopped without finishing it.
+    # How long a job stays claimed by an instance that stopped without finishing it. A running job
+    # renews its claim every third of this, so it never runs twice at once however long it takes.
     hold: 10m
     outbox-cleanup: 1h
+    # Jobs running at once on one instance, each on its own thread and connection, so that a slow
+    # one (an export, billing) holds up no other.
+    concurrent: 2
   server:
     # How long a stopping instance keeps answering, with its readiness already OUT_OF_SERVICE, before
     # it stops taking requests (ReadinessDrain): long enough for the edge's health check, which runs
