@@ -65,11 +65,65 @@ def select(bundle, stage=None, feature=None, suite=None):
     return sorted(entries, key=lambda e: (e.get("scope") or "", e.get("id") or ""))
 
 
+def _reference(entry):
+    return f"{entry.get('scope')}:{entry.get('id')}"
+
+
+def failed_in(report_dir):
+    """The 'scope:id' of every entry that did not pass in an earlier run's summary.json."""
+    path = os.path.join(report_dir, "summary.json")
+    try:
+        with open(path, encoding="utf-8") as handle:
+            summary = json.load(handle)
+    except (OSError, ValueError) as error:
+        raise SelectionError(f"cannot read {path}: {error}")
+    return [_reference(r) for r in summary.get("entries") or [] if r.get("outcome") != "pass"]
+
+
+def narrow(entries, names=(), rerun_report=None):
+    """The entries of one scope's selection that were asked for by name or failed in an earlier run.
+
+    A name is an entry id ('catalogue-api') or, where ids repeat across a feature's stages,
+    'scope:id' ('F05-S01:catalogue-api'). Narrowing never reaches outside the chosen scope."""
+    wanted = list(names or ())
+    if rerun_report:
+        failed = failed_in(rerun_report)
+        if not failed:
+            raise SelectionError(f"{rerun_report} records no failed entry; there is nothing to run again")
+        wanted += failed
+    chosen = []
+    for name in wanted:
+        match = [e for e in entries if name in (_reference(e), e.get("id"))]
+        if not match:
+            known = ", ".join(_reference(e) for e in entries) or "none"
+            raise SelectionError(f"'{name}' is not an automation entry of this scope (entries: {known})")
+        if len(match) > 1 and ":" not in name:
+            raise SelectionError(f"'{name}' names entries in {len(match)} scopes; use "
+                                 + " or ".join(_reference(e) for e in match))
+        chosen += [e for e in match if e not in chosen]
+    return [e for e in entries if e in chosen]  # keep the scope's own order
+
+
+def time_limit_seconds(entry):
+    """How long an entry may run: its own timeout_minutes, or the runner's default."""
+    minutes = entry.get("timeout_minutes")
+    valid = isinstance(minutes, (int, float)) and not isinstance(minutes, bool) and minutes > 0
+    return (minutes if valid else S.ENTRY_TIME_LIMIT_MINUTES) * 60
+
+
+def budget_check(suite, elapsed_seconds, partial=False):
+    """summary.json's 'budget' for a full run of a suite that has one, else None."""
+    if partial or suite not in S.SUITE_BUDGET_MINUTES:
+        return None
+    minutes = S.SUITE_BUDGET_MINUTES[suite]
+    elapsed = round(elapsed_seconds / 60, 1)
+    return {"suite": suite, "minutes": minutes, "elapsed_minutes": elapsed,
+            "exceeded": elapsed_seconds > minutes * 60}
+
+
 def command(entry):
     """The argv that runs one automation entry, from the repository root."""
     tool, path = entry.get("tool"), entry.get("file")
-    if tool == "command":
-        return ["bash", "-c", entry["cmd"]]
     if tool == "playwright":
         argv = ["pnpm", "--dir", "qa", "exec", "playwright", "test", os.path.relpath(path, "qa")]
         return argv + (["--project", entry["project"]] if entry.get("project") else [])
@@ -104,7 +158,7 @@ def _process_start(pid):
 
 
 def _cancel_process_tree(child, grace_seconds=2):
-    """Cancellation only: never impose a deadline on ordinary test execution."""
+    """Stops an entry's whole process group: on cancellation, or when it reaches its time limit."""
     result = {"term_sent": False, "kill_sent": False, "reaped": False}
     group = child.pid if os.name == "posix" else None
 
@@ -225,11 +279,16 @@ def default_instance_refusal(environ):
     return None
 
 
-def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_seconds=30):
+def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_seconds=30,
+        suite=None, selection=None):
     """Returns (exit code, report directory).
 
-    A heartbeat is a subprocess wait interval, never a test timeout or retry. Raw
-    child output stays in its log; progress prints only scope, counts and timings.
+    A heartbeat is a subprocess wait interval, never a retry. Each entry has a time limit
+    (time_limit_seconds); one that reaches it is stopped and recorded as 'timeout', a failure,
+    and the run goes on to the next entry. Raw child output stays in its log; progress prints
+    only scope, counts and timings. suite names the suite being run, whose budget is then
+    checked; selection describes a narrowed run (--entry, --rerun-failed), which is recorded as
+    partial and is not held to the suite's budget.
     """
     if not entries:
         print(f"refusing: {label} selects no automation; there is nothing to run", flush=True)
@@ -257,6 +316,9 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
                "entries": [], "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     summary["runner"] = {"pid": os.getpid(), "process_start": _process_start(os.getpid()),
                          "started_at": summary["started_at"]}
+    summary["partial"] = bool(selection)
+    if selection:
+        summary["selection"] = selection
     results = summary["entries"]
 
     def progress(index, entry, entry_started):
@@ -285,6 +347,8 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
             entry_started = time.monotonic()
             progress(index, entry, entry_started)
             log_path = os.path.join(report_dir, f"{index:03d}-{entry['scope']}-{entry.get('id')}.log")
+            limit = time_limit_seconds(entry)
+            timed_out = None
             with open(log_path, "w", encoding="utf-8") as log:
                 child = None
                 try:
@@ -298,8 +362,15 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
                     summary["current"]["process_start"] = _process_start(child.pid)
                     _write_summary(report_dir, summary)
                     while True:
+                        remaining = limit - (time.monotonic() - entry_started)
+                        if remaining <= 0:
+                            timed_out = _cancel_process_tree(child)
+                            code = child.returncode if child.returncode is not None else -signal.SIGTERM
+                            log.write(f"\nsdlc run: stopped after reaching the entry's time limit of "
+                                      f"{limit / 60:g} minutes\n")
+                            break
                         try:
-                            code = child.wait(timeout=heartbeat_seconds)
+                            code = child.wait(timeout=min(heartbeat_seconds, remaining))
                             break
                         except subprocess.TimeoutExpired:
                             progress(index, entry, entry_started)
@@ -311,16 +382,32 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
                         summary["cancellation"] = _cancel_process_tree(child)
                         active_child = None
                     raise
-            outcome = "pass" if code == 0 else ("tool-missing" if code == 127 else "fail")
-            print(f"  {outcome.upper():12} {entry['scope']} {entry.get('id')}", flush=True)
-            results.append({**entry, "argv": argv, "exit_code": code, "outcome": outcome,
-                            "log": log_path, "log_sha256": _file_digest(log_path),
-                            "elapsed_seconds": round(time.monotonic() - entry_started, 3)})
+            if timed_out is not None:
+                outcome = "timeout"
+            else:
+                outcome = "pass" if code == 0 else ("tool-missing" if code == 127 else "fail")
+            print(f"  {outcome.upper():12} {entry['scope']} {entry.get('id')}"
+                  + (f" (stopped at its {limit / 60:g}-minute limit)" if timed_out is not None else ""), flush=True)
+            result = {**entry, "argv": argv, "exit_code": code, "outcome": outcome,
+                      "log": log_path, "log_sha256": _file_digest(log_path),
+                      "elapsed_seconds": round(time.monotonic() - entry_started, 3),
+                      "time_limit_seconds": limit}
+            if timed_out is not None:
+                result["cancellation"] = timed_out
+            results.append(result)
             progress(index, entry, entry_started)
             active_child = None
         passed = len(results) == len(entries) and all(r["outcome"] == "pass" for r in results)
         summary.update(state="complete", result="pass" if passed else "fail", current=None,
+                       elapsed_seconds=round(time.monotonic() - started, 3),
                        finished_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
+        budget = budget_check(suite, summary["elapsed_seconds"], partial=bool(selection))
+        if budget:
+            summary["budget"] = budget
+            if budget["exceeded"]:
+                print(f"WARNING: {suite} took {budget['elapsed_minutes']:g} minutes, over its budget of "
+                      f"{budget['minutes']} minutes (docs/qa/test-plan.md, \"Suites\"): going over budget "
+                      "is a defect in the suite", flush=True)
         _write_summary(report_dir, summary)
     except (KeyboardInterrupt, OSError):
         if active_child is not None:
@@ -348,7 +435,8 @@ def run_release(bundle, version, dry_run=False):
             rows.append((gate_id, "NOT RUN", "an earlier gate failed"))
             continue
         if gate.get("suite"):
-            code, report = run(select(bundle, suite=gate["suite"]), f"{version} {gate['suite']}", dry_run)
+            code, report = run(select(bundle, suite=gate["suite"]), f"{version} {gate['suite']}", dry_run,
+                               suite=gate["suite"])
             detail = report or gate["suite"]
         else:
             print(f"gate {gate_id}: {gate.get('cmd')}")

@@ -28,10 +28,18 @@ HANDED_OVER = ("built", "complete", "released")
 # A dependency must have reached one of these before a stage is built on it.
 BUILDABLE_ON = ("complete", "released")
 
+# The tools an automation entry may name; runner.command() knows how to run exactly these.
 TOOLS = ("playwright", "maestro", "k6", "script")
 # smoke: minutes, on every PR and merge; regression: before a release and for refactors of
 # delivered work; release: the slow checks (load, production-like stack, image scan) before a deploy.
 SUITES = ("smoke", "regression", "release")
+# Each suite's time budget on the local machine (docs/qa/test-plan.md, "Suites"). A full suite
+# run that takes longer passes or fails as it would, with a warning and summary.json's "budget".
+# release has no budget.
+SUITE_BUDGET_MINUTES = {"smoke": 5, "regression": 20}
+# How long one automation entry may run before the runner stops it and records it as timed out.
+# An entry may set its own limit with timeout_minutes; one that needs longer says so in its yaml.
+ENTRY_TIME_LIMIT_MINUTES = 30
 CASE_TYPES = (
     "functional", "api", "tenant-isolation", "permissions", "concurrency", "load",
     "payment-integrity", "accessibility", "responsive", "branding", "security",
