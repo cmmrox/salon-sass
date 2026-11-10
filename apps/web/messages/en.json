@@ -21,6 +21,12 @@
     "body": "There is nothing at this address.",
     "home": "Go to the home page"
   },
+  "errorPage": {
+    "title": "Something went wrong",
+    "body": "This page could not be shown. Nothing you saved is lost. Try again, or go back to the start.",
+    "retry": "Try again",
+    "home": "Go to the start"
+  },
   "salon": {
     "notFound": {
       "title": "Salon not found",
