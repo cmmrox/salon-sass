@@ -4,27 +4,16 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
-import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
-import { salonBookingRulesFor, salonBookingsFor } from '@/features/booking/server';
-import { salonCatalogueFor } from '@/features/catalogue/server';
+import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';
 
 /**
  * The booking actions of the workspace BFF (F07-S03), as the route wires them, against a fake API on loopback: each
  * behind its permission, a support session read-only, every request rebuilt from the contract's own fields and sent
  * for the salon of the request's own hostname only.
  */
-const handleIdentity = createIdentityWeb(
-  salonAccountFor,
-  salonSettingsFor,
-  salonHoursFor,
-  salonBookingRulesFor,
-  salonCatalogueFor,
-  salonTeamFor,
-  salonBookingsFor,
-);
+const handleIdentity = createIdentityWeb(salonAccountFor, WORKSPACE_ROUTES);
 type Call = { method: string; path: string; host?: string; authorization?: string; key?: string; body: string };
 let server: Server;
 let calls: Call[];

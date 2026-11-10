@@ -14,41 +14,9 @@ import { hasSlugForm, platformDomainOf, slugOf } from '@/lib/tenancy/hostname';
 import { strictInstant } from '@/lib/http/network';
 import { readBoundedJson } from '@/lib/http/bounded-json';
 import type { Kind, Principal } from '../types';
-import type { SalonAccount, SalonAccountFor, SupportCredential } from './salon-account';
-import type { SalonSettings, SalonSettingsFor } from './salon-settings';
-import {
-  changeHours,
-  HOURS_PERMISSIONS,
-  HOURS_READS,
-  HOURS_WRITES,
-  readHours,
-  type SalonHoursFor,
-} from './salon-hours';
-import {
-  changeRules,
-  readRules,
-  RULES_PERMISSIONS,
-  RULES_READS,
-  type SalonBookingRulesFor,
-} from './salon-booking-rules';
-import {
-  CATALOGUE_PERMISSIONS,
-  CATALOGUE_PHOTO,
-  CATALOGUE_READS,
-  CATALOGUE_WRITES,
-  readCatalogue,
-  type SalonCatalogueFor,
-} from './salon-catalogue';
-import { readTeam, TEAM_PERMISSIONS, TEAM_PHOTO, TEAM_READS, TEAM_WRITES, type SalonTeamFor } from './salon-team';
-import {
-  BOOKING_PERMISSIONS,
-  BOOKING_READS,
-  BOOKING_WRITES,
-  changeBooking,
-  readBookings,
-  type SalonBookingsFor,
-} from './salon-bookings';
+import type { RouteTable } from '@/lib/api-core/routes';
 import { UPLOAD_LIMIT_BYTES } from '@/lib/http/upload-limits';
+import type { SalonAccountFor, SupportCredential } from './salon-account';
 
 type Tokens = components['schemas']['Tokens'];
 /** A client for the identity module's paths, for calls made for the salon with this hostname. */
@@ -78,21 +46,12 @@ export function supportCsrf(request: NextRequest): boolean {
 }
 /** The support credential's host-only HttpOnly cookies on the salon's host (F03-S04). */
 const SUPPORT_COOKIES = ['access', 'session'] as const;
-/** Support reads: what the Owner can read; support-access and own-account reads are refused by the API. */
-const SUPPORT_READS = [
-  'principal',
-  'staff',
-  'audit',
-  'entitlements',
-  'invoices',
-  'profile-draft',
-  'brand-draft',
-  ...HOURS_READS,
-  ...RULES_READS,
-  ...CATALOGUE_READS,
-  ...TEAM_READS,
-  ...BOOKING_READS,
-];
+/**
+ * A support view's reads of identity's own (F03-S04): the principal and what the Owner can read of the salon's sign-in
+ * accounts and audit; a module's read is the support view's unless the module says otherwise. Its own devices are
+ * refused 403.
+ */
+const IDENTITY_SUPPORT_READS = ['principal', 'staff', 'audit'];
 export function proxyKey(): Buffer {
   const value = process.env.SALON_IDENTITY_PROXY_KEY;
   if (!value || !/^[a-fA-F0-9]{64}$/.test(value)) throw new Error('Configure SALON_IDENTITY_PROXY_KEY');
@@ -189,15 +148,12 @@ async function handleSupport(
   action: string,
   host: { hostname: string },
   salonAccountFor: SalonAccountFor,
-  salonSettingsFor: SalonSettingsFor,
-  salonHoursFor: SalonHoursFor,
-  salonBookingRulesFor: SalonBookingRulesFor,
-  salonCatalogueFor: SalonCatalogueFor,
-  salonTeamFor: SalonTeamFor,
-  salonBookingsFor: SalonBookingsFor,
+  routes: RouteTable,
 ) {
-  if (request.method === 'GET' && !SUPPORT_READS.includes(action))
-    return action === 'sessions' || action === 'support-sessions'
+  const route = routes.reads[action];
+  const readable = IDENTITY_SUPPORT_READS.includes(action) || (route !== undefined && route.supportView !== false);
+  if (request.method === 'GET' && !readable)
+    return action === 'sessions' || route?.supportView === false
       ? problem('permission_denied', 403)
       : problem('method_not_allowed', 405);
   if (request.method !== 'GET' && request.method !== 'POST') return problem('method_not_allowed', 405);
@@ -206,14 +162,7 @@ async function handleSupport(
     return problem('support_read_only', 403);
   const client = identityClient(host.hostname);
   const account = salonAccountFor(host.hostname);
-  const settings = salonSettingsFor(host.hostname);
-  const hours = salonHoursFor(host.hostname);
-  const bookingRules = salonBookingRulesFor(host.hostname);
-  const catalogue = salonCatalogueFor(host.hostname);
-  const team = salonTeamFor(host.hostname);
-  const bookings = salonBookingsFor(host.hostname);
-  if (!client || !account || !settings || !hours || !bookingRules || !catalogue || !team || !bookings)
-    return problem('service_unavailable', 503);
+  if (!client || !account) return problem('service_unavailable', 503);
   const access = request.cookies.get(cookieName('support', 'access'))?.value;
   const options = { headers: access ? { Authorization: `Bearer ${access}` } : {}, signal: requestSignal() };
   if (action === 'clear') {
@@ -253,45 +202,16 @@ async function handleSupport(
     return response;
   }
   const principal = answer.data;
-  const permission: Record<string, string> = {
-    entitlements: 'entitlement.read',
-    invoices: 'invoice.read',
-    staff: 'staff.list',
-    audit: 'audit.list',
-    'profile-draft': 'settings.read',
-    'brand-draft': 'settings.read',
-    ...HOURS_PERMISSIONS,
-    ...RULES_PERMISSIONS,
-    ...CATALOGUE_PERMISSIONS,
-    ...TEAM_PERMISSIONS,
-    ...BOOKING_PERMISSIONS,
-  };
-  if (permission[action] && !principal.permissions.includes(permission[action]!))
-    return problem('permission_denied', 403);
+  const permission = route?.permission ?? IDENTITY_PERMISSIONS[action];
+  if (permission && !principal.permissions.includes(permission)) return problem('permission_denied', 403);
   if (action === 'principal') return output(principal);
-  const page = Number(request.nextUrl.searchParams.get('page') ?? 0);
-  const query = { page, size: 10 };
-  const result = HOURS_READS.includes(action)
-    ? await readHours(hours, action, options, request.nextUrl.searchParams)
-    : RULES_READS.includes(action)
-      ? await readRules(bookingRules, action, options, request.nextUrl.searchParams)
-      : CATALOGUE_READS.includes(action)
-        ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
-        : TEAM_READS.includes(action)
-          ? await readTeam(team, action, options, request.nextUrl.searchParams)
-          : BOOKING_READS.includes(action)
-            ? await readBookings(bookings, action, options, request.nextUrl.searchParams, () => apiTime(host.hostname))
-            : action === 'staff'
-              ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-              : action === 'audit'
-                ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
-                : action === 'entitlements'
-                  ? await account.entitlements(options)
-                  : action === 'profile-draft'
-                    ? await settings.profileDraft(options)
-                    : action === 'brand-draft'
-                      ? await settings.brandDraft(options)
-                      : await account.invoices(options, query);
+  const query = { page: Number(request.nextUrl.searchParams.get('page') ?? 0), size: 10 };
+  const result = route
+    ? await route.read(host.hostname, options, request.nextUrl.searchParams)
+    : action === 'staff'
+      ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
+      : await client.GET('/api/v1/identity/audit', { ...options, params: { query } });
+  if (!result) return problem('service_unavailable', 503);
   if (result.response.status === 401) {
     const response = problem('invalid_session', 401, { renewable: false });
     endSupportView(response);
@@ -317,32 +237,28 @@ function issue(response: NextResponse, kind: Kind, tokens: Tokens) {
 }
 
 /**
- * The workspace BFF (`/identity-web/{kind}/{action}`), with the platform module's salon account calls, the
- * branding module's settings calls (F04-S01), staff's hours (F04-S03), booking's rules (F04-S04) and the
- * catalogue (F05-S01) handed in by the route that serves it.
+ * The workspace BFF (`/identity-web/{kind}/{action}`): sign-in and the session's own actions here, every module's reads,
+ * changes and uploads from the one route table (decision 121; web H4), each as its module declared it, and the
+ * platform module's support entry and end for a support view, handed in by the route that serves it.
  */
-export function createIdentityWeb(
-  salonAccountFor: SalonAccountFor,
-  salonSettingsFor: SalonSettingsFor,
-  salonHoursFor: SalonHoursFor,
-  salonBookingRulesFor: SalonBookingRulesFor,
-  salonCatalogueFor: SalonCatalogueFor,
-  salonTeamFor: SalonTeamFor,
-  salonBookingsFor: SalonBookingsFor,
-) {
+export function createIdentityWeb(salonAccountFor: SalonAccountFor, routes: RouteTable) {
+  const principalFirst = (method: string, action: string) => checksPrincipalFirst(method, action, routes);
   return (request: NextRequest, kind: Kind, action: string) =>
-    answeredForSession(request, kind, action, () =>
-      handleIdentity(request, kind, action, {
-        salonAccountFor,
-        salonSettingsFor,
-        salonHoursFor,
-        salonBookingRulesFor,
-        salonCatalogueFor,
-        salonTeamFor,
-        salonBookingsFor,
-      }),
+    answeredForSession(request, kind, action, principalFirst, () =>
+      handleIdentity(request, kind, action, salonAccountFor, routes, principalFirst),
     );
 }
+
+/** The permission each of identity's own actions needs; a module's are in its routes. */
+const IDENTITY_PERMISSIONS: Record<string, string> = {
+  staff: 'staff.list',
+  audit: 'audit.list',
+  'staff-create': 'staff.manage',
+  'staff-change': 'staff.manage',
+  'staff-remove': 'staff.manage',
+  password: 'password.change',
+  'mfa-start': 'mfa.enroll',
+};
 
 /**
  * The identity module's own actions: signing in, the session and its devices, and the salon's sign-in accounts. They
@@ -369,21 +285,15 @@ const IDENTITY_ACTIONS = new Set([
 ]);
 
 /**
- * Reads whose API endpoint answers anyone on the salon's host (the published tax and booking rules, the opening
- * week, the API's clock): the BFF's own session and permission check is their only gate.
- */
-const OPEN_UPSTREAM = new Set(['catalogue-tax-public', 'booking-rules-public', 'team-opening-hours', 'booking-clock']);
-
-/**
  * Whether the principal is read (`/identity/me`) and the session and permission checked here before the call (the
  * lead's ruling on web H3). A module's read is not: its endpoint authenticates the credential itself, refuses another
  * salon's (the API resolves the salon by `Host`) and requires the same permission (`SessionAccess.auth()` and each use
  * case's `principals.require`), so the refusal is the API's, 403 `permission_denied`. Every change keeps the re-check
- * before its call, as do the identity module's own actions, the reads whose endpoint answers anyone, and uploads,
- * whose form is read only after the session is known (BUG-F04-001).
+ * before its call, as do the identity module's own actions, the reads whose endpoint answers anyone (`open`), and
+ * uploads, whose form is read only after the session is known (BUG-F04-001).
  */
-function checksPrincipalFirst(method: string, action: string): boolean {
-  return method !== 'GET' || IDENTITY_ACTIONS.has(action) || OPEN_UPSTREAM.has(action) || UPLOAD_FIELDS.has(action);
+function checksPrincipalFirst(method: string, action: string, routes: RouteTable): boolean {
+  return method !== 'GET' || IDENTITY_ACTIONS.has(action) || Boolean(routes.reads[action]?.open);
 }
 
 /**
@@ -395,10 +305,11 @@ async function answeredForSession(
   request: NextRequest,
   kind: Kind,
   action: string,
+  principalFirst: (method: string, action: string) => boolean,
   handle: () => Promise<NextResponse>,
 ): Promise<NextResponse> {
   const response = await handle();
-  if (kind !== 'staff' || checksPrincipalFirst(request.method, action)) return response;
+  if (kind !== 'staff' || principalFirst(request.method, action)) return response;
   if (response.status !== 401 && response.status !== 403) return response;
   const body = (await response
     .clone()
@@ -427,94 +338,48 @@ export function answersWithoutLookup(path: string): boolean {
   return Boolean(match && !IDENTITY_ACTIONS.has(match[1]!) && match[1] !== 'entry' && match[1] !== 'end');
 }
 
-/** The other modules' calls the BFF reaches, handed in by the route. */
-type Ports = {
-  salonAccountFor: SalonAccountFor;
-  salonSettingsFor: SalonSettingsFor;
-  salonHoursFor: SalonHoursFor;
-  salonBookingRulesFor: SalonBookingRulesFor;
-  salonCatalogueFor: SalonCatalogueFor;
-  salonTeamFor: SalonTeamFor;
-  salonBookingsFor: SalonBookingsFor;
-};
+/** Identity's own reads; a module's are in the route table. */
+const IDENTITY_READS = ['principal', 'sessions', 'staff', 'audit'];
 
 /** Allowlisted account operations only; neither a URL nor a tenant selector comes from input. */
-async function handleIdentity(request: NextRequest, kind: Kind, action: string, ports: Ports) {
-  const {
-    salonAccountFor,
-    salonSettingsFor,
-    salonHoursFor,
-    salonBookingRulesFor,
-    salonCatalogueFor,
-    salonTeamFor,
-    salonBookingsFor,
-  } = ports;
+async function handleIdentity(
+  request: NextRequest,
+  kind: Kind,
+  action: string,
+  salonAccountFor: SalonAccountFor,
+  routes: RouteTable,
+  principalFirst: (method: string, action: string) => boolean,
+) {
   try {
     const host = requestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
-    if (kind === 'support')
-      return await handleSupport(
-        request,
-        action,
-        host,
-        salonAccountFor,
-        salonSettingsFor,
-        salonHoursFor,
-        salonBookingRulesFor,
-        salonCatalogueFor,
-        salonTeamFor,
-        salonBookingsFor,
-      );
-    const reads = [
-      'principal',
-      'sessions',
-      'staff',
-      'audit',
-      'entitlements',
-      'invoices',
-      'support-sessions',
-      'profile-draft',
-      'brand-draft',
-      ...HOURS_READS,
-      ...RULES_READS,
-      ...CATALOGUE_READS,
-      ...TEAM_READS,
-      ...BOOKING_READS,
-    ];
-    if (request.method === 'GET' && !reads.includes(action)) return problem('method_not_allowed', 405);
+    if (kind === 'support') return await handleSupport(request, action, host, salonAccountFor, routes);
+    const read = routes.reads[action];
+    const change = routes.changes[action];
+    const upload = routes.uploads[action];
+    if (request.method === 'GET' && !IDENTITY_READS.includes(action) && !read)
+      return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !csrf(request)) return problem('request_rejected', 403);
     const client = identityClient(host.hostname);
-    const account: SalonAccount | null = salonAccountFor(host.hostname);
-    const settings: SalonSettings | null = salonSettingsFor(host.hostname);
-    const hours = salonHoursFor(host.hostname);
-    const bookingRules = salonBookingRulesFor(host.hostname);
-    const catalogue = salonCatalogueFor(host.hostname);
-    const team = salonTeamFor(host.hostname);
-    const bookings = salonBookingsFor(host.hostname);
-    if (!client || !account || !settings || !hours || !bookingRules || !catalogue || !team || !bookings)
-      return problem('service_unavailable', 503);
+    if (!client) return problem('service_unavailable', 503);
     const access = request.cookies.get(cookieName(kind, 'access'))?.value;
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
-    // A brand image, a service photo and a team photo are the multipart actions; their forms are read only after the
-    // session and permission checks, so no caller who is refused has a form parsed.
-    const uploadField = UPLOAD_FIELDS.get(action);
-    const read =
-      request.method === 'GET' || uploadField
-        ? { ok: true as const, value: {} }
-        : await readBoundedJson(request, 16384);
+    // An upload's form is read only after the session and permission checks, so no caller who is refused has a form
+    // parsed.
+    const body =
+      request.method === 'GET' || upload ? { ok: true as const, value: {} } : await readBoundedJson(request, 16384);
     // The request's budget, which the request log starts again once the body has arrived (BUG-F04-001).
     const signal = requestSignal();
-    if (!read.ok) return problem('bad_request', 400);
-    const body: Record<string, unknown> = read.value;
+    if (!body.ok) return problem('bad_request', 400);
+    const input: Record<string, unknown> = body.value;
     // Input values are forwarded only through each generated contract's explicit fields.
-    const text = (name: string) => (typeof body[name] === 'string' ? (body[name] as string) : '');
-    const page = Number(request.nextUrl.searchParams.get('page') ?? 0);
-    const query = { page, size: 10 };
+    const text = (name: string) => (typeof input[name] === 'string' ? (input[name] as string) : '');
+    const query = { page: Number(request.nextUrl.searchParams.get('page') ?? 0), size: 10 };
     const options = { headers, signal };
     const publicActions = ['sign-in', 'mfa-enroll', 'mfa-verify'];
     let principal: Principal | undefined;
-    const checked = checksPrincipalFirst(request.method, action);
+    const checked = principalFirst(request.method, action);
     // A module's read without an access credential is refused here, without asking the API.
     if (!checked && !access) return problem('invalid_session', 401);
     if (checked && !publicActions.includes(action) && action !== 'clear') {
@@ -552,35 +417,8 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
         return problem('invalid_session', 401, { renewable });
       }
     }
-    const permission: Record<string, string> = {
-      entitlements: 'entitlement.read',
-      invoices: 'invoice.read',
-      staff: 'staff.list',
-      audit: 'audit.list',
-      'staff-create': 'staff.manage',
-      'staff-change': 'staff.manage',
-      'staff-remove': 'staff.manage',
-      password: 'password.change',
-      'mfa-start': 'mfa.enroll',
-      'support-sessions': 'support.manage',
-      'support-revoke': 'support.manage',
-      'profile-draft': 'settings.read',
-      'profile-save': 'settings.manage',
-      'profile-publish': 'settings.manage',
-      'profile-discard': 'settings.manage',
-      'brand-draft': 'settings.read',
-      'brand-save': 'settings.manage',
-      'brand-reset': 'settings.manage',
-      'brand-publish': 'settings.manage',
-      'brand-discard': 'settings.manage',
-      'brand-image': 'settings.manage',
-      ...HOURS_PERMISSIONS,
-      ...RULES_PERMISSIONS,
-      ...CATALOGUE_PERMISSIONS,
-      ...TEAM_PERMISSIONS,
-      ...BOOKING_PERMISSIONS,
-    };
-    if (principal && permission[action] && !principal.permissions.includes(permission[action]!))
+    const permission = (read ?? change ?? upload)?.permission ?? IDENTITY_PERMISSIONS[action];
+    if (principal && permission && !principal.permissions.includes(permission))
       return problem('permission_denied', 403);
     if (action === 'principal') return output(principal);
     if (action === 'refresh') return output({ ok: true }); // A competing tab already renewed.
@@ -590,36 +428,14 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       return response;
     }
     if (request.method === 'GET') {
-      const result = HOURS_READS.includes(action)
-        ? await readHours(hours, action, options, request.nextUrl.searchParams)
-        : RULES_READS.includes(action)
-          ? await readRules(bookingRules, action, options, request.nextUrl.searchParams)
-          : CATALOGUE_READS.includes(action)
-            ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
-            : TEAM_READS.includes(action)
-              ? await readTeam(team, action, options, request.nextUrl.searchParams)
-              : BOOKING_READS.includes(action)
-                ? await readBookings(bookings, action, options, request.nextUrl.searchParams, () =>
-                    apiTime(host.hostname),
-                  )
-                : action === 'sessions'
-                  ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
-                  : action === 'staff'
-                    ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-                    : action === 'audit'
-                      ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
-                      : action === 'entitlements'
-                        ? await account.entitlements(options)
-                        : action === 'invoices'
-                          ? await account.invoices(options, { page, size: 10 })
-                          : action === 'support-sessions'
-                            ? await account.supportSessions(options, query)
-                            : action === 'profile-draft'
-                              ? await settings.profileDraft(options)
-                              : action === 'brand-draft'
-                                ? await settings.brandDraft(options)
-                                : null;
-      if (!result) return problem('not_found', 404);
+      const result = read
+        ? await read.read(host.hostname, options, request.nextUrl.searchParams)
+        : action === 'sessions'
+          ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
+          : action === 'staff'
+            ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
+            : await client.GET('/api/v1/identity/audit', { ...options, params: { query } });
+      if (!result) return problem('service_unavailable', 503);
       return result.data
         ? output(result.data)
         : problem(result.error?.code ?? 'service_unavailable', result.response.status, {
@@ -711,7 +527,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
                   mobile: text('mobile'),
                   password: text('password'),
                   role: text('role'),
-                  professionalGrant: body.professionalGrant as boolean,
+                  professionalGrant: input.professionalGrant as boolean,
                 },
               })
             : action === 'staff-change'
@@ -719,9 +535,9 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
                   ...options,
                   params: { path: { id: text('id') } },
                   body: {
-                    version: body.version as number,
+                    version: input.version as number,
                     role: text('role'),
-                    professionalGrant: body.professionalGrant as boolean,
+                    professionalGrant: input.professionalGrant as boolean,
                   },
                 })
               : await client.DELETE('/api/v1/identity/staff/{id}', {
@@ -730,89 +546,22 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
                 });
         return r.response.ok ? output(r.data ?? { ok: true }) : failure(r);
       }
-      case 'support-revoke': {
-        const r = await account.revokeSupportSession(options, text('id'));
-        return r.response.ok ? output({ ok: true }) : failure(r);
-      }
-      case 'profile-save':
-      case 'profile-publish':
-      case 'profile-discard': {
-        // The draft the API answers is allowlisted by its contract; the request is rebuilt by branding.
-        const r =
-          action === 'profile-save'
-            ? await settings.saveProfileDraft(options, body.version, body.profile)
-            : action === 'profile-publish'
-              ? await settings.publishProfile(options, body.version)
-              : await settings.discardProfileDraft(options, body.version);
-        return r.data ? output(r.data) : failure(r);
-      }
-      case 'brand-save':
-      case 'brand-reset':
-      case 'brand-publish':
-      case 'brand-discard': {
-        const r =
-          action === 'brand-save'
-            ? await settings.saveBrandDraft(options, body.version, body.brand)
-            : action === 'brand-reset'
-              ? await settings.resetBrandDraft(options, body.version)
-              : action === 'brand-publish'
-                ? await settings.publishBrand(options, body.version)
-                : await settings.discardBrandDraft(options, body.version);
-        return r.data ? output(r.data) : failure(r);
-      }
-      case 'brand-image':
-      case CATALOGUE_PHOTO:
-      case TEAM_PHOTO: {
-        if (!uploadField) return problem('not_found', 404);
-        const upload = await uploadForm(request, uploadField);
-        if ('refused' in upload) return problem(upload.refused, upload.status, { errors: upload.errors });
-        // The upload's own stated limit, from the end of reading its form (docs/engineering/web.md, "Structure";
-        // BUG-F04-001).
-        restartRequestBudget(UPLOAD_API_TIMEOUT_MS);
-        const call = { headers, signal: requestSignal() };
-        if (action === 'brand-image') {
-          const r = await settings.uploadBrandImage(call, upload.text, upload.file);
-          return r.data ? output(r.data, 201) : failure(r);
-        }
-        // A service photo (F05-S01) or a team member's (F06-S01): the service or member named in the form, the file
-        // passed on as it came.
-        const r =
-          action === CATALOGUE_PHOTO
-            ? await catalogue.uploadPhoto(call, upload.text, upload.file)
-            : await team.uploadPhoto(call, upload.text, upload.file);
-        return r.data ? output(r.data) : failure(r);
-      }
-      case 'booking-rules-save': {
-        // Booking rules (F04-S04): the answer is allowlisted by its contract, the request rebuilt by booking.
-        const r = await changeRules(bookingRules, options, body);
-        return r.data ? output(r.data) : failure(r);
-      }
       default: {
-        if (CATALOGUE_WRITES.includes(action)) {
-          // The catalogue (F05-S01): the answer is allowlisted by its contract, the request rebuilt by the
-          // catalogue. A delete answers no content; a creation or a duplicate answers 201.
-          const r = await catalogue.change(options, action, body);
-          if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
-          return r.response.ok ? output({ ok: true }) : failure(r);
+        if (upload) {
+          const form = await uploadForm(request, upload.field);
+          if ('refused' in form) return problem(form.refused, form.status, { errors: form.errors });
+          // The upload's own stated limit, from the end of reading its form (docs/engineering/web.md, "Structure";
+          // BUG-F04-001).
+          restartRequestBudget(UPLOAD_API_TIMEOUT_MS);
+          const r = await upload.upload(host.hostname, { headers, signal: requestSignal() }, form.text, form.file);
+          if (!r) return problem('service_unavailable', 503);
+          return r.data ? output(r.data, upload.created ? 201 : 200) : failure(r);
         }
-        if (BOOKING_WRITES.includes(action)) {
-          // Bookings (F07-S03): the answer is allowlisted by its contract, the request rebuilt by booking. A hold
-          // answers 201, a release no content.
-          const r = await changeBooking(bookings, action, options, body);
-          if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
-          return r.response.ok ? output({ ok: true }) : failure(r);
-        }
-        if (TEAM_WRITES.includes(action)) {
-          // The team (F06-S01): the answer is allowlisted by its contract, the request rebuilt by staff. A removal
-          // answers no content; an addition answers 201.
-          const r = await team.change(options, action, body);
-          if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
-          return r.response.ok ? output({ ok: true }) : failure(r);
-        }
-        if (!HOURS_WRITES.includes(action)) return problem('not_found', 404);
-        // Hours, holidays and closures (F04-S03): the answer is allowlisted by its contract, the request
-        // rebuilt by staff. Reopening a closure answers no content.
-        const r = await changeHours(hours, action, options, body);
+        if (!change) return problem('not_found', 404);
+        // A module's change: its answer is allowlisted by its contract and its request rebuilt by its module. A
+        // creation answers 201, a removal no content.
+        const r = await change.change(host.hostname, options, input);
+        if (!r) return problem('service_unavailable', 503);
         if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
         return r.response.ok ? output({ ok: true }) : failure(r);
       }
@@ -824,13 +573,6 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     return response;
   }
 }
-/** The multipart actions, each with the one text field its form carries beside the file. */
-const UPLOAD_FIELDS = new Map<string, 'kind' | 'serviceId' | 'memberId'>([
-  ['brand-image', 'kind'],
-  [CATALOGUE_PHOTO, 'serviceId'],
-  [TEAM_PHOTO, 'memberId'],
-]);
-
 /** The browser's request over its declared size is refused before its form is read (the API's 10 MB limit). */
 const UPLOAD_LIMIT = UPLOAD_LIMIT_BYTES;
 

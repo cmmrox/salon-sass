@@ -22,6 +22,7 @@ import {
   type OperatorEntry,
 } from '@/features/platform/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
+import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';
 import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from '@/lib/tenancy/console-host';
 import { platformDomainOf } from '@/lib/tenancy/hostname';
 
@@ -49,24 +50,11 @@ const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
 /** Staff sign-in, where a visitor without a usable session belongs. */
 const SIGN_IN = '/workspace/sign-in';
 
-/** The protected workspace pages, whose entry is decided here before anything renders (CR-013). */
-const PROTECTED = new Set([
-  '/workspace/account',
-  '/workspace/staff',
-  '/workspace/audit',
-  '/workspace/billing',
-  '/workspace/support-access',
-  '/workspace/settings',
-  '/workspace/settings/profile',
-  '/workspace/settings/hours',
-  '/workspace/settings/rules',
-  '/workspace/settings/tax',
-  '/workspace/settings/branding',
-  // The Services & pricing page and its Categories tab (F05-S01), and its Products tab (F05-S03).
-  '/workspace/services',
-  '/workspace/services/categories',
-  '/workspace/services/products',
-]);
+/**
+ * The protected workspace pages, whose entry is decided here before anything renders (CR-013): every page of the one
+ * route table, as each module declares it (web M5; `/workspace/bookings` and `/workspace/team` were missing).
+ */
+const PROTECTED = new Set(WORKSPACE_ROUTES.pages.map((page) => page.path));
 
 /** Settings, and the first of its tabs (F04-S01): Profile, the only one delivered so far. */
 const SETTINGS = '/workspace/settings';

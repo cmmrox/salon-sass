@@ -19,26 +19,10 @@ import { SupportAccessScreen } from './SupportAccessScreen';
 import { SupportBanner } from './SupportBanner';
 import { TaxSettingsScreen } from './TaxSettingsScreen';
 import { TeamFrame } from './TeamFrame';
+import { pageOf } from './routes';
 import { TeamScreen } from './TeamScreen';
 
-type View =
-  'account' | 'bookings' | 'team' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
-type PageProps = { kind: Kind; view?: View; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };
-
-const REQUIRED: Record<View, string> = {
-  account: 'session.manage',
-  // The Bookings page (F07-S03): the calendar's readers, each in their data scope; not the Accountant (decision 108).
-  bookings: 'calendar.read',
-  // The Team page (F06-S01): every role but the Accountant, and a support session (decisions 099, 100).
-  team: 'team.read',
-  staff: 'staff.list',
-  audit: 'audit.list',
-  billing: 'invoice.read',
-  'support-access': 'support.manage',
-  settings: 'settings.read',
-  // The Services & pricing page (F05-S01): every role and a support session read it (decision 093).
-  services: 'catalogue.read',
-};
+type PageProps = { kind: Kind; view?: string; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };
 
 /**
  * The region a typed mobile number is checked against (decision 084): the booking module's setting, else the branding
@@ -92,7 +76,8 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
     <SupportBanner expiresAt={principal?.expiresAt ?? null} timeZone={salon.timeZone} />
   ) : undefined;
   // The support view has no account of its own: its account page shows what it may read.
-  const required = view && !(support && view === 'account') ? REQUIRED[view] : null;
+  // Each view's permission is its page's in the one route table (web M5).
+  const required = view && !(support && view === 'account') ? (pageOf(view)?.permission ?? null) : null;
   if (principal && required && !principal.permissions.includes(required)) {
     return (
       <AccountFrame
@@ -202,7 +187,7 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
           kind={kind}
           initialPrincipal={principal}
           timeZone={salon.timeZone}
-          view={view}
+          view={view === 'audit' ? 'audit' : view === 'account' ? 'account' : undefined}
           readOnly={readOnly}
         />
       )}

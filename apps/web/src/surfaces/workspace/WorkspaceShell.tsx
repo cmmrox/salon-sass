@@ -5,6 +5,7 @@ import type { Salon } from '@/features/branding';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shared/Navigation';
+import { WORKSPACE_ROUTES } from './routes';
 
 /** An image beside the salon's name, which says nothing the name does not: no text alternative. */
 const DECORATIVE = '';
@@ -14,8 +15,7 @@ const DECORATIVE = '';
  * Sidebar (a 200px rail from 900px and 236px from 1200px; below 900px its sheet, opened from the
  * header's menu button) and the main area (CR-017).
  */
-export type WorkspaceView =
-  'account' | 'bookings' | 'team' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
+export type WorkspaceView = string;
 
 /**
  * In the support view (F03-S04) the support banner opens the main area and sticks just under the
@@ -49,66 +49,18 @@ export function WorkspaceShell({
       current: signIn || view === 'account',
     },
   ];
-  // Bookings (F07-S03): after Today's place in the prototype's order, which F10 delivers, so first after Account.
-  if (permissions.includes('calendar.read'))
+  // Every other item is a page of the one route table that has one, in its order, for whoever holds its permission
+  // (web M5): Bookings, Team, Services, Audit, Billing, Support access, and Settings last, as in the prototype.
+  for (const page of [...WORKSPACE_ROUTES.pages].sort((a, b) => (a.nav?.order ?? 0) - (b.nav?.order ?? 0))) {
+    if (!page.nav || !permissions.includes(page.permission)) continue;
     items.push({
-      href: '/workspace/bookings',
-      label: t('bookingsNav'),
-      icon: 'bookings',
-      testId: 'workspace-bookings',
-      current: view === 'bookings',
+      href: page.path,
+      label: t(page.nav.label as 'account'),
+      icon: page.nav.icon as NavigationItem['icon'],
+      testId: page.nav.testId,
+      current: view === page.view || Boolean(page.nav.alsoFor?.includes(view)),
     });
-  // The Team page (F06-S01, decision 100), whose Sign-in accounts tab is F02's staff screen.
-  if (permissions.includes('team.read'))
-    items.push({
-      href: '/workspace/team',
-      label: t('teamNav'),
-      icon: 'staff',
-      testId: 'workspace-team',
-      current: view === 'team' || view === 'staff',
-    });
-  // After Staff, as in the prototype's navigation (F05-S01): every role reads the catalogue (decision 093).
-  if (permissions.includes('catalogue.read'))
-    items.push({
-      href: '/workspace/services',
-      label: t('servicesNav'),
-      icon: 'services',
-      testId: 'workspace-services',
-      current: view === 'services',
-    });
-  if (permissions.includes('audit.list'))
-    items.push({
-      href: '/workspace/audit',
-      label: t('audit'),
-      icon: 'audit',
-      testId: 'workspace-audit',
-      current: view === 'audit',
-    });
-  if (permissions.includes('invoice.read'))
-    items.push({
-      href: '/workspace/billing',
-      label: t('billing'),
-      icon: 'billing',
-      testId: 'workspace-billing',
-      current: view === 'billing',
-    });
-  if (permissions.includes('support.manage'))
-    items.push({
-      href: '/workspace/support-access',
-      label: t('supportAccess'),
-      icon: 'support',
-      testId: 'workspace-support-access',
-      current: view === 'support-access',
-    });
-  // Last, as in the prototype's navigation (F04-S01).
-  if (permissions.includes('settings.read'))
-    items.push({
-      href: '/workspace/settings',
-      label: t('settings'),
-      icon: 'settings',
-      testId: 'workspace-settings',
-      current: view === 'settings',
-    });
+  }
   const header = (
     <header
       className="sticky top-0 z-40 flex min-h-header items-center gap-2 bg-background px-4 py-2 rail:border-b rail:border-border rail:bg-card rail:px-7 rail:py-0"

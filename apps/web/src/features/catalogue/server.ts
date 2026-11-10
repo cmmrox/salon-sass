@@ -3,3 +3,4 @@ import 'server-only';
 
 export { salonCatalogueFor } from './server/salon-catalogue';
 export { servicePhoto } from './server/service-photo';
+export { catalogueRoutes } from './server/routes';

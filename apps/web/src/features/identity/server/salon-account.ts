@@ -14,16 +14,11 @@ type Call = { headers: Record<string, string | undefined>; signal: AbortSignal }
 export type SupportCredential = { accessToken: string; sessionId: string; issuedAt: string; expiresAt: string };
 
 /**
- * The platform module's paths the workspace BFF reaches for a salon user: the salon's entitlements
- * and invoices, its support sessions, and a support view's entry and end. Identity checks the session
- * and the permission first; the platform module makes the calls, and the route serving the BFF hands
- * its implementation in, so that neither module imports the other.
+ * The platform module's paths a support view's own session actions reach (F03-S04): its entry and its end. The
+ * salon's account reads and changes are the platform module's own routes; the route serving the BFF hands this in, so
+ * that neither module imports the other.
  */
 export interface SalonAccount {
-  entitlements(call: Call): Promise<Answer>;
-  invoices(call: Call, query: { page: number; size: number }): Promise<Answer>;
-  supportSessions(call: Call, query: { page: number; size: number }): Promise<Answer>;
-  revokeSupportSession(call: Call, id: string): Promise<Answer>;
   enterSupport(signal: AbortSignal, code: string): Promise<Answer<SupportCredential>>;
   endSupport(call: Call): Promise<Answer>;
 }

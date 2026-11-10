@@ -16,3 +16,4 @@ export {
   type Credentials,
 } from './server/identity-web';
 export type { Kind, Principal } from './types';
+export { identityRoutes } from './server/routes';

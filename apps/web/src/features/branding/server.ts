@@ -6,3 +6,4 @@ export { findSalon, type SalonLookup } from './server/salon';
 export { decodeSalon, encodeSalon, SALON_HEADER } from './server/salon-header';
 export { salonSettingsFor } from './server/salon-settings';
 export { brandImage } from './server/brand-image';
+export { brandingRoutes } from './server/routes';

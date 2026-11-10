@@ -140,6 +140,17 @@ describe('routeRequest', () => {
     expect(response.headers.get('x-middleware-request-content-security-policy')).toBe(security.policy);
   });
 
+  // Web M5: the Bookings and Team pages were missing from the protected pages; they are the route table's now.
+  it.each(['/workspace/bookings', '/workspace/team'])(
+    'sends a visitor without a session from %s to sign-in before anything renders',
+    async (path) => {
+      const resolve = resolving({ kind: 'salon', salon: alpha });
+      const response = await routeRequest(request(path), resolve);
+      expect(response.status).toBe(307);
+      expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/sign-in');
+    },
+  );
+
   it.each([
     ['/', '/workspace'],
     ['/sign-in', '/workspace/sign-in'],

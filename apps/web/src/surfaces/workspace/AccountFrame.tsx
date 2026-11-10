@@ -5,6 +5,7 @@ import { BrandStyle } from '@/components/shared/BrandStyle';
 import { DataLayer } from '@/lib/api-core/data-layer';
 import { WorkspaceShell, type WorkspaceView } from './WorkspaceShell';
 import { SessionRenewal } from './SessionRenewal';
+import { pageOf } from './routes';
 import { StaffSignInFrame } from './StaffSignInFrame';
 import type { Kind } from '@/features/identity';
 /** Every salon screen carries the salon's resolved identity and its brand accent. */
@@ -34,6 +35,8 @@ export function AccountFrame({
   scope?: string;
 }) {
   const t = useTranslations('account');
+  // Each view's title is its page's in the one route table (web M5).
+  const title = (pageOf(view)?.title ?? 'account') as 'account';
   if (signIn)
     return (
       <>
@@ -58,25 +61,7 @@ export function AccountFrame({
             className="text-title leading-heading font-semibold wrap-anywhere rail:text-workspace-title"
             data-testid="account-title"
           >
-            {signIn
-              ? t('staffTitle')
-              : view === 'bookings'
-                ? t('bookings')
-                : view === 'team' || view === 'staff'
-                  ? t('team')
-                  : view === 'audit'
-                    ? t('audit')
-                    : view === 'billing'
-                      ? t('billing')
-                      : view === 'support-access'
-                        ? t('supportAccess')
-                        : view === 'settings'
-                          ? t('settings')
-                          : view === 'services'
-                            ? t('services')
-                            : support
-                              ? t('supportView')
-                              : t('account')}
+            {signIn ? t('staffTitle') : title === 'account' && support ? t('supportView') : t(title)}
           </h1>
           {children}
         </div>

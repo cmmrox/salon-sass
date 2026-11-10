@@ -5,14 +5,9 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UPLOAD_API_TIMEOUT_MS } from '@/lib/api-core/client';
 import { contextFromTraceparent, currentRequest, runInRequest } from '@/lib/observability/request-context';
+import type { Answer, Call } from '@/lib/api-core/routes';
 import { createIdentityWeb } from './identity-web';
 import type { SalonAccount, SalonAccountFor } from './salon-account';
-import type { SalonSettings, SalonSettingsFor } from './salon-settings';
-import type { SalonHours, SalonHoursFor } from './salon-hours';
-import type { SalonBookingRules, SalonBookingRulesFor } from './salon-booking-rules';
-import type { SalonCatalogue, SalonCatalogueFor } from './salon-catalogue';
-import type { SalonTeam, SalonTeamFor } from './salon-team';
-import type { SalonBookings, SalonBookingsFor } from './salon-bookings';
 
 /**
  * BUG-F04-001: a photo sent over a slow connection. The BFF's API budget starts once it has read the request's
@@ -39,8 +34,10 @@ let remainingAtUpload: number[];
 let partsRead: number;
 
 /** The team module as far as a photo goes: it answers as the API would, refusing a call whose signal has ended. */
-const team: SalonTeamFor = () =>
-  new Proxy({} as SalonTeam, {
+/** The staff module's photo upload as far as this test goes. */
+type TeamPhotos = { uploadPhoto(call: Call, memberId: string, file: Blob): Promise<Answer> };
+const team = (): TeamPhotos | null =>
+  new Proxy({} as TeamPhotos, {
     get: (_target, name) =>
       name === 'uploadPhoto'
         ? async (call: { signal: AbortSignal }, memberId: string, file: Blob) => {
@@ -52,15 +49,19 @@ const team: SalonTeamFor = () =>
         : () => Promise.reject(new Error('only the photo is reached here')),
   });
 
-const handleIdentity = createIdentityWeb(
-  unreachedModule<SalonAccount>('platform') as SalonAccountFor,
-  unreachedModule<SalonSettings>('branding') as SalonSettingsFor,
-  unreachedModule<SalonHours>('hours') as SalonHoursFor,
-  unreachedModule<SalonBookingRules>('booking rules') as SalonBookingRulesFor,
-  unreachedModule<SalonCatalogue>('catalogue') as SalonCatalogueFor,
-  team,
-  unreachedModule<SalonBookings>('booking') as SalonBookingsFor,
-);
+const handleIdentity = createIdentityWeb(unreachedModule<SalonAccount>('platform') as SalonAccountFor, {
+  pages: [],
+  reads: {},
+  changes: {},
+  // The team's photo upload, as the staff module declares it, over the fake team module above.
+  uploads: {
+    'team-photo': {
+      permission: 'team.manage',
+      field: 'memberId',
+      upload: (_hostname, call, memberId, file) => team()?.uploadPhoto(call, memberId, file) ?? null,
+    },
+  },
+});
 
 beforeEach(async () => {
   uploads = [];

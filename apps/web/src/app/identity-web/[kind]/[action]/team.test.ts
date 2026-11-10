@@ -4,23 +4,12 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
-import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
-import { salonBookingRulesFor, salonBookingsFor } from '@/features/booking/server';
-import { salonCatalogueFor } from '@/features/catalogue/server';
+import { WORKSPACE_ROUTES } from '@/surfaces/workspace/routes';
 
 /** The team actions of the workspace BFF (F06-S01), as the route wires them, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(
-  salonAccountFor,
-  salonSettingsFor,
-  salonHoursFor,
-  salonBookingRulesFor,
-  salonCatalogueFor,
-  salonTeamFor,
-  salonBookingsFor,
-);
+const handleIdentity = createIdentityWeb(salonAccountFor, WORKSPACE_ROUTES);
 let server: Server;
 let calls: { method: string; path: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };
