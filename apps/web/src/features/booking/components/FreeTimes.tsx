@@ -15,7 +15,7 @@ import { countdownText, secondsLeft, whenOf } from '../client/booking-time';
 import type { Availability, Booking } from '../types';
 
 /** Why a day has no free time, as the screen words it: "not working" names the professional chosen, if any (AC-5). */
-export type NoTimeReason = 'closed' | 'nobody_performs' | 'not_working' | 'nobody_working' | 'fully_booked';
+type NoTimeReason = 'closed' | 'nobody_performs' | 'not_working' | 'nobody_working' | 'fully_booked';
 
 /** The free times being looked for, found, or not there. */
 export type TimesState =

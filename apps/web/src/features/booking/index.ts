@@ -1,8 +1,6 @@
 // The booking module's client-safe entry: the Booking rules tab's parts (F04-S04) and the Bookings page's (F07-S03).
 export type {
   Availability,
-  BookableMember,
-  BookableService,
   Booking,
   BookingDetail,
   BookingPage,
@@ -32,7 +30,7 @@ export { AppointmentSheet, type AppointmentRefusal } from './components/Appointm
 export { BookingsList } from './components/BookingsList';
 export { BookingsTools } from './components/BookingsTools';
 export { CancelBookingDialog } from './components/CancelBookingDialog';
-export { FreeTimes, type NewAppointmentRefusal, type NoTimeReason, type TimesState } from './components/FreeTimes';
+export { FreeTimes, type NewAppointmentRefusal, type TimesState } from './components/FreeTimes';
 export { NewAppointmentSheet, type AppointmentChoices } from './components/NewAppointmentSheet';
 export {
   availabilityRequest,
@@ -48,12 +46,4 @@ export {
 } from './client/appointment-form';
 export { type SheetAction } from './client/appointment-rules';
 export { aYearOn, dateInZone, minutesLeft, secondsLeft, whenOf } from './client/booking-time';
-export {
-  filtered,
-  listRequest,
-  PAGE_SIZE,
-  queryOf,
-  searchOf,
-  type BookingsQuery,
-  type StatusFilter,
-} from './client/bookings-query';
+export { filtered, listRequest, PAGE_SIZE, queryOf, searchOf, type BookingsQuery } from './client/bookings-query';

@@ -12,7 +12,7 @@ import { initialOf, performedCategoryNames, toneOf } from '../client/team-form';
 import type { NextLeave, TeamCategory, TeamMember, TeamService, TeamWorkday } from '../types';
 
 /** Where the web serves a team photo on the salon's own hostname (F06-S01 AC-9): through its BFF route. */
-export const teamPhotoSource = (photoId: string) => `/team-photos/${photoId}`;
+const teamPhotoSource = (photoId: string) => `/team-photos/${photoId}`;
 
 /** An image beside the person's name, which says nothing the name does not: no text alternative. */
 const DECORATIVE = '';
