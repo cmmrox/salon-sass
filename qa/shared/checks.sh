@@ -132,6 +132,32 @@ with_identity_keys() (
   "$@"
 )
 
+# with_nonlocal_keys <command...>: runs it with every key a nonlocal API start requires
+# (.env.example; infra/stack/compose.yaml): the identity keys, the operator console's five (F03-S01),
+# the export key (F03-S03) and the support signing key (F03-S04), taken from this instance's
+# retained synthetic key files. Nothing is printed; a missing or malformed key is an environment fault.
+with_nonlocal_keys() (
+  local file key value name
+  read_key_file() { # <kind> <expected count> <key=variable ...>
+    local kind="$1" want="$2" found=0 pair; shift 2
+    file="$(key_file "$kind")"
+    [ -f "$file" ] || { printf 'ENVIRONMENT: retained synthetic %s key file is absent\n' "$kind" >&2; exit 3; }
+    while IFS='=' read -r key value; do
+      name=""
+      for pair in "$@"; do [ "$key" = "${pair%%=*}" ] && name="${pair#*=}"; done
+      [ -n "$name" ] || continue
+      [[ "$value" =~ ^[0-9a-fA-F]{64}$ ]] || { printf 'ENVIRONMENT: retained %s key format is invalid\n' "$kind" >&2; exit 3; }
+      export "$name=$value"; found=$((found+1))
+    done < "$file"
+    [ "$found" = "$want" ] || { printf 'ENVIRONMENT: %s of the %s retained %s keys were found\n' "$found" "$want" "$kind" >&2; exit 3; }
+  }
+  read_key_file operator 5 signing=SALON_OPERATOR_SIGNING_KEY challenge=SALON_OPERATOR_CHALLENGE_KEY encryption=SALON_OPERATOR_ENCRYPTION_KEY \
+    proxy=SALON_OPERATOR_PROXY_KEY fingerprint=SALON_OPERATOR_FINGERPRINT_KEY
+  read_key_file export 1 export=SALON_EXPORT_KEY
+  read_key_file support 1 support=SALON_SUPPORT_SIGNING_KEY
+  with_identity_keys "$@"
+)
+
 note() { printf '      %s\n' "$*"; }
 
 # A fault of the environment, not of the product. Nothing more is tested.
