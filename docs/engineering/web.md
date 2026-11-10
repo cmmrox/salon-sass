@@ -21,7 +21,8 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 
 - `proxy.ts` reads the `Host` header only (never `X-Forwarded-Host` or `Forwarded`), applies the
   hostname rule of `docs/architecture/multi-tenancy.md`, and resolves the salon through the API on
-  every request. This is routing only. It is not a security boundary: the API and the database
+  every request, except a module's BFF call (the API resolves the salon from the same `Host` when
+  the call reaches it) and the platform's own static files. This is routing only. It is not a security boundary: the API and the database
   enforce access.
 - A hostname that is not exactly one slug-shaped label in front of the platform domain (a bare
   network address included) is "salon not found" without calling the API. Reserved slugs are left
@@ -38,8 +39,22 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
   salon exists elsewhere, and both use the neutral theme.
 - An active salon's `/` redirects to the fixed same-host `/workspace`; unauthenticated entry
   reaches `/workspace/sign-in`. `/salon-site` is not publicly reachable and returns 404.
-- Nothing about a salon is cached: every response on a salon's hostname carries `Cache-Control:
-  private, no-cache, no-store, max-age=0, must-revalidate`, and the shell is rendered per request.
+- Nothing about a salon is kept by any shared cache: every response on a salon's hostname carries
+  `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`, and every page is
+  rendered per request (the root layout asks for the connection, so the content security policy's
+  nonce reaches every script; nothing is prerendered). The one exception is a salon's public
+  photos, which the visitor's own browser may keep under the salon's own address: a service photo
+  or a published brand image for a day, a person's photo for an hour, `private` and `immutable`,
+  because each is addressed by an id that a new upload replaces (`lib/http/photo-cache.ts`). Never
+  `public`, never `s-maxage`; a draft brand image, any answer that is not 200 and a suspended or
+  unknown salon stay `no-store`. The platform's own static files (`/images`, `/icons`, `/brand`,
+  `/fonts`) are the same on every hostname, hold nothing of a salon, and may be cached for a day.
+- Every response sends `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` and
+  `X-Frame-Options: DENY`, and every page a content security policy (`lib/http/security-headers.ts`):
+  scripts only from the origin with the request's nonce (`'strict-dynamic'`, never
+  `'unsafe-inline'`), styles from the origin and inline, images from the origin, `blob:` and
+  `data:`, fonts and requests from the origin, no plugins, no framing, forms and the base URL on the
+  origin. A page that needs more changes the policy in that file, with the reason.
 - Never read a tenant from a query parameter, a cookie the browser can set, or local storage.
 
 ## Structure
@@ -56,10 +71,13 @@ apps/web/src/
                           no surfaces/platform
   features/<module>/      one folder per API module that the web uses (identity, platform, branding,
                           catalogue, staff, booking, payment, notification, customer, reporting)
-    server/               'server-only' calls to that module's API through the generated client; returns what the UI needs
-    client/               the browser side of that module's BFF session (requests, cross-tab lock, failures)
+    server/               'server-only' calls to that module's API through the generated client; `routes.ts` declares
+                          the module's BFF actions and the permission each needs
+    client/               the module's typed BFF actions and its TanStack Query hooks (`*-data.ts`); the session, the
+                          cross-tab lock and failures are `lib/api-core/request.ts`
+    pages.ts              the module's workspace pages (path, title, permission), safe to load in the browser
     components/           that module's product components, built from components/ui and Tailwind
-    hooks/  schemas/      client hooks; zod schemas for convenience validation
+    hooks/                client hooks; a form's checks are the module's `*-form.ts` (there is no schema library)
     types.ts              types shared by the module's server and client code
     index.ts  server.ts   the client-safe entry and the server entry; nothing else is imported from outside
   components/ui/          shadcn/ui (unchanged)
@@ -79,10 +97,11 @@ apps/web/test/            test helpers, imported as @test/*
   `app`, `surface`, `feature`, `shared-component`, `ui`, `lib` (which also covers `hooks`, `i18n`
   and `styles`) and `test-support`, and the rules apply to tests too.
 - When one feature needs another's data, it declares a small interface (a port) and the route that
-  composes them passes the other feature's implementation in. The workspace BFF reaches platform's
-  entitlements, invoices and support sessions this way (`SalonAccount`, wired in the `identity-web`
-  route).
-- The workspace navigation lists only delivered features and the modules the salon is entitled to.
+  composes them passes the other feature's implementation in. A module's BFF actions are not passed
+  this way any more: they are registered in the route table (below); `SalonAccount` remains only
+  for the support view's entry and end.
+- The workspace navigation lists the route table's pages that the person's permissions allow.
+  Module entitlements join it with F18 (decision 077).
   It reads them from the API (plan features plus add-on modules, decision 077). Hiding an item is a
   convenience; the API refuses the module's routes on its own.
 - Each feature exposes a client-safe `index.ts` and a server entry `server.ts`; a surface exposes
@@ -97,8 +116,8 @@ apps/web/test/            test helpers, imported as @test/*
   inside that module's `features/<module>/server/`.
 - Mutations go through the BFF route handlers, which re-check the session; there are no Server
   Actions alongside them.
-- Server components fetch for first render in the staff workspace.
-  Client components are for interaction only.
+- The server renders the frame: the principal, the salon's brand and entitlements, and the page's
+  shell. A screen's data is read after first render through the client data layer.
 - **One client data layer (decision 121).** After first render, a screen reads and changes data
   only through TanStack Query hooks in its module's `features/<module>/client/`, over the one
   request module in `lib/api-core`. That module renews an expired access credential once and
@@ -106,11 +125,28 @@ apps/web/test/            test helpers, imported as @test/*
   renewed; maps error codes in one place; and never applies an answer to a form or list that has
   changed since the request was made. A list other people change (bookings, the calendar) is
   refreshed by polling at an interval stated in its hook. Every hook has a unit test in which an
-  earlier request answers after a later one. Hand-written `useEffect` fetching is not added, and
-  the existing hooks move to this layer before F08 (the review's handover lists them).
-- **Routes are registered per module.** Each module declares its workspace pages, BFF actions and
-  the permissions they need in its own `features/<module>/server/`; `identity` holds only sign-in
-  and session actions, and a new feature edits no other module to add a route.
+  earlier request answers after a later one (`apps/web/test/late-answers.tsx`). Hand-written
+  `useEffect` fetching is not added. Each frame has its own query client, keyed by a scope the
+  server makes from the hostname, the kind of session and a hash of the session; every key starts
+  with it, and the client is dropped when the frame goes, so nothing one person or one salon read
+  can be shown for another. The layer does not retry a read, and only Bookings reads again on
+  focus and every 30 seconds; a re-read that fails keeps the last good list and says it may be out
+  of date. A change goes straight out and is asked again once, with the same body and
+  `Idempotency-Key`, only after the answer that says the credential was refused before anything was
+  done (401 `invalid_session`, renewable); a lost or timed-out answer is never asked again by the
+  layer.
+- **Who refuses what in the BFF.** A read of a module endpoint is not checked in the BFF first: the
+  API authenticates the credential, resolves the salon from the `Host` and requires the permission
+  itself, so a missing permission is the API's 403. Every change, every upload, identity's own
+  actions, a support view's reads and a read whose endpoint answers anyone (marked `open` in its
+  route) are checked in the BFF, session and permission, before the call.
+- **Routes are registered per module.** Each module declares its workspace pages in
+  `features/<module>/pages.ts` and its BFF actions with the permission each needs in
+  `features/<module>/server/routes.ts`; `surfaces/workspace/routes.ts` composes them into the one
+  table the proxy's protected pages, the page, the BFF, the frame's title and the menu read.
+  `identity` holds only sign-in and the session's own actions, a new feature edits no other module
+  to add a route, and the lint rule `local/own-routes` refuses a module's routes or pages declared
+  anywhere else.
 - Every route group has an error boundary (`error.tsx`), and the application a `global-error.tsx`,
   so one value that fails to render does not blank the page.
 - A BFF handler's time limit starts after it has read the request body, and an upload or a long
@@ -124,10 +160,11 @@ apps/web/test/            test helpers, imported as @test/*
 The same standard as the API (`docs/engineering/backend.md`, "Clean code"), with the web's tools:
 
 - Names in the business's words; a component is named for what it shows, a hook for what it gives.
-- Small units: a component that grows past about 200 lines, or mixes data access with layout, is
+- Small units: aim for components under about 200 lines (many older ones are longer and are split
+  when next changed); a component that mixes data access with layout is
   split; logic that is not rendering moves to a hook or to `features/<module>/server/`.
 - Nothing dead: no commented-out code, unused component, export, file, dependency or message key.
-  `knip` fails the build on an unused file, export or dependency. A `TODO` names its stage, change
+  `knip` fails CI on an unused file, export or dependency. A `TODO` names its stage, change
   request or bug.
 - One format: Prettier, with the Tailwind class-sorting plugin, formats every file; `prettier
   --check` and `eslint --max-warnings 0` are part of the gates. TypeScript is `strict`; no `any`,
@@ -162,7 +199,8 @@ The same standard as the API (`docs/engineering/backend.md`, "Clean code"), with
   metadata and mutation work. It starts when the request arrives and starts again once the
   request's body has been received, so the time a slow connection takes to send a body is not
   taken from the API (BUG-F04-001). An upload's call to the API has its own limit of ten seconds
-  (`UPLOAD_API_TIMEOUT_MS`), counted from when its form has been read; the form is read only after the
+  (`UPLOAD_API_TIMEOUT_MS`; the operator's holiday import has ten, `HOLIDAY_IMPORT_API_TIMEOUT_MS`, and an
+  export download thirty, `EXPORT_DOWNLOAD_API_TIMEOUT_MS`), counted from when its form has been read; the form is read only after the
   session and permission check, so a caller who is not signed in is refused with its upload unread.
   (The framework hands a route handler the body only once it has all arrived, so that check has its
   full budget after a slow upload.) The response-finish log also includes framework/error serialization
