@@ -8,6 +8,7 @@ import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.repository.SalonExportStore;
 import com.salonplatform.platform.repository.SalonExportStore.Stored;
 import com.salonplatform.platform.service.ExportDownloadService;
+import com.salonplatform.shared.persistence.DatabaseLimits;
 import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -60,7 +61,8 @@ class ExportDownloadServiceImpl implements ExportDownloadService {
 
     @Override
     public Archive archiveForOperator(UUID salonId) {
-        return work.run(() -> {
+        // A whole archive read and decrypted: long work, not capped by a request's limits (decision 120).
+        return DatabaseLimits.longWork(() -> work.run(() -> {
             var operator = access.require(OperatorPermission.EXPORT_READ);
             Stored row = store.archiveOfSalon(salonId).orElseThrow(NotFoundException::new);
             if ("pending".equals(row.status())) {
@@ -78,7 +80,7 @@ class ExportDownloadServiceImpl implements ExportDownloadService {
                     salonId.toString(),
                     downloadDetails(row, "console"));
             return archive;
-        });
+        }));
     }
 
     @Override
@@ -96,7 +98,7 @@ class ExportDownloadServiceImpl implements ExportDownloadService {
         if (!ExportKey.tokenShaped(token)) {
             throw new NotFoundException();
         }
-        return database.inTransaction(status -> {
+        return DatabaseLimits.longWork(() -> database.inTransaction(status -> {
             Stored row =
                     store.readyArchiveByTokenHash(ExportKey.tokenHash(token)).orElseThrow(NotFoundException::new);
             Archive archive = open(row);
@@ -108,7 +110,7 @@ class ExportDownloadServiceImpl implements ExportDownloadService {
                     row.salonId().toString(),
                     downloadDetails(row, "link"));
             return archive;
-        });
+        }));
     }
 
     private Archive open(Stored row) {

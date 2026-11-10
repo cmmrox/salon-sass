@@ -1,6 +1,6 @@
 package com.salonplatform.platform.repository;
 
-import com.salonplatform.shared.persistence.RequestDatabaseLimit;
+import com.salonplatform.shared.persistence.DatabaseLimits;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.RegisteredTenant;
@@ -49,7 +49,7 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
 
     private final JdbcClient jdbc;
 
-    TenantRegistry(DataSource tenantDataSource, RequestDatabaseLimit limit) {
+    TenantRegistry(DataSource tenantDataSource, DatabaseLimits limit) {
         this.jdbc = JdbcClient.create(new LimitedConnections(tenantDataSource, limit));
     }
 
@@ -153,9 +153,9 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
      */
     private static final class LimitedConnections extends TransactionAwareDataSourceProxy {
 
-        private final RequestDatabaseLimit limit;
+        private final DatabaseLimits limit;
 
-        LimitedConnections(DataSource tenantDataSource, RequestDatabaseLimit limit) {
+        LimitedConnections(DataSource tenantDataSource, DatabaseLimits limit) {
             super(tenantDataSource);
             this.limit = limit;
         }

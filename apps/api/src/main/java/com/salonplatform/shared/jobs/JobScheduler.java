@@ -1,6 +1,7 @@
 package com.salonplatform.shared.jobs;
 
 import com.salonplatform.shared.observability.Traces;
+import com.salonplatform.shared.persistence.DatabaseLimits;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
@@ -208,7 +209,8 @@ final class JobScheduler implements SmartLifecycle {
                     .register(meters)
                     .record(Duration.between(occurrence.get(), now));
             try {
-                job.run(now);
+                // Long work: its transactions set their own limits, not a request's (decision 120).
+                DatabaseLimits.longWork(() -> job.run(now));
                 log.info("Platform job {} ran", job.name());
             } catch (RuntimeException ex) {
                 log.error("Platform job {} failed; its next occurrence tries again", job.name(), ex);
@@ -264,7 +266,8 @@ final class JobScheduler implements SmartLifecycle {
                     salon,
                     () -> traces.inSpan("job." + job.name(), salon, null, () -> {
                         try {
-                            transactions.executeWithoutResult(status -> {
+                            // Long work: its transaction sets its own limits, not a request's (decision 120).
+                            DatabaseLimits.longWork(() -> transactions.executeWithoutResult(status -> {
                                 try {
                                     job.runFor(salon, now);
                                 } catch (RuntimeException ex) {
@@ -272,7 +275,7 @@ final class JobScheduler implements SmartLifecycle {
                                 } catch (Exception ex) {
                                     throw new IllegalStateException(ex);
                                 }
-                            });
+                            }));
                             log.info("Job {} ran for the salon", job.name());
                             return true;
                         } catch (RuntimeException ex) {

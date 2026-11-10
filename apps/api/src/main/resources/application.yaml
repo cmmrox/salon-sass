@@ -152,6 +152,29 @@ salon:
     # before the request is answered 503. Shorter than the driver's socket timeout, which is the
     # limit for everything else (migrations included).
     request-timeout: 3s
+    # The database's own limits on every connection of the application's pools (decision 120,
+    # DatabaseLimits): a statement, a wait for a lock, and a transaction left open and idle. The
+    # statement limit is shorter than request-timeout, so the database stops a slow statement, frees
+    # its locks and answers before the driver gives the connection up; either way the request is
+    # answered 503. While a statement runs the server checks this often that its client is still
+    # there, and stops the statement of one that went away.
+    statement-timeout: 2500ms
+    lock-timeout: 2s
+    idle-in-transaction-timeout: 10s
+    client-check-interval: 2s
+    # Work that legitimately runs longer (recurring jobs, exports and their download, the erasers)
+    # sets these on each transaction it opens instead; the driver then waits 10 s longer than the
+    # statement limit.
+    long-work:
+      statement-timeout: 5m
+      lock-timeout: 10s
+      idle-in-transaction-timeout: 60s
+    # The migrations' connection, under the driver's 30 s socket timeout. The lock limit keeps a
+    # migration that waits behind the running version's transactions from holding up every later one.
+    migration:
+      statement-timeout: 25s
+      lock-timeout: 10s
+      idle-in-transaction-timeout: 25s
     # How often the pool asks for a new connection while the database is unreachable or silent,
     # once it has been reached. This, not the pool's own wait between attempts (which grows to five
     # seconds and cannot be set), decides how soon the API answers again after the database does
