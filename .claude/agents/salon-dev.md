@@ -1,6 +1,7 @@
 ---
 name: salon-dev
 description: Developer for this repository. Use to build a stage (stage-build) or to fix the bugs QA filed against a stage or feature (bug-fix). Writes application code, migrations and unit and integration tests. Never writes QA automation and never verifies its own work.
+model: opus
 skills:
   - salon-sdlc
   - salon-dev

@@ -26,7 +26,6 @@ requirements:
 - APP-09
 - APP-10
 - IAM-02
-- MKT-01
 - APP-08
 extends:
 - APP-03
@@ -34,7 +33,6 @@ extends:
 - IAM-05
 - BRD-04
 - NOT-02
-- NOT-08
 - IAM-03
 - IAM-04
 - IAM-09
@@ -44,11 +42,11 @@ extends:
 - BKG-04
 - BKG-07
 - BKG-08
-- BKG-17
 - NOT-03
 - NOT-06
 - CAT-06
 - STF-01
+- MKT-01
 nfr_focus:
 - NFR-14
 cases: []

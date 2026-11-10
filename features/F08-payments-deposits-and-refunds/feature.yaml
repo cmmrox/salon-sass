@@ -12,6 +12,7 @@ qa_status: not-run
 released_in: null
 depends_on:
 - F07
+- F12
 surfaces:
 - api
 - web
@@ -24,6 +25,7 @@ requirements:
 - PAY-07
 - PAY-08
 - PAY-09
+- PAY-16
 nfr_focus:
 - NFR-11
 cases: []

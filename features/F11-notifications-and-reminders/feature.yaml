@@ -22,7 +22,6 @@ requirements:
 - NOT-05
 - NOT-06
 - NOT-07
-- NOT-08
 - BRD-10
 - MKT-02
 nfr_focus:

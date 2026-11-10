@@ -35,6 +35,28 @@ does not certify or close F03 and does not waive its later implementation, indep
 or feature-PR gates. The recorded F03 integration branch may be recreated from updated `main`
 when implementation is requested. Remove only branches proved merged by guarded cleanup.
 
+## Draft pull requests and review before QA
+
+Decision 122 (CR-029). The owner's authorisation above to push reviewed feature changes and open
+their pull requests covers a **draft** pull request for a feature, opened when its first stage
+closes and updated at each later stage close, so that CI and the automated review (Codex, on the
+repository) run on each stage. A draft is never marked ready before `feature-close`, and nothing
+else about merging changes: the owner merges, after full feature QA.
+
+Every finding of an automated or human review gets an answer on the pull request before
+`feature-verify` starts, and again before the pull request is marked ready: fixed (with the
+commit), filed as a bug, or declined with the reason. A pull request with a review still running or
+a finding unanswered is reported to the owner as not ready to merge; PR #13 merged five seconds
+before its review arrived and two of its findings went unanswered for three weeks.
+
+## Models by role
+
+The owner's choice on 2026-11-10: planning, design checks and reviews before a feature starts are
+done by the lead on the strongest model available (Claude Fable at the time); building and
+verifying are done on Claude Opus at high effort. The Claude Code agent files name `model: opus`
+for the developer and QA so that this holds whichever model the lead's session runs on; the
+effort is the session's. A different choice is the owner's and is recorded here.
+
 ## Feature and merge records
 
 `feature.yaml` keeps `status` and `qa_status`, and an `integration` mapping:

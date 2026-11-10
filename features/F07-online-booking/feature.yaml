@@ -31,6 +31,8 @@ requirements:
 - BKG-11
 - BKG-14
 - BKG-16
+- BKG-24
+- BKG-26
 nfr_focus:
 - NFR-03
 - NFR-05

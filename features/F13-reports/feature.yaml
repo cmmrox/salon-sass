@@ -8,7 +8,7 @@ qa_status: not-run
 released_in: null
 depends_on: [F10]
 surfaces: [api, web]
-requirements: [REP-02, REP-03, REP-04, REP-10]
+requirements: [REP-02, REP-03, REP-04, REP-10, REP-06]
 nfr_focus: []
 cases: []
 verification:

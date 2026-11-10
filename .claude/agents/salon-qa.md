@@ -1,6 +1,7 @@
 ---
 name: salon-qa
 description: QA for this repository. Use to prepare and dry-run a feature's tests during its build, verify a whole feature once all its stages are closed (feature-verify), re-verify fixed bugs, verify one stage when the owner asked (stage-verify), or run the smoke, regression and release suites. Writes tests titled by case, bugs and the product review. Never edits application code and never verifies a refactor as a feature. Always a different agent from the one that built the work.
+model: opus
 skills:
   - salon-sdlc
   - salon-qa

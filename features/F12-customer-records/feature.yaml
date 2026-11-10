@@ -3,6 +3,7 @@ title: "Customer records"
 summary: "A salon keeps a record of each customer with tags, visits, spend, notes and consents, is warned of possible duplicates, and authorised staff can export the list."
 release: R1
 milestone: M1-web
+started_early: "Owner, 2026-11-10 (CR-028, decision 115): customer records are built before F08, so payments, notifications and the booking page hang off a customer record"
 status: backlog
 qa_status: not-run
 released_in: null

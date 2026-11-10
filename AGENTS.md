@@ -29,7 +29,7 @@ A project fact is never written into a skill, and a skill never restates a docum
   see (architecture, code organisation, an upgrade, tooling) is a **refactor**: a decision entry,
   updated docs, a `refactor/` branch proved by the developer's gates, smoke (plus regression when
   delivered features are touched) and one PR. Never a feature, a stage or QA cases (decision 066).
-- **Order and audience:** salon owner/admin/staff web first, released, then the customer React Native mobile app. No customer website (`docs/ROADMAP.md`).
+- **Order and audience:** salon owner/admin/staff web and each salon's customer booking page first, released, then the customer React Native mobile app. No customer account area or marketing website (`docs/ROADMAP.md`).
 - **Three roles:** the lead plans and closes, the developer builds, QA verifies. The agent that
   built a stage never verifies its feature. In Claude Code delegate to the `salon-dev` and `salon-qa`
   subagents; in Codex spawn the `salon_dev` and `salon_qa` agents; or use separate sessions.

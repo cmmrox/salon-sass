@@ -12,6 +12,7 @@ status it leaves behind. Each section stands alone; read only the one you are ru
 - `stage-build`
 - `stage-close`
 - QA during the build
+- `feature-review`
 - `feature-verify` (and re-verifying fixes)
 - `bug-fix`
 - `feature-close`
@@ -43,7 +44,7 @@ during the build, so the feature pass starts with working tests.
 | State | Turn |
 | --- | --- |
 | Stage `outlined` / `planned` or `in-progress` / `built` | Lead `stage-plan` / developer `stage-build` / lead `stage-close` |
-| Every stage `complete`, feature `qa_status: not-run` | QA: `feature-verify` |
+| Every stage `complete`, feature `qa_status: not-run` | Lead: `feature-review`, then QA: `feature-verify` |
 | `failing` with an `open` or `reopened` bug | Developer: `bug-fix <F>` |
 | `failing` with every bug fixed | QA: `feature-verify` (re-verify) |
 | `blocked` | Lead: remove what blocks QA (`blocked_reason`) |
@@ -108,13 +109,22 @@ and architecture (`docs/README.md` says where).
 2. One folder per stage, `stages/S01-<slug>/`, with `stage.yaml` from `assets/stage.yaml`:
    `status: outlined`, title, sequence, surfaces, `depends_on`, its requirement ids. Every
    requirement of the feature belongs to a stage.
-3. Write the feature `README.md` from `assets/feature-README.md`.
-4. On the feature branch from updated `origin/main`, record `integration.branch`, run
+3. Write the feature `README.md` from `assets/feature-README.md`, including its **design check**:
+   the records the feature adds or changes and what each belongs to, the states and who may change
+   them, the events and read interfaces other modules will need, and for every later feature that
+   depends on this one, what it will need from this model and whether the model already allows it.
+   Do it on the strongest model available, before any spec: a model that is right for its own spec
+   and wrong for the next feature is the most expensive defect there is, and no test finds it.
+4. **Market check.** Compare the feature's requirements and reference screens with how the products
+   the project names as comparisons do the same job (the project's review context says which). List
+   what they have that the requirements lack, and put each gap to the owner now as a change request
+   or a backlog idea; found after the build, the same gap is rework.
+5. On the feature branch from updated `origin/main`, record `integration.branch`, run
    `start-check <F>`, set `status: planned`.
-5. **Confirm the design first.** For a feature with screens, show the owner the reference screens it
+6. **Confirm the design first.** For a feature with screens, show the owner the reference screens it
    will follow and get their agreement before any UI stage is planned. Designs changed after build
    cost F01 and F02 about 40 hours of repair.
-6. Show the owner the stage outline and wait for approval.
+7. Show the owner the stage outline, the design check and the market gaps, and wait for approval.
 
 **Does not:** write a spec, code or a test.
 
@@ -182,9 +192,13 @@ a `depends_on` stage is not closed; `handoff.notes` misses an acceptance criteri
 passing record for the current source (`docs/operations/verification-evidence.md`; run only the
 missing or invalidated ones); `sdlc validate` reports anything; a "Done criteria" item fails.
 
-**Do:** correct `docs/` for every difference the handoff reports and record any decision; set
+**Do:** rule on every difference and every choice the handoff reports, one by one: accept it and
+correct `docs/` (recording the decision), or send it back. A difference nobody ruled on is how a
+wrong reading ships: one handoff note on F07 became a bug only at the pull request's review. Set
 `status: complete`; generate and validate; merge the stage branch into the feature branch with
-that change in the merge commit: `merge(<F-S>): <title>`. Report what was delivered, the gate
+that change in the merge commit: `merge(<F-S>): <title>`. Where the git policy allows it, push the
+feature branch to its draft pull request (opened at the first stage close) so that CI and any
+automated review run on this stage now. Report what was delivered, the gate
 results, any criterion not checked, and, after the last stage, that `feature-verify` is next.
 
 ---
@@ -202,6 +216,29 @@ for the first time; the dry run moves that work into the build.
 
 ---
 
+## `feature-review <F>`
+
+**Role:** Lead, after the last stage closes and before `feature-verify`. QA tests from outside and
+`stage-close` is a light check, so this is the one place the feature's code is read as a whole.
+
+**Refuse if:** a stage is not `complete`; the draft pull request's CI is failing or a review of it
+is still running.
+
+**Do:**
+1. Read the feature's whole diff against `main` for what tests do not show: the design check's
+   promises kept, module and ownership rules, races, money and time handling, data another
+   organisation could reach, and code that waits for an answer and then acts on state that may
+   have changed. Use an independent reviewer (a fresh agent or the review skill) when the diff is
+   large; never the agent that built it.
+2. Answer every finding, yours and any automated review's, on the pull request: fixed (the
+   developer fixes on a branch from the feature branch, with a test, and the lead merges it),
+   filed as a bug, or declined with the reason. No finding is left unanswered.
+3. Report the findings and their answers. `feature-verify` starts on the result.
+
+**Does not:** certify anything. It finds; QA's pass is still the proof.
+
+---
+
 ## `feature-verify <F>`
 
 **Role:** QA; load `salon-qa`, whose checklist this wraps. **Reads:** the feature README and yaml,
@@ -209,7 +246,8 @@ every stage's `spec.md` and `stage.yaml` (with `handoff`), the requirements, the
 documents, `docs/qa/`, the running product. Code only to find a selector or endpoint; expectations
 come from the specs and requirements.
 
-**Refuse if:** a stage is not `complete`; you built a stage of this feature in this context.
+**Refuse if:** a stage is not `complete`; you built a stage of this feature in this context; the
+lead has not reported `feature-review` done with every finding answered.
 
 **Do, on the first pass:**
 1. On the feature branch, set `status: in-qa`. Start the product from the handoffs; a product that
@@ -250,8 +288,11 @@ After the batch, run the affected stages' gates once, deduplicated. Do not chang
 
 **Role:** Lead. `complete` is what every later release trusts, so this command refuses.
 
-**Before it:** give each `review.md` suggestion a disposition (`change-requests.md`), and correct
-`docs/` for what the review reports as different.
+**Before it:** give each `review.md` suggestion a disposition (`change-requests.md`), putting every
+"should" to the owner now, so that what they approve is built before the merge and not as a second
+pull request after it; and correct `docs/` for what the review reports as different. Run the
+regression suite on the feature branch (QA runs it) and deal with every failure: a suite nobody
+runs between releases rots, and a stale case found at release time costs a day.
 
 **Refuse if:** a stage is not `complete` or `qa_status` is not `pass`; the product changed since
 `integration.qa_revision` (`docs/operations/verification-evidence.md`; verify the affected scope
@@ -269,10 +310,12 @@ left open and suggestions awaiting the owner. Then `feature-submit` where the gi
 **Role:** Lead. Read `git-workflow.md` and `docs/operations/git-delivery.md`.
 
 **Submit.** Refuse if the feature is not `complete` with QA `pass`, the branch is not clean,
-`qa/scripts/sdlc pr-check <F>` fails, or pushing is outside the owner's authorisation. Push, open
-one PR into `main` with the QA summary, tested revision and manual/deferred cases, record
+`qa/scripts/sdlc pr-check <F>` fails, pushing is outside the owner's authorisation, or a review
+finding on the pull request has no answer. Push, mark the draft pull request ready (or open
+one PR into `main`) with the QA summary, tested revision and manual/deferred cases, record
 `integration.pull_request` in one metadata commit, and wait for CI on the final head. Smoke runs on
-the PR. The owner merges; nothing deploys.
+the PR. Tell the owner if a review is still running: a pull request is not ready to merge until it
+has arrived and been answered. The owner merges; nothing deploys.
 
 **Integrate.** Refuse if `qa/scripts/sdlc merge-sync <F> --check` cannot verify the merge. Update
 `main`; clean up only the feature's merged branches and worktrees (`sdlc cleanup`, preview first);

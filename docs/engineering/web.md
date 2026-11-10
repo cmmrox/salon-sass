@@ -99,6 +99,22 @@ apps/web/test/            test helpers, imported as @test/*
   Actions alongside them.
 - Server components fetch for first render in the staff workspace.
   Client components are for interaction only.
+- **One client data layer (decision 121).** After first render, a screen reads and changes data
+  only through TanStack Query hooks in its module's `features/<module>/client/`, over the one
+  request module in `lib/api-core`. That module renews an expired access credential once and
+  retries the request, so no screen sends a signed-in person to sign-in while the session can be
+  renewed; maps error codes in one place; and never applies an answer to a form or list that has
+  changed since the request was made. A list other people change (bookings, the calendar) is
+  refreshed by polling at an interval stated in its hook. Every hook has a unit test in which an
+  earlier request answers after a later one. Hand-written `useEffect` fetching is not added, and
+  the existing hooks move to this layer before F08 (the review's handover lists them).
+- **Routes are registered per module.** Each module declares its workspace pages, BFF actions and
+  the permissions they need in its own `features/<module>/server/`; `identity` holds only sign-in
+  and session actions, and a new feature edits no other module to add a route.
+- Every route group has an error boundary (`error.tsx`), and the application a `global-error.tsx`,
+  so one value that fails to render does not blank the page.
+- A BFF handler's time limit starts after it has read the request body, and an upload or a long
+  read has its own stated limit.
 - No money arithmetic, availability logic or policy logic in the browser. Show what the API returns.
 - Forms validate for the user's convenience and the API validates for real. Show the API's field
   errors next to the fields.
@@ -357,7 +373,7 @@ because the owner set one standard for all Next.js work in this product.
 - A salon whose API colour is missing or not `#RRGGBB` keeps its name and identity and gets the
   default `#D6086A` (BUG-F02-010); the database refuses an invalid stored colour, so this guards
   only against a malformed API answer.
-- A brand change is a draft until the salon publishes it. The future React Native app consumes the published brand; no customer website is created.
+- A brand change is a draft until the salon publishes it. The customer booking page (F24) and the future React Native app consume the published brand.
 
 Staff sign-in uses the dedicated CR-012 layout without the protected workspace rail/header. It
 shows the hostname-resolved salon name/initial and a shared decorative interior fallback.

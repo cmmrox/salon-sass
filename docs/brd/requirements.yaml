@@ -18,6 +18,7 @@ modules:
   MKT: "Marketing and loyalty"
   REP: "Reports"
   BRD: "Branding, web addresses and white-label apps"
+  WEB: "Customer booking page"
   INV: "Retail and inventory"
   OCC: "Bridal and occasion services"
   AST: "AI-assisted booking and front desk"
@@ -80,8 +81,8 @@ requirements:
     release: R1
     prototype: none
     status: changed
-    changed_by: CR-023
-    text: "Import of customers, services and future appointments from a spreadsheet, with a template, validation, a preview of what will be created, possible duplicates flagged by normalised phone number and email, and a downloadable error report."
+    changed_by: CR-028
+    text: "Import of customers and services from a spreadsheet, with a template, validation, a preview of what will be created, possible duplicates flagged by normalised phone number and email, and a downloadable error report. Future appointments and visit history are PLT-16."
   - id: PLT-09
     module: PLT
     priority: should
@@ -131,22 +132,29 @@ requirements:
     prototype: none
     status: active
     text: "The staff workspace is available in Sinhala and Tamil as well as English."
+  - id: PLT-16
+    module: PLT
+    priority: could
+    release: R2
+    prototype: none
+    status: active
+    text: "Import of future appointments and of visit history, as an assisted migration from another product."
   - id: IAM-01
     module: IAM
     priority: must
     release: R1
     prototype: none
     status: changed
-    changed_by: CR-010
-    text: "Customers sign in to the React Native mobile app with their mobile number and a one-time code delivered by SMS or WhatsApp. There are no customer passwords or customer web sign-in screens. The mobile app starts after M1 salon administration web is released."
+    changed_by: CR-028
+    text: "Customers verify their mobile number with a one-time code delivered by SMS or WhatsApp, on the salon’s booking page and in the React Native mobile app. There are no customer passwords."
   - id: IAM-02
     module: IAM
     priority: must
     release: R1
     prototype: partial
     status: changed
-    changed_by: CR-010
-    text: "In the later React Native customer app, customers can browse services and availability without signing in. Verification happens at Your details; customers manage bookings within the app using verified identity or a secure app link. No customer booking website is provided."
+    changed_by: CR-028
+    text: "Customers can browse services and availability without signing in, on the booking page and in the app. Verification happens at Your details. A customer manages a booking through its secure link or, in the app, through their verified identity."
   - id: IAM-03
     module: IAM
     priority: must
@@ -433,16 +441,17 @@ requirements:
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "Two bookings or holds can never overlap for the same professional. This is guaranteed by the database under simultaneous requests, not only checked by the application."
+    status: changed
+    changed_by: CR-028
+    text: "Two bookings or holds can never overlap for the same professional, unless a member of staff with the permission deliberately books over another booking (BKG-25). This is guaranteed by the database under simultaneous requests, not only checked by the application."
   - id: BKG-06
     module: BKG
     priority: must
     release: R1
     prototype: yes
     status: changed
-    changed_by: CR-023
-    text: "Booking states: held, pending payment, confirmed, arrived, in service, completed, cancelled, no-show. Completed is reached only through checkout; no-show can be set only after the start time and undone the same day; cancellation is only before the start time. Each change records who made it, when, and why."
+    changed_by: CR-028
+    text: "Booking states: held, pending payment, confirmed, arrived, in service, completed, cancelled, no-show. Completed is reached only through checkout; no-show can be set only after the start time and undone the same day; cancellation is only before the start time. Arrived and in service can be undone on the same day. A confirmed booking that nobody marked on its day can still be checked out, or marked a no-show, afterwards by a role with the permission, with a reason. Staff can release a booking that is waiting for a payment, and a booking whose payment fails stays held for at least the salon’s hold length. Each change records who made it, when, and why."
   - id: BKG-07
     module: BKG
     priority: must
@@ -469,16 +478,17 @@ requirements:
     priority: must
     release: R1
     prototype: yes
-    status: active
-    text: "Walk-ins: check immediate availability, start now, book the next free time, or join a queue with an estimated wait. Confirmed bookings are never moved to make room."
+    status: changed
+    changed_by: CR-028
+    text: "Walk-ins: check immediate availability, start now, or book the next free time, with or without a mobile number. Confirmed bookings are never moved to make room. The queue with an estimated wait is BKG-27."
   - id: BKG-11
     module: BKG
     priority: must
     release: R1
     prototype: yes
     status: changed
-    changed_by: CR-023
-    text: "Staff can create a booking on a customer’s behalf on any open day: a mobile number is required, free times across eligible professionals are offered, and the source (phone, WhatsApp, front desk) is recorded."
+    changed_by: CR-028
+    text: "Staff can create a booking on a customer’s behalf on any open day: a name is required, a mobile number of any country is required except for a walk-in, free times across eligible professionals are offered, and the source (phone, WhatsApp, front desk) is recorded."
   - id: BKG-12
     module: BKG
     priority: must
@@ -513,14 +523,15 @@ requirements:
     release: R1
     prototype: partial
     status: changed
-    changed_by: CR-023
-    text: "Every booking records its channel: customer app, staff web, shared app link, Instagram, Google, WhatsApp, phone, front desk or walk-in. Existing historical channel labels may be retained as data; no customer website is delivered."
+    changed_by: CR-028
+    text: "Every booking records its channel: booking page, customer app, staff web, shared app link, Instagram, Google, WhatsApp, phone, front desk or walk-in."
   - id: BKG-17
     module: BKG
     priority: should
-    release: R1
+    release: R2
     prototype: yes
-    status: active
+    status: changed
+    changed_by: CR-028
     text: "Waitlist: a customer joins for a date, time band and professional; staff can notify them when a time opens; the customer must confirm."
   - id: BKG-18
     module: BKG
@@ -545,10 +556,11 @@ requirements:
     text: "Customer risk rules: after a set number of no-shows, full prepayment is required, or online booking is blocked."
   - id: BKG-21
     module: BKG
-    priority: could
-    release: R3
+    priority: should
+    release: R2
     prototype: none
-    status: active
+    status: changed
+    changed_by: CR-028
     text: "Recurring appointments (for example every four weeks)."
   - id: BKG-22
     module: BKG
@@ -566,6 +578,34 @@ requirements:
     status: changed
     changed_by: CR-020
     text: "Services at the customer’s location capture the service address and include staff travel assignments and buffers in availability and conflict checks."
+  - id: BKG-24
+    module: BKG
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A booking is one visit by one customer for one or more services. Each service has its own professional, time, terms and price; the visit has one reference, and is held, confirmed, cancelled and checked out as a whole. Services are offered back to back, and a visit is placed completely or not at all."
+  - id: BKG-25
+    module: BKG
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "A member of staff with the permission can deliberately place or move a booking over another booking of the same professional, after a warning that names the clash and with a recorded reason. Customers can never do so, and every other overlap is refused by the database (BKG-05)."
+  - id: BKG-26
+    module: BKG
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "A booking carries a note that staff can add and change, shown on the booking and on the calendar. It is separate from the notes on the customer’s record."
+  - id: BKG-27
+    module: BKG
+    priority: could
+    release: R2
+    prototype: none
+    status: active
+    text: "Walk-ins can join a queue with an estimated wait."
   - id: APP-01
     module: APP
     priority: must
@@ -607,8 +647,8 @@ requirements:
     release: R1
     prototype: partial
     status: changed
-    changed_by: CR-010
-    text: "Customer booking and self-service are available only in the React Native mobile app after the salon administration web milestone is released. Salon web addresses serve staff administration; app links have no customer website fallback."
+    changed_by: CR-028
+    text: "Customers book and manage their bookings in a browser on the salon’s booking page from the web milestone (WEB-01, WEB-02), and in the React Native mobile app once it is released. A salon’s app link opens its booking page when the app is not installed."
   - id: APP-07
     module: APP
     priority: must
@@ -763,8 +803,8 @@ requirements:
     release: R1
     prototype: partial
     status: changed
-    changed_by: CR-023
-    text: "In-salon checkout: settle the balance in one or more payments, add or remove services and products, apply a discount with a reason, record each tender (cash, card terminal, bank transfer with a required reference, LANKAQR), show the balance still due, complete the visit once paid, and issue a receipt by WhatsApp, SMS or email."
+    changed_by: CR-028
+    text: "In-salon checkout: settle the balance in one or more payments, add or remove services and products, apply a discount with a reason, record each tender (cash, card terminal, bank transfer with a required reference, LANKAQR), take a tip (PAY-13), show the balance still due, complete the visit once paid, and issue a receipt by WhatsApp, SMS or email, or on paper (PAY-17)."
   - id: PAY-07
     module: PAY
     priority: must
@@ -785,8 +825,8 @@ requirements:
     release: R1
     prototype: none
     status: changed
-    changed_by: CR-023
-    text: "A payment link can be sent by WhatsApp or SMS for a staff-created booking so that a deposit can be taken for phone, WhatsApp and front-desk bookings. The link opens the gateway’s hosted checkout and returns to a salon-branded payment result; it is not a booking website. Only the gateway’s verified notification confirms the payment."
+    changed_by: CR-028
+    text: "A payment link can be sent by WhatsApp or SMS for a staff-created booking so that a deposit can be taken for phone, WhatsApp and front-desk bookings. The link opens the gateway’s hosted checkout and returns to the booking’s page on the salon’s web address (WEB-02). A link stays valid for a time the salon sets in hours, separate from the hold length. Only the gateway’s verified notification confirms the payment."
   - id: PAY-10
     module: PAY
     priority: should
@@ -811,11 +851,12 @@ requirements:
     text: "Late-cancellation and no-show fees charged to a saved payment method, where the customer agreed to this at booking."
   - id: PAY-13
     module: PAY
-    priority: could
-    release: R3
+    priority: should
+    release: R1
     prototype: none
-    status: active
-    text: "Tips, recorded per professional."
+    status: changed
+    changed_by: CR-028
+    text: "Tips are taken at checkout and recorded per professional, kept apart from service revenue and tax, and shown in the day-end summary and in reports."
   - id: PAY-14
     module: PAY
     priority: could
@@ -830,6 +871,27 @@ requirements:
     prototype: partial
     status: active
     text: "Refundable security deposits are held as a liability separate from service revenue, with a traceable receipt, deduction and refund audit."
+  - id: PAY-16
+    module: PAY
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Staff can record a deposit received outside the gateway (bank transfer, LANKAQR or cash) against a future booking, with its tender, a reference where the tender has one, and an optional photo of the payment slip. It confirms the booking, is held and applied like a gateway deposit, and is refunded as a recorded manual refund."
+  - id: PAY-17
+    module: PAY
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "A receipt can be printed from the workspace in a layout that fits an 80 mm receipt printer and A4 paper."
+  - id: PAY-18
+    module: PAY
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "Staff can sell products and take payment without a booking (a counter sale), with the same tenders, receipt, limits and day-end totals as a checkout."
   - id: NOT-01
     module: NOT
     priority: must
@@ -850,8 +912,9 @@ requirements:
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "Reminder timing is set by the salon (for example the day before and two hours before). Reminders include links to confirm, reschedule or cancel."
+    status: changed
+    changed_by: CR-028
+    text: "Reminder timing is set by the salon (for example the day before and two hours before). Reminders carry the booking’s secure link, which opens the page where the customer confirms, reschedules or cancels (WEB-02)."
   - id: NOT-04
     module: NOT
     priority: must
@@ -885,9 +948,10 @@ requirements:
   - id: NOT-08
     module: NOT
     priority: should
-    release: R1
+    release: R2
     prototype: partial
-    status: active
+    status: changed
+    changed_by: CR-028
     text: "A notification centre in the workspace and in the app."
   - id: NOT-09
     module: NOT
@@ -974,8 +1038,8 @@ requirements:
     release: R1
     prototype: none
     status: changed
-    changed_by: CR-010
-    text: "Each salon has shareable app booking links and QR codes for the later React Native app, suitable for Instagram, Google Business Profile, WhatsApp and printed material. No customer booking website is provided."
+    changed_by: CR-028
+    text: "Each salon has a shareable booking link and QR code that open its booking page, and its app experience once the app is released and installed, suitable for Instagram, Google Business Profile, WhatsApp and printed material."
   - id: MKT-02
     module: MKT
     priority: should
@@ -1052,8 +1116,9 @@ requirements:
     priority: must
     release: R1
     prototype: yes
-    status: active
-    text: "Today view: appointments, amount collected, amount to collect, walk-in queue."
+    status: changed
+    changed_by: CR-028
+    text: "Today view: appointments, amount collected, amount to collect, walk-ins."
   - id: REP-02
     module: REP
     priority: must
@@ -1085,10 +1150,10 @@ requirements:
   - id: REP-06
     module: REP
     priority: should
-    release: R2
+    release: R1
     prototype: partial
     status: changed
-    changed_by: CR-023
+    changed_by: CR-028
     text: "Financial reports: tax, discounts, refunds and outstanding balances. Collections by tender and deposits held are REP-10."
   - id: REP-07
     module: REP
@@ -1100,9 +1165,10 @@ requirements:
   - id: REP-08
     module: REP
     priority: should
-    release: R3
+    release: R2
     prototype: none
-    status: active
+    status: changed
+    changed_by: CR-028
     text: "Staff performance and commission."
   - id: REP-09
     module: REP
@@ -1139,8 +1205,8 @@ requirements:
     release: R1
     prototype: none
     status: changed
-    changed_by: CR-010
-    text: "Every salon receives a platform subdomain for its staff administration web workspace with a secure certificate at onboarding; local development remains HTTP under CR-005. No customer web booking site is provided."
+    changed_by: CR-028
+    text: "Every salon receives a platform subdomain with a secure certificate at onboarding, serving its staff workspace and its customer booking page; local development remains HTTP under CR-005."
   - id: BRD-04
     module: BRD
     priority: must
@@ -1209,8 +1275,8 @@ requirements:
     release: R2
     prototype: none
     status: changed
-    changed_by: CR-010
-    text: "Links on the salon domain open the dedicated React Native app when installed and direct users to its store listing when needed. No customer booking website or browser booking fallback is provided."
+    changed_by: CR-028
+    text: "Links on the salon domain open the dedicated React Native app when installed, and the salon’s booking page otherwise."
   - id: BRD-13
     module: BRD
     priority: should
@@ -1218,6 +1284,27 @@ requirements:
     prototype: none
     status: active
     text: "The operator console shows, for every salon app, the store status, live version, pending reviews and expiring credentials."
+  - id: WEB-01
+    module: WEB
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Each salon has a public booking page on its own web address. Without installing anything, a customer chooses one or more services, a professional or no preference, and a free time, gives their details, verifies their mobile number with a one-time code, and pays the deposit or amount the salon requires."
+  - id: WEB-02
+    module: WEB
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Every booking has a secure link, sent in its confirmation and reminders, that opens a page for that booking alone. There the customer can confirm they are coming, reschedule or cancel within the salon’s policy with the policy and the exact refund shown first, and pay a deposit that is due."
+  - id: WEB-03
+    module: WEB
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "The booking page carries only the salon’s brand, never shows or suggests another salon, has no customer account area, works on a small phone on mobile data, and meets the accessibility criteria."
   - id: INV-01
     module: INV
     priority: could

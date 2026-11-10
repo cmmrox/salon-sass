@@ -12,6 +12,7 @@ The `type` values are the ones the validator accepts (`qa/scripts/sdlc_lib/schem
 
 - Selection table
 - Always required
+- Where QA's time goes
 - How much of each
 - What each type must assert
 - Types that need the owner's go-ahead
@@ -43,6 +44,25 @@ The `type` values are the ones the validator accepts (`qa/scripts/sdlc_lib/schem
   with no salon data at all says so in its review's test approach.
 - **`permissions` for every endpoint that is not public.** Check each role, not just one allowed and
   one refused.
+
+## Where QA's time goes
+
+Decision 122 (CR-029). In F04 to F07 the QA API tests repeated the developer's integration tests
+almost file for file and found one product bug, while eleven defects of one kind escaped: a screen
+that kept a stale answer or acted on a late one.
+
+- **At the API, QA proves only what must be proved from outside:** `tenant-isolation`,
+  `permissions`, `concurrency`, the contract of each new endpoint, `payment-integrity`, and the
+  journeys across stages. A rule the developer's integration tests already prove from inside (a
+  validation table, a calculation, a state rule) gets one case that shows it holds for a user, as
+  `test-design.md` in `salon-qa` says, and no more. A criterion's one case may be that browser case.
+- **In the browser, every screen that reads or changes data gets these cases:** an earlier request
+  answering after a later one; the same screen after the access credential has expired and can be
+  renewed (the person stays signed in and sees their data); a change submitted twice; a change
+  another person made in the meantime; and the connection lost between a request and its answer.
+  Rows of one case where the screen has several lists or forms.
+- A defect found by the pull request's review that a case of these kinds would have caught is
+  written up in `review.md` as a gap in the pass, with the case added.
 
 ## How much of each
 

@@ -14,6 +14,21 @@ docs/brd/requirements.yaml; do not copy it here.>
 <The surfaces involved and the main design decisions, with links to docs/architecture/.
 Dependencies on other features.>
 
+## Design check
+
+<Done at `feature-new`, before any spec. The records this feature adds or changes and what each
+belongs to; the states and who may change them; the events and read interfaces other modules will
+need. Then one row per later feature that depends on this one.>
+
+| Later feature | What it will need from this model | Allowed as designed? |
+| --- | --- | --- |
+| F00 | <for example: several services in one booking> | <yes, or the change made now so that it is> |
+
+## Market check
+
+<How the comparison products do this job, what they have that the requirements lack, and where
+each gap went: a change request, the backlog, or declined by the owner.>
+
 ## Stages
 
 The order and status of the stages is in `features/README.md` (generated). This section explains

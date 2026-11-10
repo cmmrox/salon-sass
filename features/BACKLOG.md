@@ -12,24 +12,24 @@ Requirement text is in `docs/brd/requirements.yaml`.
 | Candidate feature | Requirements |
 | --- | --- |
 | Operator insight and message allowance | PLT-09, PLT-10, BRD-13 |
-| Smarter booking: automatic waitlist offers, multi-professional bookings, risk rules, booking for someone else | BKG-18, BKG-19, BKG-20, IAM-12 |
+| Smarter booking: the waitlist and its automatic offers, multi-professional bookings, risk rules, booking for someone else, recurring appointments, the walk-in queue with an estimated wait (waitlist, recurring and queue moved here under CR-028) | BKG-17, BKG-18, BKG-19, BKG-20, BKG-21, BKG-27, IAM-12 |
 | Reviews and ratings | APP-13, STF-07, NOT-09 |
 | Customer campaigns | MKT-03, MKT-04 |
 | Customer app extras: Sinhala and Tamil, favourites, gallery, saved payment method | APP-12, APP-14, APP-17, APP-19 |
 | Payment operations: reconciliation and late fees (payment links and the day-end close moved to R1 under CR-023) | PAY-11, PAY-12 |
 | Customer insight: segments and blocking | CRM-07, CRM-08 |
 | Deeper reports | REP-05, REP-06 |
-| Commission (moved from R3 under CR-023) | STF-08 |
 | Staff workspace in Sinhala and Tamil (CR-023) | PLT-15 |
 | Custom domains and app links (design approved in CR-021: `docs/architecture/multi-tenancy.md`, "Domains a salon owns") | BRD-11, BRD-12 |
+| Notification centre in the workspace and the app (moved from R1 under CR-028) | NOT-08 |
+| Assisted migration: future appointments and visit history (split from PLT-08 under CR-028) | PLT-16 |
 
 ## Release 3 candidates
 
 | Candidate feature | Requirements |
 | --- | --- |
 | Stock and back-bar inventory (selling products moved to R1 under CR-023) | INV-02, INV-03 |
-| Staff attendance, targets and tips | STF-09, REP-08, PAY-13 |
-| Recurring appointments | BKG-21 |
+| Staff attendance (tips moved to R1 and staff performance to F25 under CR-028) | STF-09 |
 | Memberships and referrals | MKT-07, MKT-08 |
 | Smaller additions | PLT-12, IAM-13, APP-22, PAY-14, REP-09 |
 
@@ -70,3 +70,10 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Focus the chosen day, or today, when a date control's calendar opens | SUG-F06-06 | Today focus lands on "Go to the Next Month"; the shared date control, so every date field gains |
 | Put the status and source badges side by side in the wide Bookings table, as the prototype does | SUG-F07-04 | Saves a line per row; wrap only when the column is too narrow |
 | Show an example mobile number in New appointment's empty field, and keep the Bookings search placeholder whole at 360px | SUG-F07-05 | The prototype shows "077 123 4567"; the placeholder is cut at "referen" today |
+| Bookings outside opening hours for staff with a permission, and more than one opening window a day (a 5 am bridal dressing cannot be recorded today) | Foundation review 2026-11-10 | Needs its own change request; wanted before F19 |
+| Staff notifications on a channel that reaches a professional's phone (NOT-07 names none) | Foundation review 2026-11-10 | Decide when F11 is planned |
+| PIN switching between staff on a shared front-desk device | Foundation review 2026-11-10 | Fresha, Timely and Zenoti have it; affects who the audit trail names |
+| Rebook at checkout, and average ticket and retention rate in reports | Foundation review 2026-11-10 | Small additions to F10 and F13 when they are planned |
+| A quote and enquiry link that needs no app, for bridal customers (F19 ships before F20) | Foundation review 2026-11-10 | Revisit OCC-15 and OCC-16 at `feature-new F19` |
+| Decimal tax and service-charge rates on the Tax & charges screen | Decision 118 | Rates are stored in basis points; the screen keeps whole percentages until asked |
+| Self-serve salon sign-up with a trial | Foundation review 2026-11-10 | PLT-01 is operator-only; Fresha, Booksy and Vagaro offer trials |

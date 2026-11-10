@@ -13,7 +13,7 @@ are in `docs/engineering/` and `docs/architecture/multi-tenancy.md`, and are not
         |                              |                          |
         +---------------+--------------+--------------------------+
                         |
-            Next.js staff workspace and operator console (no customer website)
+            Next.js staff workspace, operator console and customer booking page (F24)
             Expo customer app (one codebase: container app and dedicated apps)
                         |
                   REST API, /api/v1   (contract generated, shared by web and app)
@@ -42,7 +42,7 @@ row-level security does not already give.
 
 | Address | Serves |
 | --- | --- |
-| A subdomain of the platform per salon | That salon's staff workspace under `/workspace`; root enters it |
+| A subdomain of the platform per salon | That salon's staff workspace under `/workspace`; root enters it. From F24, also the salon's customer booking page and each booking's own page (decision 117) |
 | A domain the salon owns (later release) | The same, resolved by the API from a verified `tenant_domain` row; Caddy issues its certificate on demand. Design in `docs/architecture/multi-tenancy.md`, "Domains a salon owns" |
 | A reserved console hostname | The operator console; never resolves to a tenant |
 
@@ -65,7 +65,9 @@ first candidates are `notification`, then `reporting`. Rules: `docs/engineering/
 
 ## Booking integrity
 
-A hold and a booking are one kind of record in different states. A PostgreSQL exclusion constraint
+A booking is a visit of one or more services (decision 114): the visit holds the customer, reference,
+state and history, and each service is a line with its own professional and time. A hold and a
+booking are the same records in different states. A PostgreSQL exclusion constraint on the lines
 forbids two active records for the same salon and professional with overlapping times, so the
 database refuses a double booking even under simultaneous requests. Confirming a payment and
 converting the hold happen in one transaction, which also writes a `BookingConfirmed` event to the

@@ -16,7 +16,6 @@ surfaces:
 requirements:
 - BKG-07
 - BKG-08
-- BKG-17
 - APP-03
 nfr_focus: []
 cases: []

@@ -1,0 +1,22 @@
+id: F24
+title: "Customer booking page"
+summary: "A customer books in a browser on the salon's own web address with no app to install: services, professional, time, details with a verified number and the deposit the salon requires. Every booking's secure link opens a page to confirm, reschedule, cancel or pay. It reuses the booking, payment and customer APIs the staff workspace already uses (CR-028)."
+release: R1
+milestone: M1-web
+started_early: "Owner, 2026-11-10 (CR-028, decision 117): part of M1-web although numbered after the R2 features; it starts when F08, F09, F11 and F12 are merged"
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F08, F09, F11, F12]
+surfaces: [api, web]
+requirements: [WEB-01, WEB-02, WEB-03, MKT-01]
+extends: [BKG-07, BKG-08, BKG-24, PAY-01, PAY-04, PAY-09, NOT-03, IAM-01, IAM-02, APP-06, APP-09]
+nfr_focus: [NFR-01, NFR-03, NFR-05, NFR-11, NFR-12]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

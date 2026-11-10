@@ -14,15 +14,15 @@ requirement detail is in `qa/coverage.md`.
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | complete | merged | 4/4 | 6 | - |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | complete | merged | 3/3 | 7 | - |
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | complete | merged | 3/3 | 4 | - |
-| F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | complete | merged | 3/3 | 8 | - |
-| F08 | [Payments, deposits and refunds](F08-payments-deposits-and-refunds/) | M1-web | backlog | - | - | 8 | **lead**: `feature-new F08` |
-| F09 | [Manage a booking: reschedule, cancel and waitlist](F09-manage-a-booking/) | M1-web | backlog | - | - | 4 | after F08 |
-| F10 | [Salon calendar and front desk](F10-salon-calendar-and-front-desk/) | M1-web | backlog | - | - | 8 | after F08 |
-| F11 | [Notifications and reminders](F11-notifications-and-reminders/) | M1-web | backlog | - | - | 10 | after F09 |
-| F12 | [Customer records](F12-customer-records/) | M1-web | backlog | - | - | 5 | after GitHub merge of F08, F09, F10, F11 |
-| F13 | [Reports](F13-reports/) | M1-web | backlog | - | - | 4 | after F10 |
+| F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | complete | merged | 3/3 | 10 | - |
+| F08 | [Payments, deposits and refunds](F08-payments-deposits-and-refunds/) | M1-web | backlog | - | - | 9 | after F12 |
+| F09 | [Manage a booking: reschedule, cancel and waitlist](F09-manage-a-booking/) | M1-web | backlog | - | - | 3 | after F08 |
+| F10 | [Salon calendar and front desk](F10-salon-calendar-and-front-desk/) | M1-web | backlog | - | - | 12 | after F08 |
+| F11 | [Notifications and reminders](F11-notifications-and-reminders/) | M1-web | backlog | - | - | 9 | after F09 |
+| F12 | [Customer records](F12-customer-records/) | M1-web | backlog | - | - | 5 | **lead**: `feature-new F12` |
+| F13 | [Reports](F13-reports/) | M1-web | backlog | - | - | 5 | after F10 |
 | F14 | [Guided onboarding and data import](F14-guided-onboarding-and-import/) | M1-web | backlog | - | - | 3 | after F08 |
-| F15 | [Customer mobile app](F15-customer-mobile-app/) | M2-mobile | backlog | - | - | 13 | after F09, F11 |
+| F15 | [Customer mobile app](F15-customer-mobile-app/) | M2-mobile | backlog | - | - | 12 | after F09, F11 |
 | F16 | [Dedicated salon apps and store pipeline](F16-dedicated-salon-apps/) | M3-growth | backlog | - | - | 4 | after F15 |
 | F17 | [Service customisation and treatment readiness](F17-service-customisation-and-treatment-readiness/) | M3-growth | backlog | - | 0/3 | 10 | after F08, F12 |
 | F18 | [Multi-branch salons and module administration](F18-multi-branch-salons/) | M3-growth | backlog | - | 0/3 | 5 | after F10, F13, F17 |
@@ -30,6 +30,8 @@ requirement detail is in `qa/coverage.md`.
 | F20 | [Bridal customer mobile experience](F20-bridal-customer-mobile-experience/) | M3-growth | backlog | - | 0/3 | 2 | after F15, F19 |
 | F21 | [Offers, loyalty and gift cards](F21-offers-loyalty-and-gift-cards/) | M3-growth | backlog | - | 0/3 | 8 | after F08, F09, F12, F14, F15, F18 |
 | F22 | [AI-assisted booking and front desk](F22-ai-assisted-booking-and-front-desk/) | M4-assistance | backlog | - | 0/3 | 8 | after F15, F19, F20, F21 |
+| F24 | [Customer booking page](F24-customer-booking-page/) | M1-web | backlog | - | - | 4 | after F08, F09, F11, F12 |
+| F25 | [Commission and staff performance](F25-commission-and-staff-performance/) | M3-growth | backlog | - | - | 2 | after F10, F13 |
 
 ## In flight
 

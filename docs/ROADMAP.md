@@ -1,7 +1,9 @@
 # Roadmap
 
-The order in which the product is delivered. It was set by the owner: the salon administration web application first,
-released, and only then the React Native customer mobile app. No customer website is provided (CR-010). Only the owner changes this order.
+The order in which the product is delivered. It was set by the owner: the salon administration web application and
+each salon's customer booking page first, released, and only then the React Native customer mobile app. The booking
+page was restored by CR-028 (decision 117); there is still no customer account area, marketing website or marketplace.
+Only the owner changes this order.
 
 The live status of every feature is in `features/README.md` (generated). This file explains the
 order and is edited by the lead when the owner changes it.
@@ -10,9 +12,9 @@ order and is edited by the lead when the owner changes it.
 
 | Milestone | What is delivered | Features | Starts when |
 | --- | --- | --- | --- |
-| `M1-web` | The operator console and each salon's owner/admin/staff workspace; no customer web surface | F01 to F14 | Now |
+| `M1-web` | The operator console, each salon's owner/admin/staff workspace, and each salon's customer booking page | F01 to F14, F24 | Now |
 | `M2-mobile` | The customer mobile app, reached through the shared app (D-01) | F15 | Every `M1-web` feature is released |
-| `M3-growth` | Dedicated salon apps, service customisation, multi-branch operations, Bridal/occasion workflows and expanded commerce | F16 to F21 | Every R1 feature (F01 to F15) is released |
+| `M3-growth` | Dedicated salon apps, service customisation, multi-branch operations, Bridal/occasion workflows, expanded commerce, commission | F16 to F21, F25 | Every R1 feature (F01 to F15, F24) is released |
 | `M4-assistance` | Guided customer and staff AI assistants with human handoff | F22 | Every `M3-growth` feature is released |
 
 A milestone may ship as more than one version. `M2-mobile` waits for the last `M1-web` feature to
@@ -25,8 +27,9 @@ the order, the lead records the instruction in that feature's `started_early` fi
 
 ## M1-web: the web application
 
-Delivered in this order. Each feature depends on the ones before it that it names in its
-`feature.yaml`.
+Delivered in this order, which since CR-028 is not the order of the numbers: F07's follow-up, then F12, then F08 to
+F11, F13, F14 and F24. Each feature depends on the ones it names in its `feature.yaml`; F12 and F24 carry
+`started_early` so that the tooling follows this order.
 
 | Feature | Delivers |
 | --- | --- |
@@ -36,14 +39,15 @@ Delivered in this order. Each feature depends on the ones before it that it name
 | F04 Salon setup | Profile, branding, hours, holidays, policies |
 | F05 Service catalogue | Services, categories, variants, prices, tax |
 | F06 Staff, schedules and leave | Professionals, working hours, leave, blocked time |
-| F07 Booking engine and staff booking foundations | Staff booking controls and shared availability/hold/confirmation APIs |
-| F08 Payments, deposits and refunds | Staff payment controls and shared gateway APIs; customer payment UI waits for F15 |
-| F09 Manage a booking | Staff reschedule, cancel and waitlist controls; customer self-service waits for F15 |
-| F10 Salon calendar and front desk | The staff's day: calendar, walk-ins, checkout |
+| F07 Booking engine and staff booking foundations | Staff booking controls and shared availability/hold/confirmation APIs. Its CR-028 follow-up makes a booking a visit of several services, with notes, walk-ins without a number and the corrected states |
+| F12 Customer records | The salon's record of each customer, built before payments so that payments, messages and the booking page attach to it (decision 115) |
+| F08 Payments, deposits and refunds | Staff payment controls, deposits recorded outside the gateway, and shared gateway APIs; customers pay on the booking page (F24) and later in the app (F15) |
+| F09 Manage a booking | Staff reschedule and cancel controls; customers do the same on the booking's page (F24). The waitlist moved to R2 |
+| F10 Salon calendar and front desk | The staff's day: calendar, walk-ins, checkout with tips, counter sales, printed receipts, the day-end close |
 | F11 Notifications and reminders | WhatsApp, SMS and email, with templates, preferences and a cost log |
-| F12 Customer records | The salon's record of each customer |
 | F13 Reports | How the business did over a period |
 | F14 Guided onboarding and data import | A new salon sets itself up |
+| F24 Customer booking page | A customer books, pays, confirms, reschedules and cancels in a browser on the salon's own address, with nothing to install |
 
 CR-023 adopted the current prototype and refined these features without enlarging R1's shape. The
 salon's settings are tabbed, with hours, closures and policies. Services and the team have full
@@ -53,12 +57,13 @@ links. Messaging warns before its balance runs out. Reports show collections by 
 held. From F04 the data carries a branch scope, and from F05 service time is stored as segments, so
 that R2 needs no rework (decisions 073 to 076).
 
-During M1, only salon owners, managers and relevant staff use the web workspace; the operator
-uses the console. Customers do not book, sign in or manage accounts in a browser. Staff can
+During M1, salon owners, managers and relevant staff use the web workspace and the operator uses the
+console. From F24, customers book and manage a booking in a browser on the salon's booking page,
+verifying their number with a one-time code; they have no account area there. Staff can
 manage customer records and bookings. Build versioned shared APIs and retain already-implemented
 customer identity/privacy endpoints as foundations for mobile, without starting a mobile client.
-Customer-facing screens and self-service journeys in booking, payments, waitlists and notification
-preferences are delivered by F15 after every M1 feature is released.
+The app's own screens and journeys (its home, My bookings, push, notification preferences) are
+delivered by F15 after every M1 feature is released.
 
 ## M2-mobile: the customer app
 
@@ -87,6 +92,7 @@ and the milestone gate opens. Their stage outlines do not authorise early implem
 | F19 Bridal and occasion operations | Staff enquiry, package and quote workflows, party/event scheduling, travel, ledgers, changes and reports |
 | F20 Bridal customer mobile experience | Mobile discovery, enquiry, quote acceptance, verified payment, tracking and change requests |
 | F21 Offers, loyalty and gift cards | Offers and rewards, gift-card sales and ledgers, deterministic checkout and safe reversal |
+| F25 Commission and staff performance | Commission per service and product for each professional, tips kept separate, and the report (CR-028) |
 
 ## M4-assistance: R3 guided AI
 

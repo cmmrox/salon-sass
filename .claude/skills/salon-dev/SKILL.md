@@ -46,7 +46,9 @@ When the documents do not cover something:
    For risky new logic and bug fixes, observe a meaningful failing test before implementing the
    fix. Assert promised behavior through stable interfaces, with independent expected values;
    retain database-level checks where persistence, isolation or integrity is the promise.
-   A screen ships with its automated accessibility check and an endpoint with its strict contract
+   Code that waits for an answer and then changes what the user sees ships with a test in which the
+   answer arrives late, out of order or not at all: the stale answer is the defect that most often
+   escaped here. A screen ships with its automated accessibility check and an endpoint with its strict contract
    check (the tools are named in `docs/engineering/web.md` and `backend.md`, "Tests"): contrast,
    labels, nullable fields and status codes are cheaper to catch here than in a QA round trip.
 5. **Generated files are regenerated, never edited by hand,** and committed with the change that
