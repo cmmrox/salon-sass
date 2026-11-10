@@ -28,7 +28,7 @@ class OutboxStore {
 
     private static final String DUE_EVENTS = "SELECT message_id, tenant_id FROM outbox_due_events(?, ?, ?, ?)";
 
-    private static final String BACKLOG = "SELECT waiting, oldest_due_at FROM outbox_backlog(?)";
+    private static final String BACKLOG = "SELECT waiting, oldest_due_at, unsubscribed FROM outbox_backlog(?, ?)";
 
     private static final String LOCK_DUE = """
             SELECT channel, event_type, payload::text AS payload, attempts, trace_parent FROM outbox_message
@@ -73,6 +73,17 @@ class OutboxStore {
             DELETE FROM outbox_message WHERE tenant_id = ? AND status = 'sent' AND sent_at < ?
             """;
 
+    /** Never attempted, of a type with no subscriber in this build, and published before the window began. */
+    private static final String CLOSE_UNROUTED = """
+            UPDATE outbox_message SET status = 'unrouted', updated_at = ?
+             WHERE tenant_id = ? AND kind = 'event' AND status = 'pending' AND attempts = 0
+               AND NOT (event_type = ANY (?)) AND created_at < ?
+            """;
+
+    private static final String REMOVE_UNROUTED = """
+            DELETE FROM outbox_message WHERE tenant_id = ? AND status = 'unrouted' AND updated_at < ?
+            """;
+
     private static final String CANCEL_UNDELIVERED = """
             UPDATE outbox_message SET status = 'cancelled', lease_until = NULL, lease_token = NULL, updated_at = ?
              WHERE tenant_id = ? AND id = ? AND status IN ('pending', 'sending', 'dead')
@@ -96,8 +107,11 @@ class OutboxStore {
     /** A message that is due, and its salon. */
     record Due(UUID messageId, UUID tenantId) {}
 
-    /** Waiting messages across every salon, and when the oldest due one became due. */
-    record Backlog(long waiting, Instant oldestDueAt) {}
+    /**
+     * Waiting messages across every salon, and when the oldest due one became due, apart from the pending events
+     * of a type this instance has no subscriber for, which are counted on their own.
+     */
+    record Backlog(long waiting, Instant oldestDueAt, long unsubscribed) {}
 
     /**
      * A message this dispatcher now holds.
@@ -150,12 +164,15 @@ class OutboxStore {
                 .list();
     }
 
-    Backlog backlog(Instant now) {
+    Backlog backlog(Instant now, Collection<String> subscribedTypes) {
         return jdbc.sql(BACKLOG)
-                .param(utc(now))
+                .params(utc(now), new SqlArrayValue("text", subscribedTypes.toArray()))
                 .query((row, number) -> {
                     OffsetDateTime oldest = row.getObject("oldest_due_at", OffsetDateTime.class);
-                    return new Backlog(row.getLong("waiting"), oldest == null ? null : oldest.toInstant());
+                    return new Backlog(
+                            row.getLong("waiting"),
+                            oldest == null ? null : oldest.toInstant(),
+                            row.getLong("unsubscribed"));
                 })
                 .single();
     }
@@ -253,6 +270,21 @@ class OutboxStore {
     /** Removes the salon's messages delivered before that instant; with that salon set. */
     int removeSentBefore(UUID tenantId, Instant before) {
         return jdbc.sql(REMOVE_SENT).params(tenantId, utc(before)).update();
+    }
+
+    /**
+     * Closes as {@code unrouted} the salon's events that no subscriber of this build takes, never attempted and
+     * published before that instant (decision 119); with that salon set. Returns how many.
+     */
+    int closeUnrouted(UUID tenantId, Collection<String> subscribedTypes, Instant publishedBefore, Instant now) {
+        return jdbc.sql(CLOSE_UNROUTED)
+                .params(utc(now), tenantId, new SqlArrayValue("text", subscribedTypes.toArray()), utc(publishedBefore))
+                .update();
+    }
+
+    /** Removes the salon's events closed as unrouted before that instant; with that salon set. */
+    int removeUnroutedBefore(UUID tenantId, Instant before) {
+        return jdbc.sql(REMOVE_UNROUTED).params(tenantId, utc(before)).update();
     }
 
     /**

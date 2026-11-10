@@ -13,7 +13,12 @@ public enum OutboxStatus {
     /** Intentionally not delivered because its purpose expired or was superseded. */
     CANCELLED,
     /** Out of attempts; it stays with its last error and is not attempted again. */
-    DEAD;
+    DEAD,
+    /**
+     * An event no build subscribed to within {@code salon.outbox.unrouted-after}: closed, never attempted
+     * (decision 119).
+     */
+    UNROUTED;
 
     public String value() {
         return name().toLowerCase(Locale.ROOT);

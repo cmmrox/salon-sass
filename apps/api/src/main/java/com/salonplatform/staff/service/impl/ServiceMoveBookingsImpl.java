@@ -1,15 +1,14 @@
 package com.salonplatform.staff.service.impl;
 
-import com.salonplatform.catalogue.ServiceMoveBookings;
+import com.salonplatform.catalogue.inprocess.ServiceMoveBookings;
 import com.salonplatform.shared.tenancy.TenantContext;
-import com.salonplatform.staff.UpcomingMemberBookings;
 import com.salonplatform.staff.entity.Member;
 import com.salonplatform.staff.entity.MemberCategory;
 import com.salonplatform.staff.entity.MemberSingleService;
+import com.salonplatform.staff.inprocess.UpcomingMemberBookings;
 import com.salonplatform.staff.repository.MemberCategoryRepository;
 import com.salonplatform.staff.repository.MemberRepository;
 import com.salonplatform.staff.repository.MemberSingleServiceRepository;
-import com.salonplatform.staff.service.impl.StaffScope.Scope;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,40 +28,36 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 class ServiceMoveBookingsImpl implements ServiceMoveBookings {
 
-    private final StaffScope scope;
     private final MemberRepository members;
     private final MemberCategoryRepository categories;
     private final MemberSingleServiceRepository singles;
     private final UpcomingMemberBookings upcoming;
-    private final TransactionTemplate reading;
+    private final TransactionTemplate joining;
 
     ServiceMoveBookingsImpl(
-            StaffScope scope,
             MemberRepository members,
             MemberCategoryRepository categories,
             MemberSingleServiceRepository singles,
             UpcomingMemberBookings upcoming,
             PlatformTransactionManager transactions) {
-        this.scope = scope;
         this.members = members;
         this.categories = categories;
         this.singles = singles;
         this.upcoming = upcoming;
-        this.reading = new TransactionTemplate(transactions);
-        this.reading.setReadOnly(true);
-        // Its own read, never the caller's transaction (decision 119): the catalogue asks again inside its own.
-        this.reading.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+        // In-process (decision 119): the catalogue asks again inside its own transaction, under the guard lock.
+        this.joining = new TransactionTemplate(transactions);
+        this.joining.setReadOnly(true);
     }
 
     @Override
-    public List<BookedMember> losingBookedService(UUID serviceId, UUID fromCategoryId, UUID toCategoryId) {
+    public List<BookedMember> losingBookedService(
+            UUID branchId, UUID serviceId, UUID fromCategoryId, UUID toCategoryId) {
         TenantContext.require();
         if (fromCategoryId == null || fromCategoryId.equals(toCategoryId)) {
             return List.of();
         }
-        Scope at = scope.publicly();
-        List<Member> losing = reading.execute(status -> {
-            List<Member> active = members.active(at.branch());
+        List<Member> losing = joining.execute(status -> {
+            List<Member> active = members.active(branchId);
             List<UUID> ids = active.stream().map(Member::getId).toList();
             Map<UUID, Set<UUID>> whole = categories.ofMembers(ids).stream()
                     .collect(Collectors.groupingBy(

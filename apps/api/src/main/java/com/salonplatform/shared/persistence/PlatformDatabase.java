@@ -34,7 +34,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * fails the start rather than falling back to another role. At start the role is refused, like the
  * tenant role, when it is a superuser, can bypass row-level security or owns a table, and when it is
  * the tenant role or, in a process that migrates and so is given its name, the owning role itself. Every wait has the tenant pool's limits, a transaction's
- * statements the request limit, and an unreachable database is found again at the same steady
+ * statements the limits of {@link DatabaseLimits}, and an unreachable database is found again at the same steady
  * interval.
  */
 @Component
@@ -60,7 +60,7 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
 
     private final String owningRole;
 
-    PlatformDatabase(DataSource tenantDataSource, RequestDatabaseLimit limit, Environment environment) {
+    PlatformDatabase(DataSource tenantDataSource, DatabaseLimits limit, Environment environment) {
         String username = required(environment, "salon.platform.datasource.username");
         String password = required(environment, "salon.platform.datasource.password");
         this.tenantRole = environment.getProperty("spring.datasource.username", "");
@@ -106,7 +106,7 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
             protected void prepareTransactionalConnection(Connection connection, TransactionDefinition definition)
                     throws SQLException {
                 super.prepareTransactionalConnection(connection, definition);
-                limit.applyTo(connection);
+                limit.applyToTransaction(connection);
             }
 
             // The same rule as the tenant transactions (TenantTransactionConfiguration), BUG-F02-015: a

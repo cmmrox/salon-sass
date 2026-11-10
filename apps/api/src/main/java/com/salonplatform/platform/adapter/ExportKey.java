@@ -1,10 +1,10 @@
 package com.salonplatform.platform.adapter;
 
+import com.salonplatform.shared.secrets.KeyRing;
 import com.salonplatform.shared.secrets.SecretKeys;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,17 +12,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import javax.crypto.Cipher;
-import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -45,6 +42,8 @@ public class ExportKey implements SecretKeys {
     private static final int TAG_BITS = 128;
 
     private final SecretKeySpec key;
+    private final List<byte[]> earlier;
+    private final KeyRing keys;
     private final SecureRandom random = new SecureRandom();
 
     public ExportKey(Environment environment) {
@@ -72,39 +71,36 @@ public class ExportKey implements SecretKeys {
             }
         }
         key = new SecretKeySpec(bytes, "AES");
+        // Keys that encrypted exports before the current one (decision 120): they decrypt, never encrypt.
+        earlier = KeyRing.keysOf(environment.getProperty("salon.export.earlier-keys"), "salon.export.earlier-keys");
+        keys = new KeyRing("export", bytes, earlier, KeyRing.writesKeyIds(environment));
     }
 
     @Override
     public Map<String, byte[]> byPurpose() {
-        return Map.of("export", key.getEncoded());
-    }
-
-    /** Encrypts a value for one purpose: the nonce followed by the ciphertext and its tag. */
-    public byte[] seal(byte[] plain, String purpose) {
-        try {
-            byte[] nonce = new byte[NONCE];
-            random.nextBytes(nonce);
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, nonce));
-            cipher.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
-            byte[] sealed = cipher.doFinal(plain);
-            return ByteBuffer.allocate(NONCE + sealed.length)
-                    .put(nonce)
-                    .put(sealed)
-                    .array();
-        } catch (GeneralSecurityException ex) {
-            throw new IllegalStateException("AES-GCM is unavailable", ex);
+        Map<String, byte[]> all = new java.util.LinkedHashMap<>(Map.of("export", key.getEncoded()));
+        for (int i = 0; i < earlier.size(); i++) {
+            all.put("export, earlier key " + (i + 1), earlier.get(i).clone());
         }
+        return all;
     }
 
-    /** Decrypts a value sealed for this purpose; fails when it was altered or sealed for another. */
+    /**
+     * Encrypts a value for one purpose under the current key, carrying the key's id, so that the key can be rotated
+     * (decision 120, {@link KeyRing}).
+     */
+    public byte[] seal(byte[] plain, String purpose) {
+        return keys.seal(plain, purpose);
+    }
+
+    /**
+     * Decrypts a value sealed for this purpose under the current or an earlier key, with or without a key id; fails
+     * when it was altered or sealed for another.
+     */
     public byte[] open(byte[] sealed, String purpose) {
         try {
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, Arrays.copyOf(sealed, NONCE)));
-            cipher.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
-            return cipher.doFinal(sealed, NONCE, sealed.length - NONCE);
-        } catch (GeneralSecurityException ex) {
+            return keys.open(sealed, purpose);
+        } catch (RuntimeException ex) {
             throw new IllegalStateException("An export value could not be decrypted", ex);
         }
     }

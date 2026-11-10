@@ -157,4 +157,45 @@ class IdentityCryptoTest {
         assertThat(crypto.matchesPassword("a stored password of 2026", stored)).isTrue();
         assertThat(crypto.matchesPassword("another password of 2026", stored)).isFalse();
     }
+
+    /**
+     * Decision 120: an authenticator secret stored before key ids existed (as the fixed local roster's are) still
+     * decrypts, also once its key has been rotated out to the earlier keys; a new one carries its key's id.
+     */
+    @Test
+    void aSecretStoredBeforeKeyIdsStillDecryptsAndAfterTheKeyIsRotated() throws Exception {
+        String encryptionKey = key();
+        MockEnvironment before = configured()
+                .withProperty("salon.identity.encryption-key", encryptionKey)
+                .withProperty("salon.secrets.write-key-ids", "true");
+        String purpose = "totp:" + UUID.randomUUID() + ":" + UUID.randomUUID();
+        byte[] nonce = new byte[12];
+        new SecureRandom().nextBytes(nonce);
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(
+                javax.crypto.Cipher.ENCRYPT_MODE,
+                new javax.crypto.spec.SecretKeySpec(HexFormat.of().parseHex(encryptionKey), "AES"),
+                new javax.crypto.spec.GCMParameterSpec(128, nonce));
+        cipher.updateAAD(purpose.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String stored = Base64.getEncoder().encodeToString(nonce) + "."
+                + Base64.getEncoder()
+                        .encodeToString(
+                                cipher.doFinal("JBSWY3DPEHPK3PXP".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+
+        IdentityCrypto now = new IdentityCrypto(new IdentitySecrets(before), Clock.systemUTC());
+        assertThat(now.decrypt(purpose, stored)).isEqualTo("JBSWY3DPEHPK3PXP");
+        String written = now.encrypt(purpose, "a newer secret");
+        assertThat(written.split("\\.")).hasSize(3);
+
+        MockEnvironment rotated = configured()
+                .withProperty("salon.identity.encryption-key", key())
+                .withProperty("salon.identity.encryption-earlier-keys", encryptionKey)
+                .withProperty("salon.secrets.write-key-ids", "true");
+        IdentityCrypto afterRotation = new IdentityCrypto(new IdentitySecrets(rotated), Clock.systemUTC());
+        assertThat(afterRotation.decrypt(purpose, stored)).isEqualTo("JBSWY3DPEHPK3PXP");
+        assertThat(afterRotation.decrypt(purpose, written)).isEqualTo("a newer secret");
+        assertThat(new IdentitySecrets(rotated).byPurpose())
+                .as("an earlier key is held to be independent of every other key too")
+                .containsKey("identity encryption, earlier key 1");
+    }
 }

@@ -24,7 +24,7 @@ class TenantTransactionConfiguration {
 
     @Bean
     PlatformTransactionManager transactionManager(
-            RequestDatabaseLimit limit, ObjectProvider<TransactionManagerCustomizers> customizers) {
+            DatabaseLimits limit, ObjectProvider<TransactionManagerCustomizers> customizers) {
         TenantTransactionManager transactionManager = new TenantTransactionManager(new TenantJpaDialect(limit));
         customizers.ifAvailable(each -> each.customize(transactionManager));
         return transactionManager;

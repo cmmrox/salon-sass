@@ -9,14 +9,16 @@ import com.salonplatform.booking.service.BookingChangeService;
 import com.salonplatform.booking.service.BookingReadService.BookingView;
 import com.salonplatform.booking.service.impl.BookingCallers.Caller;
 import com.salonplatform.booking.service.impl.BookingChanges.Why;
-import com.salonplatform.catalogue.UpcomingServiceBookings;
+import com.salonplatform.catalogue.inprocess.CatalogueUnderGuard;
+import com.salonplatform.catalogue.inprocess.UpcomingServiceBookings;
 import com.salonplatform.shared.persistence.TransactionLocks;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
 import com.salonplatform.staff.TeamMembers;
-import com.salonplatform.staff.UpcomingMemberBookings;
+import com.salonplatform.staff.inprocess.TeamUnderGuard;
+import com.salonplatform.staff.inprocess.UpcomingMemberBookings;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,6 +47,8 @@ class BookingChangeServiceImpl implements BookingChangeService {
     private final BookingChanges changes;
     private final TeamMembers team;
     private final TransactionLocks locks;
+    private final TeamUnderGuard teamUnderGuard;
+    private final CatalogueUnderGuard catalogueUnderGuard;
     private final Clock clock;
     private final TransactionTemplate writing;
 
@@ -54,6 +58,8 @@ class BookingChangeServiceImpl implements BookingChangeService {
             BookingChanges changes,
             TeamMembers team,
             TransactionLocks locks,
+            TeamUnderGuard teamUnderGuard,
+            CatalogueUnderGuard catalogueUnderGuard,
             Clock clock,
             PlatformTransactionManager transactions) {
         this.callers = callers;
@@ -61,6 +67,8 @@ class BookingChangeServiceImpl implements BookingChangeService {
         this.changes = changes;
         this.team = team;
         this.locks = locks;
+        this.teamUnderGuard = teamUnderGuard;
+        this.catalogueUnderGuard = catalogueUnderGuard;
         this.clock = clock;
         this.writing = new TransactionTemplate(transactions);
     }
@@ -150,7 +158,10 @@ class BookingChangeServiceImpl implements BookingChangeService {
         }
         locks.hold(UpcomingMemberBookings.GUARD_LOCK, booking.getMemberId());
         locks.hold(UpcomingServiceBookings.GUARD_LOCK, booking.getServiceId());
-        if (!team.servicesOf(booking.getMemberId()).contains(booking.getServiceId())) {
+        // In this transaction, under the locks, through the in-process contracts (decision 119).
+        if (!teamUnderGuard
+                .servicesOf(booking.getMemberId(), catalogueUnderGuard.current(at.branch()))
+                .contains(booking.getServiceId())) {
             throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE)
                     .withDetail("The professional no longer performs this service, so the no-show cannot be undone.");
         }

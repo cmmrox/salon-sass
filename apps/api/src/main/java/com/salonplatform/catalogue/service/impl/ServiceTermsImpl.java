@@ -6,12 +6,11 @@ import com.salonplatform.catalogue.domain.Ranges;
 import com.salonplatform.catalogue.entity.SalonService;
 import com.salonplatform.catalogue.entity.TermsVersion;
 import com.salonplatform.catalogue.repository.SalonServiceRepository;
+import com.salonplatform.shared.persistence.ReadOnlyWork;
 import com.salonplatform.shared.tenancy.TenantContext;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Reads in a read-only tenant transaction of its own; another salon's service or version is not seen, because the
@@ -22,14 +21,12 @@ class ServiceTermsImpl implements ServiceTerms {
 
     private final SalonServiceRepository services;
     private final TermsRows versions;
-    private final TransactionTemplate reading;
+    private final ReadOnlyWork reading;
 
-    ServiceTermsImpl(SalonServiceRepository services, TermsRows versions, PlatformTransactionManager transactions) {
+    ServiceTermsImpl(SalonServiceRepository services, TermsRows versions, ReadOnlyWork reading) {
         this.services = services;
         this.versions = versions;
-        this.reading = new TransactionTemplate(transactions);
-        this.reading.setReadOnly(true);
-        this.reading.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+        this.reading = reading;
     }
 
     @Override
@@ -38,7 +35,7 @@ class ServiceTermsImpl implements ServiceTerms {
         if (serviceId == null) {
             return Optional.empty();
         }
-        return reading.execute(status -> services.findAny(serviceId)
+        return reading.read(() -> services.findAny(serviceId)
                 .filter(service -> !service.isDeleted())
                 .flatMap(service -> versions.find(service.getCurrentTermsId()).map(terms -> of(service, terms))));
     }
@@ -49,7 +46,7 @@ class ServiceTermsImpl implements ServiceTerms {
         if (versionId == null) {
             return Optional.empty();
         }
-        return reading.execute(status -> versions.find(versionId)
+        return reading.read(() -> versions.find(versionId)
                 .flatMap(terms -> services.findAny(terms.row().getServiceId()).map(service -> of(service, terms))));
     }
 

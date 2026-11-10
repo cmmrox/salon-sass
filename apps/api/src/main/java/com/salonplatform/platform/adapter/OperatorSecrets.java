@@ -1,5 +1,6 @@
 package com.salonplatform.platform.adapter;
 
+import com.salonplatform.shared.secrets.KeyRing;
 import com.salonplatform.shared.secrets.SecretKeys;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,6 +40,8 @@ public class OperatorSecrets implements SecretKeys {
     private final byte[] encryption;
     private final byte[] proxy;
     private final byte[] fingerprint;
+    private final List<byte[]> earlierEncryption;
+    private final boolean writeKeyIds;
 
     public OperatorSecrets(Environment environment) {
         Properties saved = environment.matchesProfiles("local") ? retained(environment) : new Properties();
@@ -47,6 +50,11 @@ public class OperatorSecrets implements SecretKeys {
         encryption = read(environment, saved, "encryption");
         proxy = read(environment, saved, "proxy");
         fingerprint = read(environment, saved, "fingerprint");
+        // Keys that encrypted values before the current one (decision 120): they decrypt, never encrypt.
+        earlierEncryption = KeyRing.keysOf(
+                environment.getProperty("salon.operator.encryption-earlier-keys"),
+                "salon.operator.encryption-earlier-keys");
+        writeKeyIds = KeyRing.writesKeyIds(environment);
         List<byte[]> keys = List.of(signing, challenge, encryption, proxy, fingerprint);
         for (int a = 0; a < keys.size(); a++) {
             for (int b = a + 1; b < keys.size(); b++) {
@@ -130,12 +138,18 @@ public class OperatorSecrets implements SecretKeys {
 
     @Override
     public Map<String, byte[]> byPurpose() {
-        return Map.of(
+        Map<String, byte[]> keys = new java.util.LinkedHashMap<>(Map.of(
                 "operator signing", signing(),
                 "operator challenge", challenge(),
                 "operator encryption", encryption(),
                 "operator proxy", proxy(),
-                "operator fingerprint", fingerprint());
+                "operator fingerprint", fingerprint()));
+        for (int i = 0; i < earlierEncryption.size(); i++) {
+            keys.put(
+                    "operator encryption, earlier key " + (i + 1),
+                    earlierEncryption.get(i).clone());
+        }
+        return keys;
     }
 
     byte[] signing() {
@@ -148,6 +162,16 @@ public class OperatorSecrets implements SecretKeys {
 
     byte[] encryption() {
         return encryption.clone();
+    }
+
+    /** Whether new values carry their key's id ({@link KeyRing#WRITE_KEY_IDS}). */
+    boolean writeKeyIds() {
+        return writeKeyIds;
+    }
+
+    /** The keys that encrypted values before the current one, newest first. */
+    List<byte[]> earlierEncryption() {
+        return earlierEncryption.stream().map(byte[]::clone).toList();
     }
 
     byte[] proxy() {

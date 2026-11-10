@@ -1,4 +1,4 @@
-package com.salonplatform.catalogue;
+package com.salonplatform.catalogue.inprocess;
 
 import java.util.List;
 import java.util.UUID;
@@ -13,9 +13,12 @@ import java.util.UUID;
  * <p>Upcoming means what {@code UpcomingMemberBookings} counts. <strong>The window between the answer and the move is
  * closed by {@link UpcomingServiceBookings#GUARD_LOCK}</strong> (decision 094(f)): the moving transaction holds the
  * salon's transaction lock on the service and asks again inside it; {@code booking}'s transaction that places a hold
- * for the service holds the same lock and checks again, under it, that the person still performs the service. An
- * implementation reads the request's salon, opens its own read-only transactions and does not join the caller's.
- * Who becomes able to perform the service by a move is not asked here.
+ * for the service holds the same lock and checks again, under it, that the person still performs the service. Who
+ * becomes able to perform the service by a move is not asked here.
+ *
+ * <p><strong>In-process only</strong> (decision 119): the catalogue asks again inside its own writing transaction,
+ * under the lock, so an implementation joins the caller's transaction (a read-only one of its own when there is none),
+ * and is given the branch rather than asking {@code branding} for it inside that transaction.
  */
 public interface ServiceMoveBookings {
 
@@ -29,5 +32,5 @@ public interface ServiceMoveBookings {
      *
      * @throws com.salonplatform.shared.tenancy.TenantNotFoundException when the request names no salon
      */
-    List<BookedMember> losingBookedService(UUID serviceId, UUID fromCategoryId, UUID toCategoryId);
+    List<BookedMember> losingBookedService(UUID branchId, UUID serviceId, UUID fromCategoryId, UUID toCategoryId);
 }

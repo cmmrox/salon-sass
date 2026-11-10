@@ -55,7 +55,7 @@ class CustomerProfileServiceImpl implements CustomerProfileService {
 
     @Override
     public Profile read() {
-        return work.run(() -> view(access.customerAuth().customer()));
+        return work.read(() -> view(access.customerAuth().customer()));
     }
 
     @Override

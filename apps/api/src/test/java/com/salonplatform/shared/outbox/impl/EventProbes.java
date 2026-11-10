@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
@@ -35,6 +36,8 @@ final class EventProbes {
 
     static final String REACHER = "probe.reacher";
 
+    static final String HEARER = "probe.hearer";
+
     /** Handled by {@value #FIRST} and {@value #SECOND}. */
     @EventType("probe.Noted.v1")
     record Noted(UUID mark) {}
@@ -51,7 +54,7 @@ final class EventProbes {
     @EventType("probe.Reached.v1")
     record Reached(UUID mark, UUID othersMessage) {}
 
-    /** No subscriber handles it. */
+    /** No subscriber of {@link Subscribers} handles it; {@value #HEARER} of {@link Hearing} does. */
     @EventType("probe.Unheard.v1")
     record Unheard(UUID mark) {}
 
@@ -219,6 +222,20 @@ final class EventProbes {
                                 jpaFound,
                                 writtenFor));
             });
+        }
+    }
+
+    /**
+     * A later build: the probe subscribers, and the first subscriber of {@link Unheard}, as an instance that adds
+     * a subscriber to a type during a rolling deployment. Not a {@code @Configuration}, so that component scanning
+     * never adds it to the other applications of a test: it is a source only of the application started with it.
+     */
+    @Import(Subscribers.class)
+    static class Hearing {
+
+        @Bean
+        EventSubscriber<Unheard> hearerOfUnheard() {
+            return subscriber(HEARER, Unheard.class, event -> handle(HEARER, event.mark()));
         }
     }
 }

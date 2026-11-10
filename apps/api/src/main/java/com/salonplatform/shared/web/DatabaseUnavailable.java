@@ -11,14 +11,18 @@ import org.springframework.dao.TransientDataAccessResourceException;
 /**
  * Whether a failure means the database could not be reached or did not answer in time, rather than
  * that something was wrong with the request or the code: no connection within the pool's limit, a
- * connection refused, or a connection that went silent past the request's limit. Such a request is
- * answered 503 {@code service_unavailable}, and such a failure to open a connection is one the pool's
- * source of connections tries again steadily.
+ * connection refused, a connection that went silent past the request's limit, or work the database
+ * stopped at one of its own limits. Such a request is answered 503 {@code service_unavailable}, and
+ * such a failure to open a connection is one the pool's source of connections tries again steadily.
  */
 public final class DatabaseUnavailable {
 
-    /** SQL states of the connection-failure class, and of the server shutting down. */
-    private static final String[] UNAVAILABLE_STATES = {"08", "57P01", "57P02", "57P03"};
+    /**
+     * SQL states of the connection-failure class, of the server shutting down, and of the server's own limits
+     * (decision 120): a statement stopped at its limit (57014), a lock not granted within the lock limit
+     * (55P03), and a session ended for staying idle in a transaction (25P03).
+     */
+    private static final String[] UNAVAILABLE_STATES = {"08", "57P01", "57P02", "57P03", "57014", "55P03", "25P03"};
 
     private DatabaseUnavailable() {}
 

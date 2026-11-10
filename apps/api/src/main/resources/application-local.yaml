@@ -19,6 +19,12 @@ salon:
       password: ${SALON_DB_PLATFORM_PASSWORD:salon-platform-local-only}
   identity:
     local-key-file: ${SALON_IDENTITY_LOCAL_KEY_FILE:../../.local/identity-keys.properties}
+    # QA and a developer sign in many times from this one machine, across the synthetic salons, and
+    # reset each salon's own limits through /local/identity. The limit across salons (decision 120)
+    # has no such reset, so it is out of the way here unless SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS
+    # sets it (to 60, the default everywhere else, to try it).
+    sign-in:
+      address-limit-across-salons: ${SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS:100000}
   operator:
     local-key-file: ${SALON_OPERATOR_LOCAL_KEY_FILE:../../.local/operator-keys.properties}
   billing:

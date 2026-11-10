@@ -10,7 +10,7 @@
  * are public there. It provides {@link com.salonplatform.catalogue.ServiceTerms}, which F07 books against,
  * {@link com.salonplatform.catalogue.TaxSettings}, which F07, F08 and F10 work out the tax of a price with, and
  * {@link com.salonplatform.catalogue.Products}, which F10's checkout sells, and
- * declares {@link com.salonplatform.catalogue.UpcomingServiceBookings} and
+ * declares {@link com.salonplatform.catalogue.inprocess.UpcomingServiceBookings} and
  * {@link com.salonplatform.catalogue.ServiceBookingCounts}, which {@code booking} implements in F07.
  * Each new salon gets the default categories through platform's
  * {@link com.salonplatform.platform.inprocess.SalonBootstrapStep}. Branches are {@code branding}'s, checked

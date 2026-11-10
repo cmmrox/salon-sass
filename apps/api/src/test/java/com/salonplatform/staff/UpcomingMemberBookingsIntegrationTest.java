@@ -2,6 +2,7 @@ package com.salonplatform.staff;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.salonplatform.staff.inprocess.UpcomingMemberBookings;
 import com.salonplatform.testing.Http;
 import java.util.HashSet;
 import java.util.List;

@@ -339,8 +339,13 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "active_tenant_ids",
                 "outbox_due",
                 "outbox_backlog",
+                // Decision 119: the backlog of an instance, with the events no subscriber of its build takes
+                // counted apart (outbox_backlog(timestamptz, text[])); the one above stays for the previous version.
+                "outbox_backlog",
                 "job_claim",
                 "job_finish",
+                // Platform review M3: a running job renews its claim.
+                "job_renew",
                 "salon_entitlements",
                 "suspended_tenant_ids",
                 // F23-S05: the due events of the types the asking instance knows.
@@ -348,7 +353,10 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 // F04-S03: the published holiday calendar, the tenant role's only path to its tables.
                 "holiday_calendar_published",
                 // F04-S04: the current salon's currency, the tenant role's only path to that registry column.
-                "salon_currency");
+                "salon_currency",
+                // Decision 120: an address's failed sign-ins counted across every salon, and a correct one given back.
+                "shared_count_address_attempt",
+                "shared_return_address_attempt");
         // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
         // staff-seat usage count and billing's outbox write.
         // F03-S03: closure's session revocation and message cancellation, and each module's guarded eraser,
@@ -375,21 +383,26 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "catalogue_add_default_categories",
                 "catalogue_erase_salon_rows",
                 // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
-                "audit_record_support");
+                "audit_record_support",
+                // Decision 120: the platform job's cleanup of the address counters across salons.
+                "shared_remove_spent_address_attempts");
+        // Platform review M3: the trigger that keeps the outbox's index of waiting messages. No role may call it.
+        List<String> triggers = List.of("shared_outbox_due_track");
         assertThat(functions)
                 .extracting(function -> function.get("name"))
-                .containsExactlyInAnyOrderElementsOf(
-                        java.util.stream.Stream.concat(tenantPaths.stream(), bootstrap.stream())
-                                .toList());
+                .containsExactlyInAnyOrderElementsOf(java.util.stream.Stream.of(tenantPaths, bootstrap, triggers)
+                        .flatMap(List::stream)
+                        .toList());
         assertThat(functions).allSatisfy(function -> {
             assertThat((String) function.get("settings"))
                     .as("%s", function.get("name"))
                     .isEqualTo("search_path=pg_catalog, pg_temp");
             assertThat(function).as("%s", function.get("name")).containsEntry("public_may_run", false);
             boolean bootstraps = bootstrap.contains((String) function.get("name"));
+            boolean trigger = triggers.contains((String) function.get("name"));
             assertThat(function)
                     .as("%s", function.get("name"))
-                    .containsEntry("application_may_run", !bootstraps)
+                    .containsEntry("application_may_run", !bootstraps && !trigger)
                     .containsEntry("platform_may_run", bootstraps);
         });
     }

@@ -2,6 +2,7 @@ package com.salonplatform.identity.adapter;
 
 import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.salonplatform.shared.secrets.KeyRing;
 import com.salonplatform.shared.tenancy.SignedTenantVerifier;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -14,9 +15,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
-import javax.crypto.Cipher;
 import javax.crypto.Mac;
-import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,8 +37,11 @@ public class IdentityCrypto implements SignedTenantVerifier {
     private final JwtDecoder decoder;
     private final TimeBasedOneTimePasswordGenerator totp = new TimeBasedOneTimePasswordGenerator();
     private final String dummyHash;
+    private final KeyRing encryption;
 
     public IdentityCrypto(IdentitySecrets secrets, Clock clock) {
+        this.encryption = new KeyRing(
+                "identity encryption", secrets.encryption(), secrets.earlierEncryption(), secrets.writeKeyIds());
         this.secrets = secrets;
         this.clock = clock;
         Pbkdf2PasswordEncoder pbkdf2 = new Pbkdf2PasswordEncoder(
@@ -92,35 +94,19 @@ public class IdentityCrypto implements SignedTenantVerifier {
                 && MessageDigest.isEqual(a.getBytes(StandardCharsets.US_ASCII), b.getBytes(StandardCharsets.US_ASCII));
     }
 
+    /**
+     * Encrypts a secret for one purpose under the current encryption key, carrying the key's id, so that the key can
+     * be rotated (decision 120, {@link KeyRing}).
+     */
     public String encrypt(String purpose, String plain) {
-        try {
-            byte[] nonce = new byte[12];
-            random.nextBytes(nonce);
-            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
-            c.init(
-                    Cipher.ENCRYPT_MODE,
-                    new SecretKeySpec(secrets.encryption(), "AES"),
-                    new GCMParameterSpec(128, nonce));
-            c.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(nonce)
-                    + "."
-                    + Base64.getEncoder().encodeToString(c.doFinal(plain.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.GeneralSecurityException ex) {
-            throw new IllegalStateException("Secret encryption unavailable", ex);
-        }
+        return encryption.encrypt(purpose, plain);
     }
 
+    /** Decrypts a secret encrypted for this purpose under the current or an earlier key, with or without a key id. */
     public String decrypt(String purpose, String encrypted) {
         try {
-            String[] parts = encrypted.split("\\.");
-            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
-            c.init(
-                    Cipher.DECRYPT_MODE,
-                    new SecretKeySpec(secrets.encryption(), "AES"),
-                    new GCMParameterSpec(128, Base64.getDecoder().decode(parts[0])));
-            c.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
-            return new String(c.doFinal(Base64.getDecoder().decode(parts[1])), StandardCharsets.UTF_8);
-        } catch (Exception ex) {
+            return encryption.decrypt(purpose, encrypted);
+        } catch (RuntimeException ex) {
             throw new IllegalStateException("Stored secret could not be authenticated");
         }
     }

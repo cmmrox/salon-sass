@@ -10,6 +10,7 @@
  */
 @ApplicationModule(
         allowedDependencies = {
+            "shared :: attempts",
             "shared :: audit",
             "shared :: entitlements",
             "shared :: jobs",

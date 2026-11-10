@@ -5,12 +5,11 @@ import com.salonplatform.catalogue.Products;
 import com.salonplatform.catalogue.entity.SalonProduct;
 import com.salonplatform.catalogue.repository.SalonProductRepository;
 import com.salonplatform.catalogue.service.impl.CatalogueScope.Scope;
+import com.salonplatform.shared.persistence.ReadOnlyWork;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Reads products in a read-only tenant transaction of its own; another salon's product is not seen, because the
@@ -21,14 +20,12 @@ class ProductsImpl implements Products {
 
     private final CatalogueScope scope;
     private final SalonProductRepository products;
-    private final TransactionTemplate reading;
+    private final ReadOnlyWork reading;
 
-    ProductsImpl(CatalogueScope scope, SalonProductRepository products, PlatformTransactionManager transactions) {
+    ProductsImpl(CatalogueScope scope, SalonProductRepository products, ReadOnlyWork reading) {
         this.scope = scope;
         this.products = products;
-        this.reading = new TransactionTemplate(transactions);
-        this.reading.setReadOnly(true);
-        this.reading.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+        this.reading = reading;
     }
 
     @Override
@@ -37,13 +34,13 @@ class ProductsImpl implements Products {
         if (id == null) {
             return Optional.empty();
         }
-        return reading.execute(status -> products.findInBranch(id, at.branch()).map(SalonProduct::product));
+        return reading.read(() -> products.findInBranch(id, at.branch()).map(SalonProduct::product));
     }
 
     @Override
     public List<Product> soldAtCheckout() {
         Scope at = scope.publicly();
-        return reading.execute(status -> products.soldByName(at.branch()).stream()
+        return reading.read(() -> products.soldByName(at.branch()).stream()
                 .map(SalonProduct::product)
                 .toList());
     }

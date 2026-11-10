@@ -2,7 +2,7 @@ package com.salonplatform.booking.service.impl;
 
 import com.salonplatform.booking.repository.BookingRepository;
 import com.salonplatform.shared.tenancy.TenantContext;
-import com.salonplatform.staff.UpcomingMemberBookings;
+import com.salonplatform.staff.inprocess.UpcomingMemberBookings;
 import java.time.Clock;
 import java.util.Set;
 import java.util.UUID;
@@ -25,7 +25,7 @@ class UpcomingMemberBookingsImpl implements UpcomingMemberBookings {
     @Override
     public long countFor(UUID memberId) {
         TenantContext.require();
-        return reads.read(() -> bookings.countUpcomingForMember(memberId, clock.instant()));
+        return reads.joining(() -> bookings.countUpcomingForMember(memberId, clock.instant()));
     }
 
     @Override
@@ -34,6 +34,6 @@ class UpcomingMemberBookingsImpl implements UpcomingMemberBookings {
         if (serviceIds.isEmpty()) {
             return Set.of();
         }
-        return reads.read(() -> Set.copyOf(bookings.servicesBookedFor(memberId, serviceIds, clock.instant())));
+        return reads.joining(() -> Set.copyOf(bookings.servicesBookedFor(memberId, serviceIds, clock.instant())));
     }
 }

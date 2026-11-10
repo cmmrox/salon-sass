@@ -15,12 +15,16 @@ class IdentityWorkImpl implements IdentityWork {
 
     private final TransactionTemplate transactions;
 
+    private final TransactionTemplate reads;
+
     private final IdentityLock lock;
 
     private final Clock clock;
 
     IdentityWorkImpl(PlatformTransactionManager manager, IdentityLock lock, Clock clock) {
         this.transactions = new TransactionTemplate(manager);
+        this.reads = new TransactionTemplate(manager);
+        this.reads.setReadOnly(true);
         this.lock = lock;
         this.clock = clock;
     }
@@ -45,5 +49,11 @@ class IdentityWorkImpl implements IdentityWork {
             throw result.failure();
         }
         return result.value();
+    }
+
+    @Override
+    public <T> T read(Supplier<T> useCase) {
+        TenantContext.require();
+        return reads.execute(status -> useCase.get());
     }
 }

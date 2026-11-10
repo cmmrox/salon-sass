@@ -20,7 +20,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param backoff the wait before the next attempt after a failure
  * @param provider the limits on every provider call
  * @param breaker the circuit breaker of each channel
- * @param retention how long a delivered message is kept
+ * @param retention how long a delivered message, or an event closed as unrouted, is kept
+ * @param unroutedAfter how long an event of a type no subscriber of the cleaning instance takes waits,
+ *        never attempted, for a build that has one, before it is closed as {@code unrouted} (decision 119):
+ *        longer than a rolling deployment and a short rollback
  * @param shutdownGrace on stop, how long calls in flight are given to finish before they are left
  *        to their lease
  */
@@ -36,6 +39,7 @@ public record OutboxSettings(
         @DefaultValue Provider provider,
         @DefaultValue Breaker breaker,
         @DefaultValue("30d") Duration retention,
+        @DefaultValue("7d") Duration unroutedAfter,
         @DefaultValue("5s") Duration shutdownGrace) {
 
     public OutboxSettings {
@@ -45,6 +49,7 @@ public record OutboxSettings(
         positive("salon.outbox.poll-interval", pollInterval);
         positive("salon.outbox.lease", lease);
         positive("salon.outbox.retention", retention);
+        positive("salon.outbox.unrouted-after", unroutedAfter);
         if (shutdownGrace.isNegative()) {
             throw new IllegalArgumentException("salon.outbox.shutdown-grace must not be negative");
         }

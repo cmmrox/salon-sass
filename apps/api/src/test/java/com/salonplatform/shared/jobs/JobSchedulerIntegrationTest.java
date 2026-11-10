@@ -20,6 +20,7 @@ import com.salonplatform.testing.TestSalons.TestSalon;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.sql.SQLException;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -228,9 +230,102 @@ class JobSchedulerIntegrationTest {
                                 sql -> assertThat(sql.getSQLState()).isEqualTo("42501")));
     }
 
+    /** Platform review M3: a running job renews its claim, so one that outlives its hold never runs twice at once. */
+    @Test
+    void aJobThatRunsLongerThanItsHoldIsNotClaimedByAnotherInstanceWhileItRuns() {
+        SlowJob job = new SlowJob(Duration.ofSeconds(1), Duration.ofMillis(2500));
+        Duration hold = Duration.ofMillis(600);
+
+        startOnTheRealClock(hold, job);
+        startOnTheRealClock(hold, job);
+        await(() -> job.runs.get() >= 4);
+
+        assertThat(job.mostAtOnce.get())
+                .as("the second instance never ran it while the first, past its hold, still did")
+                .isEqualTo(1);
+    }
+
+    /** Platform review M3: each job runs on a thread of its own, so a slow one holds up no other. */
+    @Test
+    void aSlowJobDoesNotHoldUpAnother() {
+        SlowJob slow = new SlowJob(HOURLY, Duration.ofSeconds(5));
+        RecordingJob quick = new RecordingJob(null);
+
+        startOnTheRealClock(Duration.ofMinutes(10), slow, quick);
+        await(() -> slow.runs.get() == 1);
+        long started = System.nanoTime();
+        await(() -> quick.runs.size() == 3);
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started))
+                .as("the quick job ran for every salon while the slow one was still on its first")
+                .isLessThan(Duration.ofSeconds(4));
+        assertThat(slow.runs.get()).isEqualTo(1);
+    }
+
+    private void startOnTheRealClock(Duration hold, TenantJob... jobs) {
+        JobScheduler scheduler = new JobScheduler(
+                new JobSettings(true, Duration.ofMillis(50), hold, HOURLY, 2),
+                application.bean(JobStore.class),
+                List.of(jobs),
+                application.bean(ActiveTenants.class),
+                application.bean(PlatformTransactionManager.class),
+                Clock.systemUTC(),
+                application.bean(Traces.class),
+                application.bean(MeterRegistry.class));
+        schedulers.add(scheduler);
+        scheduler.start();
+    }
+
+    /**
+     * A job whose first salon's run takes a while, counting its runs and how many of them were in progress at once,
+     * across every scheduler that runs it.
+     */
+    private static final class SlowJob implements TenantJob {
+
+        private final String name = jobName();
+
+        private final Duration every;
+
+        private final Duration firstRun;
+
+        private final AtomicInteger runs = new AtomicInteger();
+
+        private final AtomicInteger atOnce = new AtomicInteger();
+
+        private final AtomicInteger mostAtOnce = new AtomicInteger();
+
+        SlowJob(Duration every, Duration firstRun) {
+            this.every = every;
+            this.firstRun = firstRun;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Duration every() {
+            return every;
+        }
+
+        @Override
+        public void runFor(CurrentTenant salon, Instant now) {
+            int inProgress = atOnce.incrementAndGet();
+            mostAtOnce.accumulateAndGet(inProgress, Math::max);
+            try {
+                if (runs.getAndIncrement() == 0) {
+                    pause(firstRun.toMillis());
+                }
+            } finally {
+                atOnce.decrementAndGet();
+            }
+        }
+    }
+
     private void start(TenantJob job) {
         JobScheduler scheduler = new JobScheduler(
-                new JobSettings(true, Duration.ofMillis(50), Duration.ofMinutes(10), HOURLY),
+                new JobSettings(true, Duration.ofMillis(50), Duration.ofMinutes(10), HOURLY, 2),
                 application.bean(JobStore.class),
                 List.of(job),
                 application.bean(ActiveTenants.class),

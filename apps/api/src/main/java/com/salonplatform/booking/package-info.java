@@ -26,9 +26,11 @@
         allowedDependencies = {
             "branding",
             "catalogue",
+            "catalogue :: inprocess",
             "identity",
             "platform",
             "staff",
+            "staff :: inprocess",
             "shared :: audit",
             "shared :: jobs",
             "shared :: lifecycle",

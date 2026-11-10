@@ -12,7 +12,7 @@
  * <p>From F06-S01: the salon's team members, their photos and the services each performs, under
  * {@code /api/v1/team}, with {@code team.read} and {@code team.manage} (decision 100); the profiles shown for
  * online booking are public there. It provides {@link com.salonplatform.staff.TeamMembers}, which F07 and F10 use,
- * and declares {@link com.salonplatform.staff.UpcomingMemberBookings}, which {@code booking} implements in F07.
+ * and declares {@link com.salonplatform.staff.inprocess.UpcomingMemberBookings}, which {@code booking} implements in F07.
  * Categories and services are {@code catalogue}'s, read through
  * {@link com.salonplatform.catalogue.CatalogueListings}. A member may link to one of {@code identity}'s accounts;
  * a staff seat is held across both modules through {@link com.salonplatform.identity.inprocess.StaffSeats}, and
@@ -33,6 +33,7 @@
         allowedDependencies = {
             "branding",
             "catalogue",
+            "catalogue :: inprocess",
             "identity",
             "identity :: inprocess",
             "platform",

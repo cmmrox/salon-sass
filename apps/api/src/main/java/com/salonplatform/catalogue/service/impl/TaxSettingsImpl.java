@@ -7,13 +7,12 @@ import com.salonplatform.catalogue.domain.TaxParts;
 import com.salonplatform.catalogue.entity.TaxVersion;
 import com.salonplatform.catalogue.repository.TaxVersionRepository;
 import com.salonplatform.catalogue.service.impl.CatalogueScope.Scope;
+import com.salonplatform.shared.persistence.ReadOnlyWork;
 import com.salonplatform.shared.tenancy.TenantContext;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Reads versions in a read-only tenant transaction of its own; another salon's version is not seen, because the
@@ -24,20 +23,18 @@ class TaxSettingsImpl implements TaxSettings {
 
     private final CatalogueScope scope;
     private final TaxVersionRepository versions;
-    private final TransactionTemplate reading;
+    private final ReadOnlyWork reading;
 
-    TaxSettingsImpl(CatalogueScope scope, TaxVersionRepository versions, PlatformTransactionManager transactions) {
+    TaxSettingsImpl(CatalogueScope scope, TaxVersionRepository versions, ReadOnlyWork reading) {
         this.scope = scope;
         this.versions = versions;
-        this.reading = new TransactionTemplate(transactions);
-        this.reading.setReadOnly(true);
-        this.reading.setPropagationBehavior(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+        this.reading = reading;
     }
 
     @Override
     public Optional<TaxSettingsVersion> current() {
         Scope at = scope.publicly();
-        return reading.execute(status ->
+        return reading.read(() ->
                 versions.findFirstByBranchIdOrderByVersionDesc(at.branch()).map(TaxVersion::settings));
     }
 
@@ -47,7 +44,7 @@ class TaxSettingsImpl implements TaxSettings {
         if (versionId == null) {
             return Optional.empty();
         }
-        return reading.execute(status -> versions.findVersion(versionId).map(TaxVersion::settings));
+        return reading.read(() -> versions.findVersion(versionId).map(TaxVersion::settings));
     }
 
     @Override

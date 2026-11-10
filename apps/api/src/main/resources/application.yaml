@@ -152,6 +152,29 @@ salon:
     # before the request is answered 503. Shorter than the driver's socket timeout, which is the
     # limit for everything else (migrations included).
     request-timeout: 3s
+    # The database's own limits on every connection of the application's pools (decision 120,
+    # DatabaseLimits): a statement, a wait for a lock, and a transaction left open and idle. The
+    # statement limit is shorter than request-timeout, so the database stops a slow statement, frees
+    # its locks and answers before the driver gives the connection up; either way the request is
+    # answered 503. While a statement runs the server checks this often that its client is still
+    # there, and stops the statement of one that went away.
+    statement-timeout: 2500ms
+    lock-timeout: 2s
+    idle-in-transaction-timeout: 10s
+    client-check-interval: 2s
+    # Work that legitimately runs longer (recurring jobs, exports and their download, the erasers)
+    # sets these on each transaction it opens instead; the driver then waits 10 s longer than the
+    # statement limit.
+    long-work:
+      statement-timeout: 5m
+      lock-timeout: 10s
+      idle-in-transaction-timeout: 60s
+    # The migrations' connection, under the driver's 30 s socket timeout. The lock limit keeps a
+    # migration that waits behind the running version's transactions from holding up every later one.
+    migration:
+      statement-timeout: 25s
+      lock-timeout: 10s
+      idle-in-transaction-timeout: 25s
     # How often the pool asks for a new connection while the database is unreachable or silent,
     # once it has been reached. This, not the pool's own wait between attempts (which grows to five
     # seconds and cannot be set), decides how soon the API answers again after the database does
@@ -178,16 +201,25 @@ salon:
     breaker:
       failure-threshold: 5
       wait-duration: 60s
-    # Delivered messages are kept this long, then removed by the outbox-cleanup job.
+    # Delivered messages, and events closed as unrouted, are kept this long, then removed by the
+    # outbox-cleanup job.
     retention: 30d
+    # An event of a type no subscriber of this build takes waits this long, never attempted, for a
+    # build that has one (a rolling deployment, a short rollback); then the outbox-cleanup job closes
+    # it as unrouted (decision 119).
+    unrouted-after: 7d
     # On stop, calls in flight are given this long to finish; what is left is recovered by its lease.
     shutdown-grace: 5s
   jobs:
     enabled: true
     poll-interval: 1s
-    # How long a job stays claimed by an instance that stopped without finishing it.
+    # How long a job stays claimed by an instance that stopped without finishing it. A running job
+    # renews its claim every third of this, so it never runs twice at once however long it takes.
     hold: 10m
     outbox-cleanup: 1h
+    # Jobs running at once on one instance, each on its own thread and connection, so that a slow
+    # one (an export, billing) holds up no other.
+    concurrent: 2
   server:
     # How long a stopping instance keeps answering, with its readiness already OUT_OF_SERVICE, before
     # it stops taking requests (ReadinessDrain): long enough for the edge's health check, which runs
@@ -206,16 +238,33 @@ springdoc:
     enabled: false
   writer-with-order-by-keys: true
 
+# Whether a new encrypted value carries its key's id (decision 120, KeyRing). Off until every running instance
+# reads key ids: a version before them reads only the format without one, so during a rolling deployment a value
+# written with an id would fail on the old instance. Values of either format are read either way.
+salon.secrets:
+  write-key-ids: ${SALON_SECRETS_WRITE_KEY_IDS:false}
+
 # No nonlocal fallback keys. Four independent 32-byte keys encoded as 64 hexadecimal characters.
 salon.identity:
   signing-key: ${SALON_IDENTITY_SIGNING_KEY:}
   challenge-key: ${SALON_IDENTITY_CHALLENGE_KEY:}
   encryption-key: ${SALON_IDENTITY_ENCRYPTION_KEY:}
+  # Keys that were the encryption key before, newest first, comma-separated: they decrypt what they encrypted,
+  # never encrypt (decision 120). To rotate, put the old key here and a new one above.
+  encryption-earlier-keys: ${SALON_IDENTITY_ENCRYPTION_EARLIER_KEYS:}
   proxy-key: ${SALON_IDENTITY_PROXY_KEY:}
   # Staff password checks (PBKDF2) running at once per instance, outside any transaction (decision 120); one more
   # waits up to two seconds, then is refused 503. Unset, it is the number of processors the JVM sees; set it with
   # SALON_IDENTITY_PASSWORD_CHECKS_CONCURRENT.
   # password-checks.concurrent:
+  # Failed staff sign-ins one address may make across every salon in fifteen minutes, beside each salon's own limits,
+  # which count every attempt (decision 120); set it with SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS. It counts
+  # failures only: many salons' staff reach us through one carrier-grade NAT address on mobile data and sign in
+  # successfully, so they do not use it up, while password spraying (a guess or two at each of many accounts, which
+  # never trips one account's limit) fails and does. An attempt is counted before its password is checked and given
+  # back when the password proves correct.
+  sign-in:
+    address-limit-across-salons: ${SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS:60}
   codes:
     number-limit: ${SALON_IDENTITY_CODE_NUMBER_LIMIT:3}
     device-limit: ${SALON_IDENTITY_CODE_DEVICE_LIMIT:10}
@@ -228,6 +277,8 @@ salon.operator:
   signing-key: ${SALON_OPERATOR_SIGNING_KEY:}
   challenge-key: ${SALON_OPERATOR_CHALLENGE_KEY:}
   encryption-key: ${SALON_OPERATOR_ENCRYPTION_KEY:}
+  # As salon.identity.encryption-earlier-keys, for the operators' secrets.
+  encryption-earlier-keys: ${SALON_OPERATOR_ENCRYPTION_EARLIER_KEYS:}
   proxy-key: ${SALON_OPERATOR_PROXY_KEY:}
   fingerprint-key: ${SALON_OPERATOR_FINGERPRINT_KEY:}
 
@@ -241,6 +292,8 @@ salon.billing:
 # every other key. No nonlocal fallback: an environment without it refuses to start.
 salon.export:
   key: ${SALON_EXPORT_KEY:}
+  # As salon.identity.encryption-earlier-keys, for the export archives.
+  earlier-keys: ${SALON_EXPORT_EARLIER_KEYS:}
   # Where the Owner's export-ready email links to: the platform domain is put in place of %s.
   link-origin: ${SALON_EXPORT_LINK_ORIGIN:https://%s}
 

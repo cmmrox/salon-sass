@@ -13,6 +13,7 @@ import com.salonplatform.identity.repository.RateBucketRepository;
 import com.salonplatform.identity.repository.StaffAccountRepository;
 import com.salonplatform.identity.service.IdentityWork;
 import com.salonplatform.identity.service.StaffSignInService;
+import com.salonplatform.shared.attempts.AddressAttempts;
 import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.ActorKind;
 import com.salonplatform.shared.audit.AuditAction;
@@ -39,6 +40,9 @@ class StaffSignInServiceImpl implements StaffSignInService {
 
     private static final int ATTEMPTS_PER_ADDRESS = 30;
 
+    /** What the address's failed attempts across every salon are counted for ({@link AddressAttempts}). */
+    private static final String SIGN_IN = "staff-sign-in";
+
     private final IdentityWork work;
     private final StaffAccountRepository accounts;
     private final RateBucketRepository rateBuckets;
@@ -49,6 +53,8 @@ class StaffSignInServiceImpl implements StaffSignInService {
     private final PasswordChecks passwords;
     private final Clock clock;
     private final AuditTrail audit;
+    private final AddressAttempts addressAttempts;
+    private final SignInLimits limits;
 
     /** The account a password is checked against, as it was read before the check. */
     private record Checked(UUID id, String passwordHash) {}
@@ -59,24 +65,38 @@ class StaffSignInServiceImpl implements StaffSignInService {
      * first, so every attempt counts even if what follows fails; then the account is read; then the outcome is
      * recorded against the account as it is then. Checking inside the transaction held a pooled connection and the
      * salon's identity lock for the whole check, so a few sign-ins in flight stalled every salon on the instance.
+     *
+     * <p>The check is reserved before anything is counted, so a sign-in refused 503 because the checks were at their
+     * limit counts toward none of the limits. Besides the salon's own limits per identifier and per address, which
+     * count every attempt, the address's failed attempts are counted across every salon ({@link AddressAttempts}), so
+     * that one address cannot spray guesses at the accounts of many salons (decision 120). That attempt is counted
+     * at the start like the others, and given back by a sign-in whose password proves correct (one that then needs
+     * the second step included), in the transaction that records its outcome.
      */
     @Override
     public SignIn signIn(String identifier, String password, String deviceLabel, String address) {
         String key = normalized(identifier);
-        work.run(() -> {
-            boolean identifierAllowed = attempt("staff-identifier", key, ATTEMPTS_PER_IDENTIFIER);
-            boolean addressAllowed = attempt("staff-address", address, ATTEMPTS_PER_ADDRESS);
-            if (!identifierAllowed || !addressAllowed) {
-                record(Actor.system("sign-in"), "sign_in_limited", crypto.hash("audit", key));
-                throw new ApplicationProblemException(429, ErrorCode.RATE_LIMITED);
-            }
-            return null;
-        });
-        Optional<Checked> checked = work.run(() -> accounts.findByIdentifier(key).stream()
-                .findFirst()
-                .map(found -> new Checked(found.getId(), found.getPasswordHash())));
-        boolean correct =
-                passwords.matches(password, checked.map(Checked::passwordHash).orElse(null));
+        String addressAcrossSalons = crypto.hash("rate-staff-address-across-salons", address);
+        Optional<Checked> checked;
+        boolean correct;
+        AddressAttempts.Counted counted;
+        try (PasswordChecks.Reserved check = passwords.reserve()) {
+            counted = work.run(() -> {
+                boolean identifierAllowed = attempt("staff-identifier", key, ATTEMPTS_PER_IDENTIFIER);
+                boolean addressAllowed = attempt("staff-address", address, ATTEMPTS_PER_ADDRESS);
+                AddressAttempts.Counted acrossSalons = addressAttempts.count(SIGN_IN, addressAcrossSalons, RATE_WINDOW);
+                boolean allowedAcrossSalons = acrossSalons.attempts() <= limits.addressAcrossSalons();
+                if (!identifierAllowed || !addressAllowed || !allowedAcrossSalons) {
+                    record(Actor.system("sign-in"), "sign_in_limited", crypto.hash("audit", key));
+                    throw new ApplicationProblemException(429, ErrorCode.RATE_LIMITED);
+                }
+                return acrossSalons;
+            });
+            checked = work.read(() -> accounts.findByIdentifier(key).stream()
+                    .findFirst()
+                    .map(found -> new Checked(found.getId(), found.getPasswordHash())));
+            correct = check.matches(password, checked.map(Checked::passwordHash).orElse(null));
+        }
         return work.run(() -> {
             // The account as it is now: one removed, or whose password changed, while its password was being
             // checked is refused like any other wrong credential.
@@ -93,6 +113,8 @@ class StaffSignInServiceImpl implements StaffSignInService {
                 throw IdentityProblems.invalidCredentials();
             }
             StaffAccount account = now.get();
+            // The password was right: not a failure across salons (decision 120).
+            addressAttempts.giveBack(SIGN_IN, addressAcrossSalons, counted);
             StaffValidation.requireDeviceLabel(deviceLabel);
             if (account.hasMfa() || account.getRole() == StaffRole.OWNER) {
                 return mfaChallenges.issue(

@@ -145,6 +145,8 @@ modules:
       - audit_entry
       - outbox_message
       - scheduled_job
+      - shared_address_attempt
+      - shared_outbox_due
       - shared_processed_event
     paths:
       - /api/v1/meta
@@ -152,6 +154,7 @@ modules:
       - salon.platform-domain
       - salon.platform.datasource
       - salon.database
+      - salon.secrets
       - salon.server
       - salon.outbox
       - salon.jobs

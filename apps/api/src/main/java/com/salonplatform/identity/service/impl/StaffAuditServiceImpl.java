@@ -30,7 +30,7 @@ class StaffAuditServiceImpl implements StaffAuditService {
     @Override
     public Page<AuditView> list(int page, int size, String subjectId) {
         Pagination.requireValid(page, size);
-        return work.run(() -> {
+        return work.read(() -> {
             authority.requireReadable("audit.list");
             AuditTrail.AuditPage rows = audit.identityPage(page, size, subjectId);
             return new Page<>(

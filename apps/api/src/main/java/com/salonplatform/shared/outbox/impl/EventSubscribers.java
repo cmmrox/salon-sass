@@ -27,7 +27,8 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>Each subscriber runs in a transaction of its own, which first records it as having processed the
  * event: the record and the subscriber's change commit together, so a repeated delivery, after a lease ran
  * out or by a second dispatcher, applies nothing twice, and a subscriber that already succeeded is passed
- * over when another one failed. An event type with no subscriber is delivered at once.
+ * over when another one failed. The dispatcher claims only events of the types that have a subscriber here
+ * ({@link #types}), so that an event nobody here subscribes to waits for a build that does (decision 119).
  */
 @Component
 class EventSubscribers {
@@ -59,13 +60,24 @@ class EventSubscribers {
         this.clock = clock;
     }
 
+    /** The event types that have at least one subscriber in this build: the only events this instance claims. */
+    Set<String> types() {
+        return byType.keySet();
+    }
+
     /**
      * Delivers one event of the current salon to every subscriber of its type that has not processed it
      * yet. Throws, naming each subscriber that failed, when any did; the others' changes stay committed.
+     * Throws for a type with no subscriber here, so that such an event is never recorded as delivered with
+     * nothing done (decision 119): it is not claimed, and if it ever were, it would be tried again.
      */
     void deliver(UUID eventId, String eventType, String payload) {
+        List<EventSubscriber<?>> subscribers = byType.get(eventType);
+        if (subscribers == null) {
+            throw new IllegalStateException("No subscriber of " + eventType + " in this build");
+        }
         List<String> failures = new ArrayList<>();
-        for (EventSubscriber<?> subscriber : byType.getOrDefault(eventType, List.of())) {
+        for (EventSubscriber<?> subscriber : subscribers) {
             try {
                 deliverOnce(subscriber, eventId, payload);
             } catch (RuntimeException ex) {

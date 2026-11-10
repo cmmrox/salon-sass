@@ -148,8 +148,14 @@ Three consequences of how the framework works, which every later stage follows:
   `branding_branch` (decision 094).
 - **Row-level security is forced, so it holds for the owning role too**, which is not a superuser
   outside a developer's machine. A `SECURITY DEFINER` function that must see several salons' rows
-  (`outbox_due`, `outbox_due_events`, `outbox_backlog`) sets each active salon in turn inside the function, and puts the
-  caller's `app.tenant_id` back before it returns. A `SET` clause on the function cannot be used:
+  sets each salon in turn inside the function, and puts the
+  caller's `app.tenant_id` back before it returns. The outbox's functions (`outbox_due`,
+  `outbox_due_events`, `outbox_backlog`) no longer do: they read `shared_outbox_due`, a platform
+  table holding only the waiting messages' salon id, message id, channel or event type, state and
+  due time, kept by a trigger on `outbox_message`; neither runtime role has a grant on it. `shared`
+  also owns `shared_address_attempt` (a keyed hash of an address and a count of failed sign-ins
+  across salons), reached only through its `SECURITY DEFINER` functions: counting and giving back
+  for the application role, cleanup for the platform role. A `SET` clause on the function cannot be used:
   only a superuser may attach one for a custom setting. `TenantContext`
   tells "no such salon" (404 `not_found`) from "suspended" (403 `salon_suspended`).
 
