@@ -104,5 +104,41 @@ class PendingTest(unittest.TestCase):
         self.assertIn("| - | none | - |", done.split("## Pending criteria", 1)[1])
 
 
+class PendingRequirementTest(unittest.TestCase):
+    """A requirement an approved request changes in a merged feature is not shown as passed."""
+
+    def bundle(self, status="approved", stages=("F07-S01",), merged=True):
+        integration = {"branch": "charithm/feature/F07-online-booking", "qa_revision": "a" * 40,
+                       "pull_request": "https://github.com/example/salon/pull/7",
+                       "merged_commit": "b" * 40, "merged_at": "2026-11-10T01:21:23Z"}
+        feature = fx.feature(status="complete", qa_status="pass", requirements=["BKG-01", "BKG-02"],
+                             **({"integration": integration} if merged else {}))
+        stage = fx.stage(requirements=["BKG-01", "BKG-02"])
+        cr = {"id": "CR-028", "status": status, "requirements": ["BKG-02"], "stages": list(stages)}
+        data = fx.bundle(features=[feature], stages=[stage], change_requests=[cr])
+        data["requirements"].append({"id": "BKG-02", "module": "BKG", "release": "R1", "priority": "must"})
+        return data
+
+    def summary_passed(self, text):
+        return [line for line in text.splitlines() if line.startswith("| R1 |")][0].split("|")[5].strip()
+
+    def test_it_is_pending_while_the_request_is_approved(self):
+        bundle = self.bundle()
+        self.assertEqual(validate.pending_requirements(bundle), {"BKG-02": "CR-028"})
+        text = generate.render_coverage(bundle)
+        self.assertEqual(self.summary_passed(text), "1")
+        self.assertIn("| BKG-02 | R1 | must | F07 (pending CR-028) |", text)
+        self.assertIn("| BKG-01 | R1 | must | F07 | F07-S01 (complete) |", text)
+
+    def test_it_counts_as_passed_once_implemented_or_when_the_request_does_not_change_the_owner(self):
+        for bundle in (self.bundle(status="implemented"), self.bundle(status="proposed"),
+                       self.bundle(stages=("F08-S01",))):
+            self.assertEqual(validate.pending_requirements(bundle), {})
+            self.assertEqual(self.summary_passed(generate.render_coverage(bundle)), "2")
+
+    def test_a_feature_not_merged_yet_has_nothing_pending(self):
+        self.assertEqual(validate.pending_requirements(self.bundle(merged=False)), {})
+
+
 if __name__ == "__main__":
     unittest.main()

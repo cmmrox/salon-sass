@@ -281,10 +281,10 @@ def check_handed_over(stage, sid):
     return findings
 
 
-# A change request's criteria wait for their cases while the request is approved and not yet
-# implemented (decision 098): the lead adds them to a merged stage's spec, in a '## CR-nnn'
-# section, before QA writes their cases, and main must still validate in between.
-PENDING_CR_STATUSES = ("approved",)
+# A change request's criteria wait for their cases while the request is in flight (decision
+# 098): the lead adds them to a merged stage's spec, in a '## CR-nnn' section, before QA writes
+# their cases, and main must still validate in between.
+PENDING_CR_STATUSES = S.CR_IN_FLIGHT
 
 
 def pending_criteria(stage, bundle):
@@ -293,6 +293,28 @@ def pending_criteria(stage, bundle):
     statuses = {r.get("id"): r.get("status") for r in bundle.get("change_requests") or []}
     return {criterion: request for criterion, request in (spec.get("cr_criteria") or {}).items()
             if statuses.get(request) in PENDING_CR_STATUSES}
+
+
+def pending_requirements(bundle):
+    """{requirement: change request} for the requirements an approved change request is changing in
+    the merged feature that owns them (the request names the requirement and a stage of that
+    feature). The feature's QA pass is from before the request, so it does not prove them. A
+    feature not merged yet builds the request into its own first delivery, so nothing is pending."""
+    owners = {}
+    for feature in bundle.get("features") or []:
+        if not flow.merged(feature):
+            continue
+        for rid in _list(feature.get("requirements")):
+            owners.setdefault(rid, feature.get("id"))
+    pending = {}
+    for request in bundle.get("change_requests") or []:
+        if request.get("status") not in PENDING_CR_STATUSES:
+            continue
+        changed = {str(sid).split("-")[0] for sid in _list(request.get("stages"))}
+        for rid in _list(request.get("requirements")):
+            if owners.get(rid) in changed:
+                pending.setdefault(rid, request.get("id"))
+    return pending
 
 
 def required_criteria(stage, bundle):

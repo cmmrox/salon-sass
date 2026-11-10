@@ -4,9 +4,12 @@
 
 ## Summary
 
+A requirement an approved change request is still changing is not counted as passed QA until
+the request is implemented; the Requirements table names the request.
+
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 106 | 106 | 44 | 44 |
+| R1 | 106 | 106 | 44 | 38 |
 | R2 | 79 | 50 | 44 | 0 |
 | R3 | 18 | 8 | 8 | 0 |
 
@@ -58,7 +61,8 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 ## Pending criteria
 
 Criteria a change request added to a stage's spec, in its `## CR-nnn` section, while the request
-is `approved`. They need no case yet; once the request is `implemented` they are required.
+is `approved`. They need no case yet; once the request is `implemented` they are required. The
+requirements such a request changes are marked pending in the Requirements table below.
 
 | Stage | Criterion | Change request |
 | --- | --- | --- |
@@ -125,18 +129,18 @@ is `approved`. They need no case yet; once the request is `implemented` they are
 | BKG-02 | R1 | must | F04 | F04-S04 (complete) |
 | BKG-03 | R1 | must | F07 | F07-S02 (complete) |
 | BKG-04 | R1 | must | F07 | F07-S01 (complete), F07-S03 (complete) |
-| BKG-05 | R1 | must | F07 | F07-S01 (complete) |
-| BKG-06 | R1 | must | F07 | F07-S01 (complete) |
+| BKG-05 | R1 | must | F07 (pending CR-028) | F07-S01 (complete) |
+| BKG-06 | R1 | must | F07 (pending CR-028) | F07-S01 (complete) |
 | BKG-07 | R1 | must | F09 | - |
 | BKG-08 | R1 | must | F09 | - |
 | BKG-09 | R1 | must | F04 | F04-S04 (complete) |
 | BKG-10 | R1 | must | F10 | - |
-| BKG-11 | R1 | must | F07 | F07-S03 (complete) |
+| BKG-11 | R1 | must | F07 (pending CR-028) | F07-S03 (complete) |
 | BKG-12 | R1 | must | F10 | - |
 | BKG-13 | R1 | must | F10 | - |
 | BKG-14 | R1 | must | F07 | F07-S01 (complete) |
 | BKG-15 | R1 | must | F01 | F01-S04 (complete) |
-| BKG-16 | R1 | must | F07 | F07-S01 (complete) |
+| BKG-16 | R1 | must | F07 (pending CR-028) | F07-S01 (complete) |
 | BKG-17 | R2 | should | unowned | - |
 | BKG-18 | R2 | should | unowned | - |
 | BKG-19 | R2 | should | unowned | - |
@@ -144,9 +148,9 @@ is `approved`. They need no case yet; once the request is `implemented` they are
 | BKG-21 | R2 | should | unowned | - |
 | BKG-22 | R2 | must | F19 | F19-S03 (outlined) |
 | BKG-23 | R2 | should | F19 | F19-S03 (outlined) |
-| BKG-24 | R1 | must | F07 | F07-S01 (complete), F07-S02 (complete), F07-S03 (complete) |
+| BKG-24 | R1 | must | F07 (pending CR-028) | F07-S01 (complete), F07-S02 (complete), F07-S03 (complete) |
 | BKG-25 | R1 | should | F10 | - |
-| BKG-26 | R1 | should | F07 | F07-S01 (complete), F07-S03 (complete) |
+| BKG-26 | R1 | should | F07 (pending CR-028) | F07-S01 (complete), F07-S03 (complete) |
 | BKG-27 | R2 | could | unowned | - |
 | APP-01 | R1 | must | F15 | - |
 | APP-02 | R1 | must | F15 | - |
