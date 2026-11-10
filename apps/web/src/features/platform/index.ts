@@ -31,3 +31,10 @@ export {
 } from './client/operator-session';
 export type { Entitlements } from './types';
 export { useEntitlements, useInvoices, useSalonAccountChanges, useSupportSessions } from './client/salon-account-data';
+export {
+  useConsoleChanges,
+  useConsolePages,
+  useConsoleRead,
+  type ConsoleChanges,
+  type ConsoleReads,
+} from './client/console-data';

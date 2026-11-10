@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts/platform';
@@ -16,20 +16,18 @@ import { Spinner } from '@/components/ui/spinner';
 import { formatBytes, formatDate, formatInstant } from '@salon/format';
 import {
   operatorRead,
-  operatorRequest,
   OperatorFailure,
-  principalInsideLock,
-  withOperatorLock,
   ConsoleFailure,
   ConsoleTextArea,
   ConsoleTextField,
   ConsoleSheet,
   DirectoryPager,
+  useConsoleChanges,
+  useConsolePages,
+  useConsoleRead,
 } from '@/features/platform';
 
 type Detail = components['schemas']['SalonDetail'];
-type LifecyclePage = components['schemas']['LifecyclePage'];
-type ExportView = components['schemas']['ExportView'];
 
 const LOCALE = 'en-LK';
 const HISTORY_SIZE = 10;
@@ -63,14 +61,6 @@ export function SalonStatusBadge({ status, testId = 'console-salon-status' }: { 
       {label}
     </Badge>
   );
-}
-
-/** Runs a console mutation under the cross-tab operator lock after confirming the session. */
-async function mutate<T>(action: string, body: unknown): Promise<T> {
-  return withOperatorLock(async () => {
-    await principalInsideLock();
-    return operatorRequest<T>(action, body);
-  });
 }
 
 /**
@@ -143,6 +133,7 @@ export function LifecycleCard({ salon, onChanged }: { salon: Detail; onChanged: 
 
 /** Suspend or Reactivate, in its sheet, with the reason the history and the audit keep. */
 function ReasonAction({ kind, salon, onDone }: { kind: 'suspend' | 'reactivate'; salon: Detail; onDone: () => void }) {
+  const mutate = useConsoleChanges().run;
   const t = useTranslations('console');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -246,6 +237,7 @@ function ReasonAction({ kind, salon, onDone }: { kind: 'suspend' | 'reactivate';
 
 /** Close salon: irreversible; states the consequences and the deletion date; the slug typed exactly and a reason. */
 function CloseSalon({ salon, onClosed }: { salon: Detail; onClosed: () => void }) {
+  const mutate = useConsoleChanges().run;
   const t = useTranslations('console');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -380,45 +372,18 @@ function CloseSalon({ salon, onClosed }: { salon: Detail; onClosed: () => void }
 /** Every lifecycle action of the salon, newest first: what, why, who and when. */
 function LifecycleHistory({ salon, refresh }: { salon: Detail; refresh: number }) {
   const t = useTranslations('console');
-  const router = useRouter();
-  const [page, setPage] = useState(0);
-  const [data, setData] = useState<LifecyclePage | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
-  const load = useCallback(
-    async (next: number) => {
-      setLoading(true);
-      setFailure(null);
-      try {
-        setData(
-          await operatorRead<LifecyclePage>(
-            `lifecycle?id=${encodeURIComponent(salon.id)}&page=${next}&size=${HISTORY_SIZE}`,
-          ),
-        );
-        setPage(next);
-      } catch (error) {
-        const f = asFailure(error);
-        if (f.code === 'invalid_session') {
-          router.replace('/console/sign-in');
-          router.refresh();
-          return;
-        }
-        setFailure(f);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [router, salon.id],
-  );
+  const { data, page, loading, failure, load } = useConsolePages('lifecycle', (next) => ({
+    id: salon.id,
+    page: next,
+    size: HISTORY_SIZE,
+  }));
+  // A lifecycle change made beside the history (`refresh`) reads its first page again.
+  const seen = useRef(refresh);
   useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load(0);
-    });
-    return () => {
-      active = false;
-    };
-  }, [load, refresh]);
+    if (seen.current === refresh) return;
+    seen.current = refresh;
+    load(0);
+  }, [refresh, load]);
   return (
     <div
       className="flex min-w-0 flex-col gap-3"
@@ -510,37 +475,17 @@ function LifecycleHistory({ salon, refresh }: { salon: Detail; refresh: number }
 export function ExportCard({ salon }: { salon: Detail }) {
   const t = useTranslations('console');
   const router = useRouter();
-  const [view, setView] = useState<ExportView | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
+  const read = useConsoleRead('export', { id: salon.id });
+  const { data: view, loading } = read;
+  // A refused download is said until the next download or read is tried; a refused read until a read answers.
+  const [refused, setFailure] = useState<OperatorFailure | null>(null);
+  const failure = refused ?? read.failure;
+  const load = () => {
+    setFailure(null);
+    read.load();
+  };
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
-  const load = useCallback(async () => {
-    setLoading(true);
-    setFailure(null);
-    try {
-      setView(await operatorRead<ExportView>(`export?id=${encodeURIComponent(salon.id)}`));
-    } catch (error) {
-      const f = asFailure(error);
-      if (f.code === 'invalid_session') {
-        router.replace('/console/sign-in');
-        router.refresh();
-        return;
-      }
-      setFailure(f);
-    } finally {
-      setLoading(false);
-    }
-  }, [router, salon.id]);
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
   async function download() {
     setDownloading(true);
     setFailure(null);

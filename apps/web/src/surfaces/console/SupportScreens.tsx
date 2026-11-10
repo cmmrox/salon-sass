@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts/platform';
@@ -25,37 +25,26 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle }
 import { Spinner } from '@/components/ui/spinner';
 import { formatInstant, viewerTimeZone } from '@salon/format';
 import {
-  operatorRead,
-  operatorRequest,
   OperatorFailure,
-  principalInsideLock,
-  withOperatorLock,
   ConsoleChoiceField,
   ConsoleFailure,
   ConsoleLoading,
   ConsoleTextArea,
   ConsoleSheet,
   DirectoryPager,
+  useConsoleChanges,
+  useConsolePages,
 } from '@/features/platform';
 
 type Detail = components['schemas']['SalonDetail'];
 type Entry = components['schemas']['SupportEntry'];
 type Session = components['schemas']['SupportSessionView'];
-type SessionPage = components['schemas']['SupportSessionPage'];
 
 const SIZE = 20;
 const DURATIONS = ['5', '15', '30', '60', '90', '120'] as const;
 
 function asFailure(error: unknown): OperatorFailure {
   return error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable');
-}
-
-/** A console mutation under the cross-tab operator lock, after confirming the session. */
-async function mutate<T>(action: string, body: unknown): Promise<T> {
-  return withOperatorLock(async () => {
-    await principalInsideLock();
-    return operatorRequest<T>(action, body);
-  });
 }
 
 /**
@@ -91,6 +80,7 @@ function EntryLink({ entry, testId }: { entry: Entry; testId: string }) {
  * the duration (5 to 120 minutes, default 30), then the link that opens the salon's workspace.
  */
 export function SupportCard({ salon }: { salon: Detail }) {
+  const mutate = useConsoleChanges().run;
   const t = useTranslations('console');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -110,7 +100,7 @@ export function SupportCard({ salon }: { salon: Detail }) {
     setBusy(true);
     setFailure(null);
     try {
-      const started = await mutate<Entry>('support-start', {
+      const started = await mutate('support-start', {
         id: salon.id,
         reason: values.reason,
         durationMinutes: Number(values.durationMinutes),
@@ -229,55 +219,36 @@ export function SupportCard({ salon }: { salon: Detail }) {
  * and refusal state.
  */
 export function SupportSessionList({ admin }: { admin: boolean }) {
+  const mutate = useConsoleChanges().run;
   const t = useTranslations('console');
   const router = useRouter();
   const [state, setState] = useState<'all' | 'active' | 'ended'>('active');
-  const [page, setPage] = useState(0);
-  const [data, setData] = useState<SessionPage | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
+  const sessions = useConsolePages(
+    'support-sessions',
+    (next, filter) => ({
+      page: next,
+      size: SIZE,
+      ...(filter === 'active' || filter === 'ended' ? { state: filter as 'active' | 'ended' } : {}),
+    }),
+    { search: 'active' },
+  );
+  const { data, page, loading } = sessions;
+  // A refused end, revoke or link is said until the next is tried; a refused read until a read answers.
+  const [refused, setFailure] = useState<OperatorFailure | null>(null);
+  const failure = refused ?? sessions.failure;
+  /** Reads a page of the sessions in a state: the same question again, or another one. */
+  const load = (next: number, filter: 'all' | 'active' | 'ended') => sessions.load(next, filter);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [links, setLinks] = useState<Record<string, Entry>>({});
   const zone = viewerTimeZone();
-  const load = useCallback(
-    async (next: number, filter: 'all' | 'active' | 'ended') => {
-      setLoading(true);
-      setFailure(null);
-      try {
-        const query = `support-sessions?page=${next}&size=${SIZE}${filter === 'all' ? '' : `&state=${filter}`}`;
-        setData(await operatorRead<SessionPage>(query));
-        setPage(next);
-      } catch (error) {
-        const f = asFailure(error);
-        if (f.code === 'invalid_session') {
-          router.replace('/console/sign-in');
-          router.refresh();
-          return;
-        }
-        setFailure(f);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [router],
-  );
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load(0, state);
-    });
-    return () => {
-      active = false;
-    };
-  }, [load, state]);
   async function act(session: Session, action: 'support-end' | 'support-entry-code') {
     setBusy(session.id);
     setFailure(null);
     setNotice(null);
     try {
       if (action === 'support-entry-code') {
-        const entry = await mutate<Entry>(action, { id: session.id });
+        const entry = await mutate(action, { id: session.id });
         setLinks((current) => ({ ...current, [session.id]: entry }));
       } else {
         await mutate(action, { id: session.id });
@@ -314,7 +285,11 @@ export function SupportSessionList({ admin }: { admin: boolean }) {
             { value: 'ended', label: t('supportEndedState') },
             { value: 'all', label: t('supportAll') },
           ]}
-          onChange={(value) => setState(value as 'all' | 'active' | 'ended')}
+          onChange={(value) => {
+            // A state chosen reads its first page.
+            setState(value as 'all' | 'active' | 'ended');
+            load(0, value as 'all' | 'active' | 'ended');
+          }}
         />
       </div>
       {notice && (

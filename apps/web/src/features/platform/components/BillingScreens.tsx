@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts/platform';
@@ -14,13 +14,8 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { formatDate, formatMoney, minorUnitsText, parseMinorUnits, todayInZone } from '@salon/format';
-import {
-  operatorRead,
-  operatorRequest,
-  OperatorFailure,
-  principalInsideLock,
-  withOperatorLock,
-} from '../client/operator-session';
+import { OperatorFailure } from '../client/operator-session';
+import { useConsoleChanges, useConsolePages, useConsoleRead } from '../client/console-data';
 import {
   ConsoleChoiceField,
   ConsoleFailure,
@@ -33,7 +28,7 @@ import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager } from './DirectoryControls';
 import { useIdempotencyKey } from './PlanScreens';
 import { PlanPicker } from './PlanPicker';
-import { PAGE_SIZE, type DirectoryPage } from '../hooks/use-directory';
+import { PAGE_SIZE } from '../hooks/use-directory';
 
 type Detail = components['schemas']['SalonDetail'];
 type Subscription = components['schemas']['SubscriptionView'];
@@ -78,14 +73,6 @@ function InvoiceBadge({ status }: { status: string }) {
   );
 }
 
-/** Runs a console mutation under the cross-tab operator lock after confirming the session. */
-async function mutate<T>(action: string, body: unknown): Promise<T> {
-  return withOperatorLock(async () => {
-    await principalInsideLock();
-    return operatorRequest<T>(action, body);
-  });
-}
-
 /**
  * The salon's subscription on its detail page: state, plan, amount, method, trial end, current
  * period, next invoice and the read-only instant, with Change billing, Move plan and the invoices; an
@@ -93,42 +80,13 @@ async function mutate<T>(action: string, body: unknown): Promise<T> {
  */
 export function SubscriptionCard({ salon, onSalonChanged }: { salon: Detail; onSalonChanged: () => void }) {
   const t = useTranslations('console');
-  const router = useRouter();
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [unbilled, setUnbilled] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
+  const read = useConsoleRead('subscription', { id: salon.id });
+  // A salon without a subscription is answered not_found: it is unbilled, which the card says, not a failure.
+  const unbilled = read.error?.code === 'not_found';
+  const subscription = unbilled ? null : read.data;
+  const failure = read.failure && read.failure.code !== 'not_found' ? read.failure : null;
+  const { loading, load } = read;
   const [notice, setNotice] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    setLoading(true);
-    setFailure(null);
-    try {
-      setSubscription(await operatorRead<Subscription>(`subscription?id=${encodeURIComponent(salon.id)}`));
-      setUnbilled(false);
-    } catch (error) {
-      const f = asFailure(error);
-      if (f.code === 'invalid_session') {
-        router.replace('/console/sign-in');
-        router.refresh();
-        return;
-      }
-      if (f.code === 'not_found') {
-        setSubscription(null);
-        setUnbilled(true);
-      } else setFailure(f);
-    } finally {
-      setLoading(false);
-    }
-  }, [router, salon.id]);
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
   const zone = salon.timeZone;
   const value = (text: string | null, testId: string) => (
     <dd className="m-0 wrap-anywhere" data-testid={testId}>
@@ -278,6 +236,7 @@ function MethodField({ value, error, onChange }: { value: string; error: boolean
 
 /** Start subscription, for an unbilled salon; a salon without a currency is given one here (LKR by default). */
 function StartSubscription({ salon, onStarted }: { salon: Detail; onStarted: () => void }) {
+  const mutate = useConsoleChanges().run;
   const t = useTranslations('console');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -418,6 +377,7 @@ function ChangeSubscription({
   subscription: Subscription;
   onChanged: () => void;
 }) {
+  const mutate = useConsoleChanges().run;
   const t = useTranslations('console');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -531,6 +491,7 @@ function ChangeSubscription({
 
 /** Move plan: refused while the salon's usage exceeds the new plan's limits. */
 function MovePlan({ salon, onMoved }: { salon: Detail; onMoved: () => void }) {
+  const mutate = useConsoleChanges().run;
   const t = useTranslations('console');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -635,50 +596,19 @@ function MovePlan({ salon, onMoved }: { salon: Detail; onMoved: () => void }) {
 /** A salon's invoices, newest first, paged in place; an open invoice offers Record transfer. */
 export function InvoiceList({ id }: { id: string }) {
   const t = useTranslations('console');
-  const router = useRouter();
-  const [salon, setSalon] = useState<Detail | null>(null);
-  const [data, setData] = useState<DirectoryPage<InvoiceSummary> | null>(null);
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<OperatorFailure | null>(null);
+  const detail = useConsoleRead('salon', { id });
+  const invoices = useConsolePages('invoices', (next) => ({ id, page: next, size: PAGE_SIZE }));
+  const salon = detail.data;
+  const data = invoices.data;
+  const page = invoices.page;
+  const loading = detail.loading || invoices.loading;
+  const failure = detail.failure ?? invoices.failure;
   const [recorded, setRecorded] = useState<{ number: string; payment: Payment } | null>(null);
-  const load = useCallback(
-    async (next: number) => {
-      setLoading(true);
-      setFailure(null);
-      try {
-        const [detail, invoices] = await Promise.all([
-          operatorRead<Detail>(`salon?id=${encodeURIComponent(id)}`),
-          operatorRead<DirectoryPage<InvoiceSummary>>(
-            `invoices?id=${encodeURIComponent(id)}&page=${next}&size=${PAGE_SIZE}`,
-          ),
-        ]);
-        setSalon(detail);
-        setData(invoices);
-        setPage(next);
-      } catch (error) {
-        const f = asFailure(error);
-        if (f.code === 'invalid_session') {
-          router.replace('/console/sign-in');
-          router.refresh();
-          return;
-        }
-        setFailure(f);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [id, router],
-  );
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load(0);
-    });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  /** Reads the salon and a page of its invoices: the same page again, or another one. */
+  const load = (next: number) => {
+    detail.load();
+    invoices.load(next);
+  };
   const zone = salon?.timeZone ?? 'UTC';
   return (
     <div className="flex min-w-0 flex-col gap-6" data-testid="console-invoices">
@@ -798,6 +728,7 @@ function RecordTransfer({
   timeZone: string;
   onRecorded: (payment: Payment) => void;
 }) {
+  const mutate = useConsoleChanges().run;
   const t = useTranslations('console');
   const router = useRouter();
   const message = useFailureMessage();
@@ -823,7 +754,7 @@ function RecordTransfer({
       receivedOn: values.receivedOn,
     };
     try {
-      const payment = await mutate<Payment>('payment-record', {
+      const payment = await mutate('payment-record', {
         ...payload,
         idempotencyKey: idempotency.keyFor(payload),
       });
