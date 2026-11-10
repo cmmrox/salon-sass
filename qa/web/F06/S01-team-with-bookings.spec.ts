@@ -13,7 +13,7 @@
 import { refused } from '../../shared/booking-rules';
 import { bookingSalon, holdInput, performs } from '../../shared/booking';
 import { id, openAs, test, expect } from '../../shared/booking-browser';
-import { serviceInput } from '../../shared/catalogue';
+import { saveOf, serviceInput } from '../../shared/catalogue';
 import { plusDays } from '../../shared/salon-hours';
 import { teamSnapshot, updateOf } from '../../shared/team';
 import { TEAM_ROUTE, card } from '../../shared/team-browser';
@@ -81,7 +81,7 @@ const moveRefusal = (members: string[], category: string) => (members.length ===
   ? `${members[0]} has upcoming bookings for this service and does not perform ${category}.`
   : `${members.join(', ')} have upcoming bookings for this service and do not perform ${category}.`) + ` Add ${category} to their services on the Team page first.`;
 
-test('TC-F06-S01-058 AC-8: moving a service to a category that people booked for it do not perform is refused 409 in_use naming each of them, the Services sheet stays open with what was chosen and says who and what to do, and the move is saved once they perform the new category; who holds the service on its own keeps it', async ({ accounts, identity, operator, clock }) => {
+test('TC-F06-S01-058 AC-8: moving a service to a category that people booked for it do not perform is refused 409 in_use naming each of them (409 conflict first when the edit is stale), the Services sheet stays open with what was chosen and says who and what to do, and the move is saved once they perform the new category; who holds the service on its own keeps it', async ({ accounts, identity, operator, clock }) => {
   // BUG-F06-002, STF-01: a service moved out of a category a person performs whole stops them performing it.
   const s = await bookingSalon(identity, operator, clock, { people: 3 });
   const [nimal, kasun, single] = s.members;
@@ -92,6 +92,22 @@ test('TC-F06-S01-058 AC-8: moving a service to a category that people booked for
     await s.bookings.confirm(s.salon, s.owner.tokens, (await s.bookings.place(s.salon, s.owner.tokens, holdInput(person.id, s.service.id, plusDays(s.today, 2), ['10:00', '12:00', '14:00'][n]))).id);
   }
   const before = teamSnapshot(s.created.id);
+
+  await test.step('a stale edit is a conflict before anything else; the current version is the in_use refusal', async () => {
+    // refs BUG-F06-002's review (9d3503c1): an out-of-date version answers 409 conflict, whatever the move would do.
+    const current = await s.catalogue.serviceS02(s.salon, s.owner.tokens, s.service.id);
+    const renamed = await s.catalogue.saveS02(s.salon, s.owner.tokens, current, { description: 'Renamed meanwhile on another device.' });
+    expect(renamed.version, 'the edit elsewhere moved the version on').not.toBe(current.version);
+    const stale = await s.catalogue.updateRaw(s.salon, s.owner.tokens, s.service.id, saveOf(current, { categoryId: treatments.id }));
+    expect(stale.status(), 'the out-of-date version').toBe(409);
+    expect((await stale.json()).code, 'is a conflict').toBe('conflict');
+    const fresh = await s.catalogue.updateRaw(s.salon, s.owner.tokens, s.service.id, saveOf(renamed, { categoryId: treatments.id }));
+    expect(fresh.status(), 'the current version').toBe(409);
+    expect((await fresh.json()).code, 'is the in_use refusal').toBe('in_use');
+    expect((await s.catalogue.service(s.salon, s.owner.tokens, s.service.id)).categoryId, 'not moved by either').toBe(s.category.id);
+    expect(teamSnapshot(s.created.id), 'nobody\'s services changed').toBe(before);
+  });
+
   const { page } = await openAs(accounts, s.owner, '/workspace/services');
   const sheet = page.getByTestId(S.sheet).filter({ visible: true });
   await page.locator(`[data-testid="${S.card}"][data-id="${s.service.id}"]`).getByTestId(S.cardEdit).click();
