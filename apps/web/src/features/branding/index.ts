@@ -24,3 +24,4 @@ export {
 } from './client/brand-form';
 export { BrandForm } from './components/BrandForm';
 export { BrandPreview } from './components/BrandPreview';
+export { useBrandingChanges, useDraft, useSetBrandingAnswer } from './client/branding-data';
