@@ -229,8 +229,14 @@ qa/scripts/sdlc run --feature F07 --rerun-failed qa/reports/<folder>   # the ent
 ```
 
 Each entry stops at its time limit (30 minutes, or its own `timeout_minutes`) and is recorded as
-`timeout`. A run narrowed by `--entry` or `--rerun-failed` is recorded as `partial`: it re-verifies
-what it ran and never stands for the whole scope. Use `--entry` to leave a stage's load entries out
-of a rerun; they run only when the owner asks.
+`timeout`. A run narrowed by `--entry` or `--rerun-failed` is recorded as `partial`, and its report
+folder is named `<YYYYMMDD-HHMMSS>-<scope>-partial-<run id>`: it re-verifies what it ran and never
+stands for the whole scope. Use `--entry` to leave a stage's load entries out of a rerun; they run
+only when the owner asks.
+
+A pass rests on one full run of the scope, which may have failed, and the later runs that passed
+what it did not pass. Record the full run in `evidence.full_pass_run` (or leave it as
+`evidence.last_run` when nothing was rerun since) and each rerun folder in `evidence.reruns`;
+`validate` checks them (`docs/operations/verification-evidence.md`, "A QA pass").
 
 While writing a test, running that one file directly with its tool is fine.

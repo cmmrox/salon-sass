@@ -90,6 +90,11 @@ CR_ID_RE = re.compile(r"^CR-\d{3}$")
 RELEASE_VERSION_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 # evidence.last_run: the folder qa/scripts/sdlc run wrote, one level under qa/reports.
 REPORT_FOLDER_RE = re.compile(r"qa/reports/[A-Za-z0-9][A-Za-z0-9._-]*/?")
+# The runner names a folder <YYYYMMDD-HHMMSS>-<scope>-<run id>, and a narrowed run (--entry,
+# --rerun-failed) <YYYYMMDD-HHMMSS>-<scope>-partial-<run id>. Folders from before the run id or the
+# marker existed keep their names.
+PARTIAL_MARKER = "partial"
+REPORT_NAME_RE = re.compile(r"qa/reports/(?P<stamp>\d{8}-\d{6})-(?P<rest>[A-Za-z0-9._-]+?)/?")
 
 # Headings every stage spec.md must carry, in this order. A section that does not apply
 # keeps its heading and says "Not applicable for this stage".

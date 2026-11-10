@@ -562,7 +562,10 @@ def _run_holding_the_lock(entries, plan, label, reports_root, heartbeat_seconds,
 
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     run_id = uuid.uuid4().hex[:12]
-    report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}-{run_id}")
+    # A narrowed run (--entry, --rerun-failed) says so in its folder's name, so that the name
+    # alone tells it from a full run of the scope: validate reads it where the folder is absent.
+    marker = f"-{S.PARTIAL_MARKER}" if selection else ""
+    report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}{marker}-{run_id}")
     os.makedirs(report_dir, exist_ok=False)
     env = {**os.environ, "QA_REPORT_DIR": os.path.abspath(report_dir), "SALON_LOCAL_INSTANCE": "qa"}
     started = time.monotonic()
