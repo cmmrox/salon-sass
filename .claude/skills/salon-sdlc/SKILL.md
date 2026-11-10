@@ -55,7 +55,7 @@ time, and keep the owner informed as [references/progress.md](references/progres
 | Tool command | Use |
 | --- | --- |
 | `qa/scripts/sdlc status` / `validate` / `generate` | Whose turn; the gate before committing under `features/`, `qa/`, `docs/` or a skill; rewrite generated documents |
-| `qa/scripts/sdlc run --feature F07` | QA automation for one scope (`--stage`, `--suite smoke|regression|release`, `--release`; `--dry-run` previews) |
+| `qa/scripts/sdlc run --feature F07` | QA automation for one scope (`--stage`, `--suite smoke|regression|release`, `--release`; `--entry` and `--rerun-failed <report>` narrow it; `--dry-run` previews) |
 | `qa/scripts/sdlc pr-check F07` | Closed, clean, and unchanged since QA's revision, before a feature PR |
 | `qa/scripts/sdlc start-check F08` / `merge-sync F07 [--check]` | Earlier merges verified live / record a verified owner merge |
 | `qa/scripts/sdlc cleanup --branch <exact>` | Preview, then `--apply`, removal of merged branches and worktrees |

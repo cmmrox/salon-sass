@@ -49,7 +49,8 @@ BUG-F05-002 and BUG-F06-001 (idle sign-out on Services, Products, Team and sched
 ## Package 2: QA, regression back to passing (QA role)
 
 - Repair the 10 stale F01 to F03 expectations listed on PR #21 and in `qa-and-delivery.md`.
-- File bugs for the two intermittent failures (TC-F03-S02-006, TC-F04-S03-032) with their root cause, not a retry.
+- Find the root cause of the two intermittent failures (TC-F03-S02-006, TC-F04-S03-032): a bug for a product defect,
+  a repair for a test defect, never a retry. (Done: the first was a test defect, the second is BUG-F02-017.)
 - Verify BUG-F01-009, which is `fixed` and was never verified.
 - Run regression on `main` and record the run. From here it runs at every feature close (decision 122).
 
@@ -68,6 +69,12 @@ From `qa-and-delivery.md`, recommendations 5, 6, 8, 9, 10 and 11:
 - **Conformance:** an ESLint rule against raw controls and CSS Modules, replacing the regex test.
 - **Pending criteria:** let criteria in a spec's `## CR-nnn` section be pending while that change request is `approved`,
   so decision 098's first commit does not fail `validate` (see CR-028, "Criteria for F07's follow-up").
+- **Status follows the lifecycle** (from the review of PR #27): `sdlc status` names `feature-review` before
+  `feature-verify`, using a new `integration.reviewed_revision`; a feature waits, and `start-check` refuses, while a
+  feature it depends on has stages named by an `approved` change request (today F12 is offered although CR-028's
+  follow-up to F07 is pending); a requirement added by such a change request is shown as pending in `qa/coverage.md`,
+  not as passed with the feature's earlier QA; and a lower-numbered feature of a later milestone is not a predecessor
+  (F25 and F22 would otherwise wait for each other).
 - **Regression time:** shard across QA instances now; a test clock per salon later, which is what allows parallel workers.
 
 ## Package 4: platform hardening (refactor, branch `charithm/refactor/platform-hardening`)

@@ -327,7 +327,9 @@ because the owner set one standard for all Next.js work in this product.
     outside the root layout and the generated plain-page CSS, an arbitrary colour in a class name,
     or a colour value (hex, `rgb()`, `hsl()`, `oklch()`, `color-mix()` and the like) in any `.tsx`
     file or any code under `src/components`, `src/surfaces`, `src/features` and `src/app`. `src/styles/brand.ts`, which computes
-    brand colours, is the one code file that holds colour values. A composition test enforces rule 1
+    brand colours, is the one code file that holds colour values. ESLint (`eslint.config.mjs`) refuses raw
+    controls outside `components/ui`, CSS Module imports and a `style` prop outside its `STYLE_PROP_ALLOWED`
+    list, so a violation fails `pnpm -r lint` as it is typed. A composition test enforces rule 1
     across every product component under `src/components`, `src/surfaces`, `src/features` and
     `src/app`: no raw `button`, `input`,
     `select`, `textarea`, `table` or `dialog` element, no import of Native Select, and the

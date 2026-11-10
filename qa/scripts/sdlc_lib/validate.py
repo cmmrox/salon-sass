@@ -144,6 +144,11 @@ def check_cases(scope, scope_id, cover_targets, target_name):
         for suite in _list(entry.get("suites")):
             if suite not in S.SUITES:
                 _add(findings, scope, f"automation {eid} is in suite '{suite}', expected one of {S.SUITES}")
+        if "timeout_minutes" in entry:
+            limit = entry["timeout_minutes"]
+            if isinstance(limit, bool) or not isinstance(limit, (int, float)) or limit <= 0:
+                _add(findings, scope, f"automation {eid} has timeout_minutes '{limit}', expected a positive number "
+                                      f"(the default is {S.ENTRY_TIME_LIMIT_MINUTES})")
     for eid in sorted({e for e in entry_ids if entry_ids.count(e) > 1}):
         _add(findings, scope, f"automation id {eid} is used more than once")
     for missing in scope.get("_missing_files") or []:
@@ -209,6 +214,11 @@ def check_qa_status(scope, scope_id):
     findings = []
     if scope.get("qa_status") not in S.QA_STATUSES:
         _add(findings, scope, f"qa_status '{scope.get('qa_status')}' is not one of {S.QA_STATUSES}")
+    evidence = scope.get("evidence") if isinstance(scope.get("evidence"), dict) else {}
+    last_run = evidence.get("last_run")
+    if last_run and not S.REPORT_FOLDER_RE.fullmatch(str(last_run)):
+        _add(findings, scope, f"evidence.last_run '{last_run}' must name the run's report folder, "
+                              "qa/reports/<folder>, as qa/scripts/sdlc run printed it")
     if scope.get("qa_status") == "blocked" and not scope.get("blocked_reason"):
         _add(findings, scope, f"{scope_id} is blocked in QA but gives no blocked_reason")
     return findings
@@ -276,15 +286,59 @@ def check_handed_over(stage, sid):
     return findings
 
 
-def check_feature_covers_stages(feature, fid, stages):
+# A change request's criteria wait for their cases while the request is in flight (decision
+# 098): the lead adds them to a merged stage's spec, in a '## CR-nnn' section, before QA writes
+# their cases, and main must still validate in between.
+PENDING_CR_STATUSES = S.CR_IN_FLIGHT
+
+
+def pending_criteria(stage, bundle):
+    """{criterion: change request} for the criteria of a stage's spec that are not yet required."""
+    spec = stage.get("_spec") or {}
+    statuses = {r.get("id"): r.get("status") for r in bundle.get("change_requests") or []}
+    return {criterion: request for criterion, request in (spec.get("cr_criteria") or {}).items()
+            if statuses.get(request) in PENDING_CR_STATUSES}
+
+
+def pending_requirements(bundle):
+    """{requirement: change request} for the requirements an approved change request is changing in
+    the merged feature that owns them (the request names the requirement and a stage of that
+    feature). The feature's QA pass is from before the request, so it does not prove them. A
+    feature not merged yet builds the request into its own first delivery, so nothing is pending."""
+    owners = {}
+    for feature in bundle.get("features") or []:
+        if not flow.merged(feature):
+            continue
+        for rid in _list(feature.get("requirements")):
+            owners.setdefault(rid, feature.get("id"))
+    pending = {}
+    for request in bundle.get("change_requests") or []:
+        if request.get("status") not in PENDING_CR_STATUSES:
+            continue
+        changed = {str(sid).split("-")[0] for sid in _list(request.get("stages"))}
+        for rid in _list(request.get("requirements")):
+            if owners.get(rid) in changed:
+                pending.setdefault(rid, request.get("id"))
+    return pending
+
+
+def required_criteria(stage, bundle):
+    """The criteria a stage's cases must cover now: every criterion of its spec but the pending ones."""
+    spec = stage.get("_spec")
+    if not spec:
+        return []
+    pending = pending_criteria(stage, bundle)
+    return [criterion for criterion in spec["acs"] if criterion not in pending]
+
+
+def check_feature_covers_stages(feature, fid, stages, bundle):
     """A feature pass is the QA of every stage in it: each stage's criteria are covered by
     that stage's cases, written at the feature pass or at a stage pass the owner asked for."""
     findings = []
     for stage in stages:
         if stage.get("qa_status") == "pass":
             continue  # already held to the full gate as a stage
-        spec = stage.get("_spec")
-        for finding in check_coverage(stage, spec["acs"] if spec else []):
+        for finding in check_coverage(stage, required_criteria(stage, bundle)):
             findings.append(f"{finding} ({fid} cannot pass QA until it is)")
     return findings
 
@@ -297,7 +351,7 @@ def check_integration(scope, shared_branch=None):
     if not isinstance(integration, dict):
         _add(findings, scope, "integration must be a mapping")
         return findings
-    for key in ("qa_revision", "merged_commit"):
+    for key in ("reviewed_revision", "qa_revision", "merged_commit"):
         value = integration.get(key)
         if value and not S.COMMIT_RE.fullmatch(str(value)):
             _add(findings, scope, f"integration.{key} must be a full Git commit SHA")
@@ -432,7 +486,7 @@ def check_features(bundle):
                     _add(findings, feature, f"{fid} is '{status}' but stage {stage.get('id')} is '{stage.get('status')}'")
         if status in S.CLAIMED or feature.get("qa_status") == "pass":
             findings += check_qa_gate(feature, fid, None)
-            findings += check_feature_covers_stages(feature, fid, stages)
+            findings += check_feature_covers_stages(feature, fid, stages, bundle)
         if (status == "released") != bool(feature.get("released_in")):
             _add(findings, feature, "released_in must be set exactly when status is 'released'")
 
@@ -542,7 +596,7 @@ def check_stages(bundle):
         if status in S.HANDED_OVER:
             findings += check_handed_over(stage, sid)
         if stage.get("qa_status") == "pass":
-            findings += check_qa_gate(stage, sid, criteria)
+            findings += check_qa_gate(stage, sid, required_criteria(stage, bundle))
         if (status == "released") != bool(stage.get("released_in")):
             _add(findings, stage, "released_in must be set exactly when status is 'released'")
     return findings
