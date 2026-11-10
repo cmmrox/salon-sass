@@ -13,6 +13,7 @@ depends_on: []              # feature ids that must pass QA and be merged into G
 integration:               # lead owns branch/PR/merge fields; QA records the tested revision
   branch: null             # feature integration branch; stages and QA merge into it
   pull_request: null       # one GitHub PR into main, opened after feature-close
+  reviewed_revision: null  # full commit SHA the lead read at feature-review; QA's turn starts once it is set
   qa_revision: null        # full commit SHA tested by independent QA; product/automation must not change afterwards
   merged_commit: null      # written only by merge-sync after confirming the owner's GitHub merge
   merged_at: null          # GitHub's merge timestamp; complete does not mean merged or deployed

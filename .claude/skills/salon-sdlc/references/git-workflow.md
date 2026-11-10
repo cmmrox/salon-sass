@@ -108,7 +108,7 @@ the staged diff.
 
 - Roles share a branch through separate worktrees; only the role whose turn it is writes a given path.
 - Different stages may be built at once in separate worktrees and branches. Features proceed in
-  portfolio order unless the owner records `started_early`; a dependency still needs its merge.
+  portfolio order (within a milestone and the ones before it) unless the owner records `started_early`; a dependency still needs its merge.
 - Keep runtime changes (clock, services, databases) out of an environment another agent is using.
 
 ## Never

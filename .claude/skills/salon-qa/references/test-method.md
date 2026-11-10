@@ -72,7 +72,7 @@ defect in the suite.
 ## Evidence
 
 - `qa/scripts/sdlc run` writes `qa/reports/<folder>/` with a log per entry and `summary.json`,
-  including the tested commit. Screenshots and traces go there too. Reports are not committed;
+  including the tested commit and whether the checkout was clean. Screenshots and traces go there too. Reports are not committed;
   `evidence.last_run`, `evidence.last_result`, `integration.qa_revision`, bugs and `review.md` are.
 - A pass holds while the product is unchanged since `integration.qa_revision`
   (`docs/operations/verification-evidence.md`); a later change is verified for its affected scope.
