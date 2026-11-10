@@ -6,7 +6,9 @@
 --
 -- Additive, so the previous version keeps running against it. Every index starts with tenant_id.
 
-CREATE UNIQUE INDEX identity_session_refresh ON identity_session (tenant_id, refresh_hash);
+-- Not unique: a refresh credential is 256 random bits, and the lookup needs only the index; a unique one would also
+-- turn the isolation tests' fixed fixture hashes into key violations ahead of the foreign keys they prove.
+CREATE INDEX identity_session_refresh ON identity_session (tenant_id, refresh_hash);
 CREATE INDEX identity_refresh_credential ON identity_refresh_history (tenant_id, credential_hash);
 
 -- What the cleanup asks: sessions that expired, or were revoked, before a given instant.

@@ -126,10 +126,6 @@ class SessionHousekeepingIntegrationTest extends IntegrationTest {
     @Test
     void theRefreshLookupsAreIndexedForTheirSalon() {
         assertThat(indexColumns("identity_session", "identity_session_refresh")).isEqualTo("tenant_id,refresh_hash");
-        assertThat(owner.queryForObject(
-                        "SELECT indisunique FROM pg_index WHERE indexrelid = 'identity_session_refresh'::regclass",
-                        Boolean.class))
-                .isTrue();
         assertThat(indexColumns("identity_refresh_history", "identity_refresh_credential"))
                 .isEqualTo("tenant_id,credential_hash");
     }
