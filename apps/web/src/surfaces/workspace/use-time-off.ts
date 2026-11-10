@@ -1,7 +1,6 @@
 'use client';
 import { useRef, useState, type RefObject } from 'react';
 import { IdentityFailure, type Kind } from '@/features/identity';
-import { read, workspaceSession } from '@/lib/api-core/request';
 import {
   blockAsksImpact,
   blockIsEdited,
@@ -17,8 +16,6 @@ import {
   newLeave,
   withBlock,
   withLeave,
-  type AddedBlock,
-  type AddedLeave,
   type BlockForm,
   type BlockRefusal,
   type LeaveForm,
@@ -28,6 +25,8 @@ import {
   type MemberSchedule,
   type PeriodImpact,
   type PeriodImpactState,
+  useStaffAsk,
+  type StaffChange,
 } from '@/features/staff';
 
 /** The passing notices of leave and blocks. */
@@ -39,7 +38,7 @@ type Deps = {
   /** The sheet's opening an answer belongs to: an answer for a sheet since closed or reopened is dropped. */
   opening: RefObject<number>;
   /** A change made under the session's lock. */
-  send: <T>(action: string, body: unknown) => Promise<T>;
+  send: StaffChange;
   /** A failure the sheet answers itself; one the caller says in its own words is returned to it. */
   failed: (error: unknown) => IdentityFailure | null;
   clearSaid: () => void;
@@ -70,8 +69,10 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
   const leaveAsked = useRef(0);
   const blockAsked = useRef(0);
 
+  const ask = useStaffAsk(kind);
+
   async function askImpact(
-    action: string,
+    asking: () => Promise<PeriodImpact>,
     asked: RefObject<number>,
     show: (state: PeriodImpactState) => void,
   ): Promise<void> {
@@ -80,7 +81,7 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
     const started = opening.current;
     show({ state: 'loading' });
     try {
-      const answer = await read<PeriodImpact>(workspaceSession(kind), action);
+      const answer = await asking();
       if (asked.current === question && opening.current === started)
         show({ state: 'ready', bookings: answer.affected });
     } catch (error) {
@@ -97,8 +98,8 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
       setLeaveImpact(IDLE);
       return;
     }
-    const query = new URLSearchParams({ memberId, firstDay: form.firstDay!, lastDay: form.lastDay! });
-    void askImpact(`team-leave-affected?${query.toString()}`, leaveAsked, setLeaveImpact);
+    const query = { memberId, firstDay: form.firstDay!, lastDay: form.lastDay! };
+    void askImpact(() => ask('team-leave-affected', query), leaveAsked, setLeaveImpact);
   }
 
   function askBlockImpact(memberId: string, form: BlockForm, previous: BlockForm | null) {
@@ -110,13 +111,8 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
     // The label is no part of the period.
     if (previous?.date === form.date && previous?.starts === form.starts && previous?.finishes === form.finishes)
       return;
-    const query = new URLSearchParams({
-      memberId,
-      date: form.date!,
-      starts: form.starts,
-      finishes: form.finishes,
-    });
-    void askImpact(`team-block-affected?${query.toString()}`, blockAsked, setBlockImpact);
+    const query = { memberId, date: form.date!, starts: form.starts, finishes: form.finishes };
+    void askImpact(() => ask('team-block-affected', query), blockAsked, setBlockImpact);
   }
 
   async function addLeave(memberId: string) {
@@ -131,7 +127,7 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
     clearSaid();
     setLeaveRefusal(null);
     try {
-      const answer = await send<AddedLeave>('team-leave-add', { id: memberId, ...leaveSaveOf(leaveForm) });
+      const answer = await send('team-leave-add', { id: memberId, ...leaveSaveOf(leaveForm) });
       if (opening.current !== started) return;
       setLeave((list) => withLeave(list, answer.leave));
       setLeaveForm(null);
@@ -159,7 +155,7 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
     setBusy(true);
     clearSaid();
     try {
-      await send<{ ok: true }>('team-leave-remove', { id: memberId, leaveId: target.id });
+      await send('team-leave-remove', { id: memberId, leaveId: target.id });
       if (opening.current !== started) return;
       setLeave((list) => list.filter((each) => each.id !== target.id));
       notify('leaveRemoved');
@@ -183,7 +179,7 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
     clearSaid();
     setBlockRefusal(null);
     try {
-      const answer = await send<AddedBlock>('team-block-add', { id: memberId, ...blockSaveOf(blockForm) });
+      const answer = await send('team-block-add', { id: memberId, ...blockSaveOf(blockForm) });
       if (opening.current !== started) return;
       setBlocks((list) => withBlock(list, answer.block));
       setBlockForm(null);
@@ -207,7 +203,7 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
     setBusy(true);
     clearSaid();
     try {
-      await send<{ ok: true }>('team-block-remove', { id: memberId, blockId: target.id });
+      await send('team-block-remove', { id: memberId, blockId: target.id });
       if (opening.current !== started) return;
       setBlocks((list) => list.filter((each) => each.id !== target.id));
       notify('blockRemoved');

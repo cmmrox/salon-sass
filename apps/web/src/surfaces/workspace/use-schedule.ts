@@ -2,7 +2,6 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
-import { change as changeOnce, read, workspaceSession } from '@/lib/api-core/request';
 import {
   changeIsEdited,
   changeSaveOf,
@@ -16,14 +15,10 @@ import {
   withChange,
   workWeekFormOf,
   workWeekSaveOf,
-  type AddedDateChange,
   type ChangeForm,
   type ChangeRefusal,
   type HoursProblem,
   type MemberDateChange,
-  type MemberSchedule,
-  type SalonOpeningWeek,
-  type SavedMemberWeek,
   type ScheduleTab,
   type TeamAffectedBooking,
   type TeamMember,
@@ -31,6 +26,8 @@ import {
   type Weekday,
   type WeekdayName,
   type WorkdayForm,
+  useStaffAsk,
+  useStaffChanges,
 } from '@/features/staff';
 import { useTimeOff, type TimeOffToast } from './use-time-off';
 
@@ -81,6 +78,9 @@ export function useSchedule(
   // The opening a read or a change belongs to: an answer for a sheet since closed or reopened is dropped.
   const opening = useRef(0);
 
+  const ask = useStaffAsk(kind);
+  /** A change, made once. */
+  const send = useStaffChanges(kind).run;
   const timeOff = useTimeOff({ kind, opening, send, failed, clearSaid, notify, onLeaveChanged: onSaved });
 
   const may = canManage && !locked;
@@ -115,8 +115,8 @@ export function useSchedule(
     setLoading(true);
     try {
       const [schedule, salon] = await Promise.all([
-        read<MemberSchedule>(workspaceSession(kind), `team-schedule?memberId=${encodeURIComponent(person.id)}`),
-        read<SalonOpeningWeek>(workspaceSession(kind), 'team-opening-hours'),
+        ask('team-schedule', { memberId: person.id }),
+        ask('team-opening-hours'),
       ]);
       if (opening.current !== started) return;
       const saved = workWeekFormOf(schedule.weekly);
@@ -138,11 +138,6 @@ export function useSchedule(
     }
   }
 
-  /** A change made under the session's lock. */
-  async function send<T>(action: string, body: unknown): Promise<T> {
-    return changeOnce<T>(workspaceSession(kind), action, body);
-  }
-
   function clearSaid() {
     setNotice((current) => (current === 'refused' ? current : null));
     setAffected([]);
@@ -155,7 +150,7 @@ export function useSchedule(
     clearSaid();
     setApiProblems([]);
     try {
-      const answer = await send<SavedMemberWeek>('team-week-save', {
+      const answer = await send('team-week-save', {
         id: member.id,
         version: loaded.version,
         weekly: workWeekSaveOf(week),
@@ -192,7 +187,7 @@ export function useSchedule(
     setChangeRefusal(null);
     setChangeApiProblems([]);
     try {
-      const answer = await send<AddedDateChange>('team-date-change-add', {
+      const answer = await send('team-date-change-add', {
         id: member.id,
         ...changeSaveOf(change),
       });
@@ -228,7 +223,7 @@ export function useSchedule(
     setBusy(true);
     clearSaid();
     try {
-      await send<{ ok: true }>('team-date-change-remove', { id: member.id, changeId: target.id });
+      await send('team-date-change-remove', { id: member.id, changeId: target.id });
       if (opening.current !== started) return;
       setLoaded({ ...loaded, changes: loaded.changes.filter((each) => each.id !== target.id) });
       notify('dateRemoved');

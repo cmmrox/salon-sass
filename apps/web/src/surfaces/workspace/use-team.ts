@@ -1,9 +1,9 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import type { CategoryList, ServiceList } from '@/features/catalogue';
+import { useRef, useState } from 'react';
+import { useCategories, useServices } from '@/features/catalogue';
 import { IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
-import { change as changeOnce, read, workspaceSession } from '@/lib/api-core/request';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 import {
   memberProblemsOf,
   memberProblemsOfFields,
@@ -16,10 +16,11 @@ import {
   type MemberValues,
   type TeamCategory,
   type TeamMember,
-  type TeamMemberList,
   type TeamService,
   type TeamSignInAccount,
-  type TeamSignInAccountList,
+  useSignInAccounts,
+  useStaffChanges,
+  useTeamMembers,
 } from '@/features/staff';
 
 /** What the page says above its list: someone else changed it, the API could not be reached, or a change was refused. */
@@ -44,11 +45,26 @@ type SheetState = { member: TeamMember | null; values: MemberValues; apiProblems
  */
 export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToast) => void) {
   const router = useRouter();
-  const [members, setMembers] = useState<TeamMember[] | null>(null);
-  const [categories, setCategories] = useState<TeamCategory[]>([]);
-  const [services, setServices] = useState<TeamService[]>([]);
-  const [accounts, setAccounts] = useState<TeamSignInAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const reads = {
+    team: useTeamMembers(kind),
+    categories: useCategories(kind),
+    services: useServices(kind),
+    accounts: useSignInAccounts(kind, canManage),
+  };
+  const change = useStaffChanges(kind).run;
+  // The team and what its cards and picker name are shown together, once each has been read.
+  const together = Boolean(
+    reads.team.data && reads.categories.data && reads.services.data && (!canManage || reads.accounts.data),
+  );
+  const members = together ? (reads.team.data?.items ?? null) : null;
+  const categories: TeamCategory[] = together
+    ? (reads.categories.data?.items ?? []).map(({ id, name }) => ({ id, name }))
+    : [];
+  const services: TeamService[] = together
+    ? (reads.services.data?.items ?? []).map(({ id, name, categoryId }) => ({ id, name, categoryId }))
+    : [];
+  const accounts: TeamSignInAccount[] = together && canManage ? (reads.accounts.data?.items ?? []) : [];
+  const loading = Object.values(reads).some((each) => each.isFetching);
   const [notice, setNotice] = useState<TeamNotice>(null);
   const [refusal, setRefusal] = useState<TeamRefusal>(null);
   const [locked, setLocked] = useState(false);
@@ -81,30 +97,17 @@ export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToas
     return null;
   }
 
-  /** Reads the team and what its cards and picker name; null when they could not be read (the page says why). */
+  /** Reads the team and what its cards and picker name again; null when they could not be read (the page says why). */
   async function load(): Promise<TeamMember[] | null> {
-    setLoading(true);
-    try {
-      const [team, nextCategories, nextServices, nextAccounts] = await Promise.all([
-        read<TeamMemberList>(workspaceSession(kind), 'team-members'),
-        read<CategoryList>(workspaceSession(kind), 'catalogue-categories'),
-        read<ServiceList>(workspaceSession(kind), 'catalogue-services'),
-        canManage
-          ? read<TeamSignInAccountList>(workspaceSession(kind), 'team-sign-in-accounts').then((answer) => answer.items)
-          : Promise.resolve([]),
-      ]);
-      setMembers(team.items);
-      setCategories(nextCategories.items.map(({ id, name }) => ({ id, name })));
-      setServices(nextServices.items.map(({ id, name, categoryId }) => ({ id, name, categoryId })));
-      setAccounts(nextAccounts);
-      setNotice((current) => (current === 'refused' ? current : null));
-      return team.items;
-    } catch (error) {
-      failed(error);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    const [team, ...others] = await Promise.all([
+      reads.team.refetch(),
+      reads.categories.refetch(),
+      reads.services.refetch(),
+      ...(canManage ? [reads.accounts.refetch()] : []),
+    ]);
+    if (!team?.data || team.error || others.some((each) => each.error)) return null;
+    setNotice((current) => (current === 'refused' ? current : null));
+    return team.data.items;
   }
 
   /** Reads again after a conflict, and an open sheet with it: its person as they are now, edits dropped. */
@@ -119,22 +122,7 @@ export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToas
     }
   }
 
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // Loaded once when the page opens; reload is the person's choice after a conflict.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /** A change made under the session's lock. */
-  async function change<T>(action: string, body: unknown): Promise<T> {
-    return changeOnce<T>(workspaceSession(kind), action, body);
-  }
+  useReadFailure([reads.team, reads.categories, reads.services, reads.accounts], (failure) => failed(failure));
 
   /** What a refusal says, from what the API named: the services and the number come from its `errors` items. */
   function refusalOf(failure: IdentityFailure, name: string): TeamRefusal {
@@ -181,8 +169,8 @@ export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToas
     try {
       const request = memberRequestOf(sheet.values);
       await (editing
-        ? change<TeamMember>('team-member-save', { ...request, id: editing.id, version: editing.version })
-        : change<TeamMember>('team-member-add', request));
+        ? change('team-member-save', { ...request, id: editing.id, version: editing.version })
+        : change('team-member-add', request));
       notify(editing ? 'saved' : 'added');
       setSheetOpen(false);
       await load();
@@ -205,7 +193,7 @@ export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToas
     setBusy(true);
     setRefusal(null);
     try {
-      await change<{ ok: true }>('team-member-remove', { id: member.id, version: member.version });
+      await change('team-member-remove', { id: member.id, version: member.version });
       notify('removed');
       setSheetOpen(false);
       await load();
@@ -232,7 +220,7 @@ export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToas
     form.append('memberId', member.id);
     form.append('file', file);
     try {
-      const saved = await change<TeamMember>('team-photo', form);
+      const saved = await change('team-photo', form);
       photoChanged(started, saved);
       if (stillOpen()) setPhotoUpload({ state: 'idle' });
       notify('photoSaved');
@@ -255,7 +243,7 @@ export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToas
     setBusy(true);
     setRefusal(null);
     try {
-      const saved = await change<TeamMember>('team-photo-remove', { id: member.id });
+      const saved = await change('team-photo-remove', { id: member.id });
       photoChanged(started, saved);
       notify('photoRemoved');
       await load();

@@ -1,17 +1,9 @@
 'use client';
 import { todayInZone } from '@salon/format';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import {
-  ensurePrincipal,
-  IdentityFailure,
-  identityRequest,
-  leaveEndedSession,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-  type Kind,
-} from '@/features/identity';
+import { useState } from 'react';
+import { IdentityFailure, leaveEndedSession, usePrincipal, type Kind } from '@/features/identity';
+import { useReadFailure } from '@/lib/api-core/data-layer';
 import {
   badDays,
   choiceFormOf,
@@ -22,9 +14,14 @@ import {
   shownYears,
   weekFormOf,
   weekSaveOf,
+  useClosures,
+  useHolidays,
+  useOpeningHours,
+  useSetStaffAnswer,
+  useStaffAsk,
+  useStaffChanges,
   type ChoiceForm,
   type Closure,
-  type ClosureImpact,
   type DayForm,
   type HolidayYear,
   type HoursSettings,
@@ -54,9 +51,20 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
   const [choices, setChoices] = useState<Record<number, Record<string, ChoiceForm>>>({});
   /** The year a holiday change is being saved for. */
   const [holidayYear, setHolidayYear] = useState<number | null>(null);
-  const [closures, setClosures] = useState<Closure[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
+  const reads = {
+    principal: usePrincipal(kind),
+    hours: useOpeningHours(kind),
+    holidays: useHolidays(kind),
+    closures: useClosures(kind),
+  };
+  const ask = useStaffAsk(kind);
+  const request = useStaffChanges(kind).run;
+  const setAnswer = useSetStaffAnswer(kind);
+  const loaded = Boolean(reads.principal.data && reads.hours.data && reads.holidays.data && reads.closures.data);
+  const closures = loaded ? (reads.closures.data ?? []) : [];
+  const setClosures = (next: (current: Closure[]) => Closure[]) =>
+    setAnswer('closures', next(reads.closures.data ?? []));
+  const loading = Object.values(reads).some((each) => each.isFetching) || (!loaded && !failedRead(reads));
   const [notice, setNotice] = useState<SettingsNotice>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
@@ -85,6 +93,14 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     setChoices((current) => ({ ...current, [next.year]: choicesOf(next) }));
   }
 
+  // The forms start from each version read: the week from the hours, the years and choices from the holidays.
+  const [shown, setShown] = useState<{ hours?: HoursSettings; holidays?: SalonHolidays }>({});
+  if (loaded && (reads.hours.data !== shown.hours || reads.holidays.data !== shown.holidays)) {
+    setShown({ hours: reads.hours.data, holidays: reads.holidays.data });
+    if (reads.hours.data !== shown.hours && reads.hours.data) showHours(reads.hours.data);
+    if (reads.holidays.data !== shown.holidays && reads.holidays.data) showYears(shownYears(reads.holidays.data.years));
+  }
+
   function failed(error: unknown): IdentityFailure | null {
     const failure = error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable');
     if (failure.code === 'invalid_session') {
@@ -105,47 +121,22 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     return null;
   }
 
+  /** Reads the tab again after a conflict: what is on the server replaces what was edited. */
   async function load() {
-    setLoading(true);
-    try {
-      await ensurePrincipal(kind);
-      const [settings, holidays, upcoming] = await Promise.all([
-        identityRequest<HoursSettings>(kind, 'hours'),
-        identityRequest<SalonHolidays>(kind, 'holidays'),
-        identityRequest<Closure[]>(kind, 'closures'),
-      ]);
-      showHours(settings);
-      showYears(shownYears(holidays.years));
-      setClosures(upcoming);
-      setNotice(null);
-      setLoaded(true);
-    } catch (error) {
-      failed(error);
-    } finally {
-      setLoading(false);
-    }
+    const [principal, settings, holidays, upcoming] = await Promise.all([
+      reads.principal.refetch(),
+      reads.hours.refetch(),
+      reads.holidays.refetch(),
+      reads.closures.refetch(),
+    ]);
+    if ([principal, settings, holidays, upcoming].some((each) => each.error)) return;
+    if (settings.data) showHours(settings.data);
+    if (holidays.data) showYears(shownYears(holidays.data.years));
+    setShown({ hours: settings.data, holidays: holidays.data });
+    setNotice(null);
   }
 
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) void load();
-    });
-    return () => {
-      active = false;
-    };
-    // Loaded once when the tab opens; reload is the person's choice after a conflict.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /** One BFF change under the session's cross-tab lock, as every credential-bearing change is. */
-  async function request<T>(action: string, body: unknown): Promise<T> {
-    if (!supportsLocks()) throw new IdentityFailure('browser_unsupported');
-    return withIdentityLock(kind, async () => {
-      await principalInsideLock(kind);
-      return identityRequest<T>(kind, action, body);
-    });
-  }
+  useReadFailure(Object.values(reads), (failure) => failed(failure));
 
   function changeDay(day: WeekdayName, change: Partial<DayForm>) {
     setWeek((current) => current.map((each) => (each.day === day ? { ...each, ...change } : each)));
@@ -162,7 +153,10 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     }
     setBusy('hours');
     try {
-      showHours(await request<HoursSettings>('hours-save', weekSaveOf(week, hours.version)));
+      const saved = await request('hours-save', weekSaveOf(week, hours.version));
+      setAnswer('hours', saved);
+      setShown((current) => ({ ...current, hours: saved }));
+      showHours(saved);
       setNotice(null);
       notify('hoursSaved');
     } catch (error) {
@@ -186,7 +180,7 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     setBusy('holidays');
     setHolidayYear(yearNumber);
     try {
-      const saved = await request<HolidayYear>('holiday-choose', { year: year.year, ...choiceSaveOf(date, next) });
+      const saved = await request('holiday-choose', { year: year.year, ...choiceSaveOf(date, next) });
       showYear(saved);
       setNotice(null);
       notify('holidaySaved');
@@ -213,7 +207,7 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     setBusy('holidays');
     setHolidayYear(yearNumber);
     try {
-      const saved = await request<HolidayYear>('holidays-accept', {
+      const saved = await request('holidays-accept', {
         year: year.year,
         version: year.version,
         choices: coming.map((day) => choiceSaveOf(day.date, chosen[day.date]!)),
@@ -232,7 +226,7 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     setClosureRefused(null);
     setImpact({ state: 'loading' });
     try {
-      const answer = await identityRequest<ClosureImpact>(kind, `closure-impact?date=${encodeURIComponent(date)}`);
+      const answer = await ask('closure-impact', { date });
       setImpact({ state: 'ready', bookings: answer.bookings });
     } catch (error) {
       const failure = error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable');
@@ -245,7 +239,7 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     setBusy('closure');
     setClosureRefused(null);
     try {
-      const added = await request<Closure>('closure-add', { date, reason: reason.trim() === '' ? null : reason });
+      const added = await request('closure-add', { date, reason: reason.trim() === '' ? null : reason });
       setClosures((current) => [...current, added].sort((a, b) => a.date.localeCompare(b.date)));
       setSheetOpen(false);
       setImpact({ state: 'idle' });
@@ -266,7 +260,7 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
   async function reopen(closure: Closure) {
     setReopening(closure.id);
     try {
-      await request<{ ok: boolean }>('closure-reopen', { id: closure.id });
+      await request('closure-reopen', { id: closure.id });
       setClosures((current) => current.filter((each) => each.id !== closure.id));
       setNotice(null);
       notify('reopened');
@@ -313,4 +307,9 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     close,
     reopen,
   };
+}
+
+/** Whether one of the tab's reads failed, so that it is not loading any more. */
+function failedRead(reads: Record<string, { error: unknown }>) {
+  return Object.values(reads).some((each) => each.error);
 }

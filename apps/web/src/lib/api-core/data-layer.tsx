@@ -112,7 +112,26 @@ export function moduleData<Reads extends ReadMap, Changes extends ChangeMap>(mod
       client.setQueryData(keyOf(scope, session, action), answer);
   }
 
-  return { keyOf, useRead, useChanges, useSetAnswer };
+  /**
+   * A question asked when something happens rather than when a screen opens (a sheet opened, a period chosen): it is
+   * read through the same cache and keys, asked again each time, and answers or throws. The screen keeps only the
+   * answer to the latest question it asked.
+   */
+  function useAsk(session: Session) {
+    const client = useQueryClient();
+    const scope = useDataScope();
+    return <A extends keyof Reads & string>(
+      action: A,
+      ...[query]: Reads[A] extends { query: infer Q } ? [query: Q] : []
+    ): Promise<Reads[A]['answer']> =>
+      client.fetchQuery({
+        queryKey: keyOf(scope, session, action, query as Query | undefined),
+        queryFn: ({ signal }) => read<Reads[A]['answer']>(session, action, query as Query | undefined, signal),
+        staleTime: 0,
+      });
+  }
+
+  return { keyOf, useRead, useChanges, useSetAnswer, useAsk };
 }
 
 /** What a read's result says about its failure. */
