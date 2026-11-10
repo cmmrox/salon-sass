@@ -51,3 +51,8 @@ Verified on 2026-11-10 on `148bf6af` (fixes `199d2bd5`, `66bbcb60`), QA instance
   - Each was answered 201 or 200, and each image was chosen, shown and saved.
 - Each fails without the fixes, with 503 `service_unavailable`, on a temporary local build with the eight fix commits reverted (commit d99b85b5 on a throwaway branch, deleted afterwards; the QA database was still at V33): `qa/reports/20261110-114024-F04-S02-a4b691cc262e`, `qa/reports/20261110-114052-F05-S01-cfdb000731b8`, `qa/reports/20261110-114132-F06-S01-4f555fe1df07`.
 - **Neighbours, for the BFF and the request log** (every BFF request's budget): F04-S02 `brand-screens`, F05-S01 `services-screens`, F06-S01 `team-screens` (each in its folder above), and F02-S04 `web-functional` and `web-resilience-address` in `qa/reports/20261110-115523-F02-S04-d44d23963c74`. All passed.
+
+**After PR #29's review fix `1910c272`** (the upload's session and permission are checked again before its form is read), on `ec24702c` after `qa-redeploy.sh`. Each upload's body still took longer than 3.5 seconds to send, as `slowUpload` asserts, and each still succeeded:
+- TC-F04-S02-035, logo: `qa/reports/20261110-134719-F04-S02-partial-f57522440934` (`brand-screens`, 12/12). The case now also sends an upload with forged, non-empty `salon_staff_access` and `salon_staff_refresh` cookies; it is answered 401 `invalid_session` and stores nothing, as the upload with no cookie is.
+- TC-F05-S01-051, service photo: `qa/reports/20261110-134801-F05-S01-partial-80199716f7d6` (`catalogue-api` 32/32, `services-screens` 17/17).
+- TC-F06-S01-057, team photo: `qa/reports/20261110-134947-F06-S01-partial-f0adbfff2d35` (`team-screens` 19/19).
