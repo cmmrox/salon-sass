@@ -22,7 +22,7 @@ const RECHECK_MS = 2000;
 const SEARCH_WAIT_MS = 300;
 
 /** Why the list is not shown: the API could not be reached, or refused this person. */
-export type ListProblem = 'unavailable' | 'refused' | null;
+type ListProblem = 'unavailable' | 'refused' | null;
 
 /**
  * The Bookings page's list (F07-S03 AC-2, AC-3): the day and filters kept in the address (pushed, so back restores

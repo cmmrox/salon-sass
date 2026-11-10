@@ -14,7 +14,7 @@ import type {
 } from '../types';
 
 /** The catalogue's BFF reads (F05-S01 to F05-S03), each with its query and answer. */
-export type CatalogueReads = {
+type CatalogueReads = {
   'catalogue-categories': { answer: CategoryList };
   'catalogue-services': { answer: ServiceList };
   'catalogue-popular-setting': { answer: PopularSetting };
@@ -29,7 +29,7 @@ type Body = Record<string, unknown>;
 type Done = { ok: true };
 
 /** The catalogue's BFF changes, each with what it answers. The request is rebuilt on the server from its own fields. */
-export type CatalogueChanges = {
+type CatalogueChanges = {
   'catalogue-category-add': { body: Body; answer: unknown };
   'catalogue-category-rename': { body: Body; answer: unknown };
   'catalogue-category-move': { body: Body; answer: CategoryList };

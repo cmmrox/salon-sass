@@ -22,9 +22,6 @@ export const WORKSPACE_ROUTES = routeTable(
   brandingRoutes,
 );
 
-/** The workspace's pages, by path. */
-export const WORKSPACE_PAGES = new Map(WORKSPACE_ROUTES.pages.map((page) => [page.path, page]));
-
 /** The page that opens each view: its permission and title. */
 export function pageOf(view: string) {
   return WORKSPACE_ROUTES.pages.find((page) => page.view === view) ?? null;

@@ -30,7 +30,7 @@ export type BookingReads = {
 type Body = Record<string, unknown>;
 
 /** The booking module's BFF changes, each with what it answers. */
-export type BookingChanges = {
+type BookingChanges = {
   'booking-rules-save': { body: Body; answer: BookingRulesSettings };
   'booking-place': { body: Body; answer: Booking };
   'booking-confirm': { body: Body; answer: Booking };

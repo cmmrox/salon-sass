@@ -20,7 +20,7 @@ import type {
 } from '../types';
 
 /** The staff module's BFF reads: the team and its schedules (F06), the salon's hours and closures (F04-S03). */
-export type StaffReads = {
+type StaffReads = {
   'team-members': { answer: TeamMemberList };
   'team-sign-in-accounts': { answer: TeamSignInAccountList };
   'team-schedule': { query: { memberId: string }; answer: MemberSchedule };
@@ -39,7 +39,7 @@ export type StaffReads = {
 type Body = Record<string, unknown>;
 
 /** The staff module's BFF changes, each with what it answers. The request is rebuilt on the server from its fields. */
-export type StaffChanges = {
+type StaffChanges = {
   'team-member-add': { body: Body; answer: TeamMember };
   'team-member-save': { body: Body; answer: TeamMember };
   'team-member-remove': { body: Body; answer: { ok: true } };

@@ -4,7 +4,7 @@ import { workspaceSession, type WorkspaceKind } from '@/lib/api-core/request';
 import type { BrandDraft, ProfileDraft, UploadedBrandImage } from '../types';
 
 /** The branding module's BFF reads: the salon's profile and brand drafts (F04-S01, F04-S02). */
-export type BrandingReads = {
+type BrandingReads = {
   'profile-draft': { answer: ProfileDraft };
   'brand-draft': { answer: BrandDraft };
 };
@@ -12,7 +12,7 @@ export type BrandingReads = {
 type Versioned = { version: unknown };
 
 /** The branding module's BFF changes, each answering the draft as it is now (an upload, the image it stored). */
-export type BrandingChanges = {
+type BrandingChanges = {
   'profile-save': { body: Record<string, unknown>; answer: ProfileDraft };
   'profile-publish': { body: Versioned; answer: ProfileDraft };
   'profile-discard': { body: Versioned; answer: ProfileDraft };

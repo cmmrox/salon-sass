@@ -39,7 +39,7 @@ export type BffChange = {
 };
 
 /** An upload: a multipart form of one text field and a file, read only after the session and permission check. */
-export type BffUpload = {
+type BffUpload = {
   permission: string;
   field: 'kind' | 'serviceId' | 'memberId';
   /** The status a stored file is answered with (a brand image is 201, a photo 200). */
@@ -49,7 +49,7 @@ export type BffUpload = {
 };
 
 /** A workspace page: where it is, the view the workspace renders, who may see it, its title and its place in the menu. */
-export type WorkspacePage = {
+type WorkspacePage = {
   readonly path: string;
   readonly view: string;
   readonly permission: string;

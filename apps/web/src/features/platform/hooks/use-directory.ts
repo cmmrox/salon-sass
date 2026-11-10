@@ -1,8 +1,6 @@
 'use client';
 import { useConsolePages, type DirectoryPage } from '../client/console-data';
 
-export type { DirectoryPage };
-
 export const PAGE_SIZE = 20;
 
 /**

@@ -10,7 +10,6 @@ export type {
   ProductList as ProductListAnswer,
   PublicTax,
   ServiceList,
-  TaxHistory,
   TaxSettings,
 } from './types';
 export {

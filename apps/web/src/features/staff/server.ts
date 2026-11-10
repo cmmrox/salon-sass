@@ -2,7 +2,5 @@
 // calls and a team member's photo (F06-S01).
 import 'server-only';
 
-export { salonHoursFor } from './server/salon-hours';
-export { salonTeamFor } from './server/salon-team';
 export { teamPhoto } from './server/team-photo';
 export { staffRoutes } from './server/routes';

@@ -25,7 +25,7 @@ const ScopeContext = createContext<string | null>(null);
 notifyManager.setScheduler(queueMicrotask);
 
 /** Reads are not retried by the layer: a screen says at once that the API could not be reached, as it always has. */
-export function newQueryClient(): QueryClient {
+function newQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: { retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false },

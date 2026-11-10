@@ -5,14 +5,14 @@ import { workspaceSession, type WorkspaceKind } from '@/lib/api-core/request';
 import type { Entitlements } from '../types';
 
 /** The salon's account as the workspace reads it (F03): its plan and limits, its invoices, its support sessions. */
-export type SalonAccountReads = {
+type SalonAccountReads = {
   entitlements: { answer: Entitlements };
   invoices: { query: { page: number }; answer: components['schemas']['InvoicePage'] };
   'support-sessions': { query: { page: number }; answer: components['schemas']['SalonSupportSessionPage'] };
 };
 
 /** The Owner's one change to the salon's account here: ending a support session (F03-S04). */
-export type SalonAccountChanges = {
+type SalonAccountChanges = {
   'support-revoke': { body: { id: string }; answer: { ok: true } };
 };
 

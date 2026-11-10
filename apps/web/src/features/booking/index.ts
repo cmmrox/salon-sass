@@ -7,7 +7,6 @@ export type {
   BookingRulesHistory,
   BookingRulesSettings,
   CancelReason,
-  OpenDays,
   PublicBookingRules,
 } from './types';
 export { BookingRulesForm } from './components/BookingRulesForm';
@@ -48,7 +47,6 @@ export { type SheetAction } from './client/appointment-rules';
 export { aYearOn, dateInZone, minutesLeft, secondsLeft, whenOf } from './client/booking-time';
 export { filtered, listRequest, PAGE_SIZE, queryOf, searchOf, type BookingsQuery } from './client/bookings-query';
 export {
-  BOOKINGS_POLL_MS,
   useApiOffset,
   useBookingAsk,
   useBookingChanges,

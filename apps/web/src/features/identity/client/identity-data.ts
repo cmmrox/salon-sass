@@ -4,7 +4,7 @@ import { workspaceSession, type WorkspaceKind } from '@/lib/api-core/request';
 import type { Principal } from '../types';
 
 /** The identity module's BFF reads after first render. */
-export type IdentityReads = {
+type IdentityReads = {
   /** Who is signed in, as the API confirms it: `GET /api/v1/identity/me`. */
   principal: { answer: Principal };
 };

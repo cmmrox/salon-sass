@@ -35,7 +35,7 @@ export type ConsoleReads = {
 type Body = Record<string, unknown>;
 
 /** The console's BFF changes, each with what it answers. The request is rebuilt on the server from its own fields. */
-export type ConsoleChanges = {
+type ConsoleChanges = {
   'plan-create': { body: Body; answer: Schemas['PlanDefinition'] };
   'salon-create': { body: Body; answer: Schemas['SalonCreated'] };
   'subscription-start': { body: Body; answer: unknown };

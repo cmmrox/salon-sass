@@ -2,6 +2,4 @@
 // page's (F07-S03).
 import 'server-only';
 
-export { salonBookingsFor } from './server/salon-bookings';
-export { salonBookingRulesFor } from './server/salon-booking-rules';
 export { bookingRoutes } from './server/routes';

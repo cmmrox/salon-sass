@@ -63,10 +63,6 @@ export class RequestFailure extends Error {
   }
 }
 
-/** Any thrown value as a failure: what is not one is an outcome nobody can know, `service_unavailable`. */
-export const failureOf = (error: unknown): RequestFailure =>
-  error instanceof RequestFailure ? error : new RequestFailure('service_unavailable');
-
 /**
  * What a screen does about a failure, decided once for every screen:
  *
@@ -107,9 +103,6 @@ export function reasonOf(failure: RequestFailure): FailureReason {
       return REFUSALS.has(failure.code) ? 'refused' : 'rule';
   }
 }
-
-/** Whether the outcome of a change is unknown: it may have been made although no answer said so (BUG-F07-006). */
-export const outcomeUnknown = (failure: RequestFailure) => reasonOf(failure) === 'unavailable';
 
 export const supportsLocks = () => typeof navigator !== 'undefined' && Boolean(navigator.locks);
 

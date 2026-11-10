@@ -2,7 +2,6 @@
 import {
   consoleSession,
   ensurePrincipal as ensureSessionPrincipal,
-  principalInsideLock as principalInsideSessionLock,
   read,
   send,
   withSessionLock,
@@ -23,11 +22,6 @@ export function operatorRequest<T>(action: string, body?: unknown): Promise<T> {
 /** Runs a credential change while holding the operator lock; without Web Locks it is refused. */
 export function withOperatorLock<T>(work: () => Promise<T>): Promise<T> {
   return withSessionLock(consoleSession, work);
-}
-
-/** Called only while holding the lock: one renewal at most, never a retry of a spent family. */
-export function principalInsideLock(): Promise<OperatorPrincipal> {
-  return principalInsideSessionLock<OperatorPrincipal>(consoleSession);
 }
 
 /**
