@@ -901,7 +901,8 @@ describe('a salon suspended while Bookings is open', () => {
     expect(await screen.findByTestId('salon-unavailable')).toBeInTheDocument();
     expect(screen.queryAllByTestId('booking-row')).toHaveLength(0);
     expect(screen.queryByTestId('bookings-stale')).toBeNull();
-    expect(leave).toHaveBeenCalledOnce();
+    // The leave is made by an effect once the notice is on screen.
+    await waitFor(() => expect(leave).toHaveBeenCalledOnce());
   });
 
   it('lets the same session go on once the salon is reactivated: the next load reads as before', async () => {

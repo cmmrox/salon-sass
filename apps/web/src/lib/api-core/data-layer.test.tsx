@@ -81,7 +81,8 @@ describe('a suspended salon', () => {
     );
     expect(await screen.findByTestId('frame-suspended')).toBeInTheDocument();
     expect(screen.queryByTestId('members')).toBeNull();
-    expect(leave).toHaveBeenCalledOnce();
+    // The leave is made by an effect once the notice is on screen.
+    await waitFor(() => expect(leave).toHaveBeenCalledOnce());
   });
 
   it('is not an API that could not be reached: that one leaves nothing', async () => {
