@@ -10,6 +10,7 @@
  */
 import { chromium, type Browser } from '@playwright/test';
 
+import { PUBLIC_SALON_FIELDS } from '@qa/answers';
 import { SALON_PATH } from '@qa/api-client';
 import { apiUrl, webUrl } from '@qa/env';
 import { expect, test } from '@qa/fixtures';
@@ -24,7 +25,10 @@ async function openSalon(browser: Browser, salon: Salon): Promise<{ api: string;
     const brand = await page.goto(`${salonUrl(salon, apiUrl)}${SALON_PATH}`);
     expect(brand, `${salon.hostname}: the API answered the browser`).not.toBeNull();
     expect(brand!.status(), `${salon.hostname}: the API's status`).toBe(200);
-    expect(await brand!.json(), `${salon.hostname}: the brand the browser was given`).toEqual({
+    // The public salon's fields since F04 (PUBLIC_SALON_FIELDS); the four that name the salon are its own.
+    const given = await brand!.json();
+    expect(Object.keys(given).sort(), `${salon.hostname}: the fields the browser was given`).toEqual(PUBLIC_SALON_FIELDS);
+    expect({ slug: given.slug, name: given.name, brandColour: given.brandColour, timeZone: given.timeZone }, `${salon.hostname}: the brand the browser was given`).toEqual({
       slug: salon.slug,
       name: salon.name,
       brandColour: salon.brandColour,
