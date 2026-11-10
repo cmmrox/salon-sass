@@ -82,6 +82,48 @@ active_run() {
 # QA instance down.
 require_prerequisites postgres api web
 
+# The QA instance's lock, which `qa/scripts/sdlc run` holds for a whole run (from before its build
+# check): taken here before the guard below and held through the stop, rebuild, start and check,
+# so a run cannot start in between. The mechanism of this library's own lock (acquire_lock): a
+# symbolic link made in one step, naming its holder as "<process id> <start time>"; a lock whose
+# holder is no longer that process is stale and is removed by one remover at a time. It is not
+# the library's lock, which local-service.sh and local-up.sh take for themselves below.
+INSTANCE_LOCK="$LOCK_DIR/qa-instance.lock"
+INSTANCE_LOCK_HOLDER=""
+release_instance_lock() {
+  if [ -n "$INSTANCE_LOCK_HOLDER" ] && [ "$(readlink "$INSTANCE_LOCK" 2>/dev/null || true)" = "$INSTANCE_LOCK_HOLDER" ]; then
+    rm -f "$INSTANCE_LOCK"
+  fi
+}
+clear_stale_instance_lock() { # <holder>
+  find "$INSTANCE_LOCK.clearing" -maxdepth 0 -mmin +1 -exec rmdir {} \; 2>/dev/null || true
+  mkdir "$INSTANCE_LOCK.clearing" 2>/dev/null || return 0
+  if [ "$(readlink "$INSTANCE_LOCK" 2>/dev/null || true)" = "$1" ]; then
+    rm -f "$INSTANCE_LOCK"
+  fi
+  rmdir "$INSTANCE_LOCK.clearing"
+}
+take_instance_lock() {
+  local me holder tries=0
+  mkdir -p "$LOCK_DIR"
+  me="$$ $(process_started "$$")"
+  while ! ln -s "$me" "$INSTANCE_LOCK" 2>/dev/null; do
+    holder="$(readlink "$INSTANCE_LOCK" 2>/dev/null || true)"
+    if [ -n "$holder" ] && is_same_process "$holder"; then
+      fail "the QA instance is in use by process ${holder%% *} ($(ps -p "${holder%% *}" -o command= 2>/dev/null | cut -c1-120)): a QA run, or another redeploy, holds its lock (${INSTANCE_LOCK#"$ROOT"/}). Run again once it has finished. Nothing was stopped."
+    fi
+    [ -z "$holder" ] || clear_stale_instance_lock "$holder"
+    tries=$((tries + 1))
+    [ "$tries" -lt 10 ] || fail "could not take the QA instance's lock ${INSTANCE_LOCK#"$ROOT"/}. Nothing was stopped."
+  done
+  INSTANCE_LOCK_HOLDER="$me"
+  trap release_instance_lock EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
+}
+take_instance_lock
+
 if run="$(active_run)"; then
   fail "a QA run of this checkout is in progress: ${run#"$ROOT"/}. Restarting the API and web app now would break it partway. Wait for it to finish, or stop it, and run again. Nothing was stopped."
 fi

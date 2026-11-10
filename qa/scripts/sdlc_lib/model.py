@@ -6,6 +6,7 @@ directory tree.
 """
 import glob
 import hashlib
+import json
 import os
 import re
 
@@ -318,7 +319,33 @@ def _title_cases(data):
     return found
 
 
-def _scope(directory, yaml_name):
+def _report_summaries(data, report_base):
+    """The summary.json of each report folder a scope's evidence names, read where the folder is
+    in this checkout (qa/reports is not committed, so in CI or another checkout it is not).
+
+    {path: summary dict}, None for a folder that is absent, {"_unreadable": True} for a summary
+    that is not JSON. report_base is the checkout whose qa/reports is read; this one by default."""
+    evidence = data.get("evidence") if isinstance(data.get("evidence"), dict) else {}
+    paths = [evidence.get("last_run"), evidence.get("full_pass_run")]
+    paths += evidence.get("reruns") if isinstance(evidence.get("reruns"), list) else []
+    found = {}
+    for path in paths:
+        if not isinstance(path, str) or not path or path in found:
+            continue
+        summary = os.path.join(report_base, path, "summary.json")
+        if not os.path.isfile(summary):
+            found[path] = None
+            continue
+        try:
+            with open(summary, encoding="utf-8") as handle:
+                value = json.load(handle)
+            found[path] = value if isinstance(value, dict) else {"_unreadable": True}
+        except (OSError, ValueError):
+            found[path] = {"_unreadable": True}
+    return found
+
+
+def _scope(directory, yaml_name, report_base="."):
     """Loads a feature or a stage: its yaml plus the facts about its sibling files."""
     path = os.path.join(directory, yaml_name)
     data = _yaml(path) or {"_unreadable": True}
@@ -334,6 +361,7 @@ def _scope(directory, yaml_name):
     data["_bugs"] = _bugs(directory)
     data["_has_review"] = os.path.isfile(os.path.join(directory, "review.md"))
     data["_has_readme"] = os.path.isfile(os.path.join(directory, "README.md"))
+    data["_reports"] = _report_summaries(data, report_base)
     data["_missing_files"] = sorted(
         entry["file"] for entry in _automation(data)
         if isinstance(entry, dict) and entry.get("file") and not os.path.exists(entry["file"])
@@ -410,20 +438,24 @@ def _releases():
     return releases
 
 
-def load(root="."):
-    """Builds the bundle. Paths inside it are relative to the repository root."""
+def load(root=".", report_base=None):
+    """Builds the bundle. Paths inside it are relative to the repository root.
+
+    report_base is the checkout whose qa/reports the evidence summaries are read from: this one
+    unless given (an absolute path, to read another checkout's reports without writing there)."""
     previous = os.getcwd()
     os.chdir(root)
+    report_base = report_base or "."
     try:
         register = _yaml("docs/brd/requirements.yaml") or {}
         features, stages = [], []
         for feature_dir in sorted(glob.glob("features/F[0-9][0-9]-*")):
             if not os.path.isdir(feature_dir):
                 continue
-            features.append(_scope(feature_dir, "feature.yaml"))
+            features.append(_scope(feature_dir, "feature.yaml", report_base))
             for stage_dir in sorted(glob.glob(os.path.join(feature_dir, "stages", "*"))):
                 if os.path.isdir(stage_dir):
-                    stage = _scope(stage_dir, "stage.yaml")
+                    stage = _scope(stage_dir, "stage.yaml", report_base)
                     stage["_feature_dir"] = feature_dir
                     stages.append(stage)
         return {

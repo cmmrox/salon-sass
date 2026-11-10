@@ -98,7 +98,7 @@ class BuildCheckTest(unittest.TestCase):
         self.git("init", "-q", "-b", "feature")
         self.git("config", "user.email", "qa@example.invalid")
         self.git("config", "user.name", "Tooling QA")
-        Path(".gitignore").write_text("qa/reports/\n")
+        Path(".gitignore").write_text("qa/reports/\n.local/\n")
         Path(runner.BUILD_SOURCES_FILE).parent.mkdir(parents=True)
         shutil.copy(REPOSITORY / runner.BUILD_SOURCES_FILE, runner.BUILD_SOURCES_FILE)
         Path("qa/checks").mkdir(parents=True)

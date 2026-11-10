@@ -47,3 +47,5 @@ verification:
 evidence:                   # only for a stage pass; a feature pass records its evidence in feature.yaml
   last_run: null            # the run this status rests on, as a path: qa/reports/<folder>
   last_result: null         # pass | fail
+  full_pass_run: null       # the full --stage run a stage pass rests on, when last_run is a later rerun
+  reruns: []                # the later runs that passed each entry that full run did not pass

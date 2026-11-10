@@ -146,8 +146,8 @@ def check_cases(scope, scope_id, cover_targets, target_name):
                 _add(findings, scope, f"automation {eid} is in suite '{suite}', expected one of {S.SUITES}")
         if "timeout_minutes" in entry:
             limit = entry["timeout_minutes"]
-            if isinstance(limit, bool) or not isinstance(limit, (int, float)) or limit <= 0:
-                _add(findings, scope, f"automation {eid} has timeout_minutes '{limit}', expected a positive number "
+            if not S.valid_time_limit(limit):
+                _add(findings, scope, f"automation {eid} has timeout_minutes '{limit}', expected a finite positive number "
                                       f"(the default is {S.ENTRY_TIME_LIMIT_MINUTES})")
     for eid in sorted({e for e in entry_ids if entry_ids.count(e) > 1}):
         _add(findings, scope, f"automation id {eid} is used more than once")
@@ -250,6 +250,103 @@ def check_coverage(scope, acceptance_criteria):
     return findings
 
 
+def _report_name(path):
+    """(stamp, is a narrowed run) from a report folder's name; stamp is None for an old name."""
+    match = S.REPORT_NAME_RE.fullmatch(str(path or ""))
+    partial = f"-{S.PARTIAL_MARKER}-" in f"-{match.group('rest') if match else path}-"
+    return (match.group("stamp") if match else None), partial
+
+
+def _refs(summary, passed):
+    """The 'scope:id' of a summary's finished entries that passed (or did not)."""
+    return {f"{e.get('scope')}:{e.get('id')}" for e in summary.get("entries") or []
+            if isinstance(e, dict) and (e.get("outcome") == "pass") == passed}
+
+
+def _interrupted(summary):
+    """Whether a run's summary is of a run that did not finish: an older runner wrote its summary
+    only at the end (no 'state'), so one without a state finished."""
+    if summary.get("state") is not None and summary.get("state") != "complete":
+        return True
+    finished = {f"{e.get('scope')}:{e.get('id')}" for e in summary.get("entries") or [] if isinstance(e, dict)}
+    if isinstance(summary.get("selected"), list):
+        return any(ref not in finished for ref in summary["selected"])
+    count = summary.get("selected_count")
+    return isinstance(count, int) and len(finished) < count
+
+
+def check_full_run(scope, scope_id):
+    """The full run a QA pass rests on (decision 069): one run of the whole scope, whose failures,
+    if it had any, each passed in a later rerun recorded under evidence.reruns.
+
+    The full run is evidence.full_pass_run when set, else evidence.last_run. By form, everywhere:
+    it is not a narrowed (-partial-) run, and last_run is one only beside a full_pass_run. Where
+    its folder is in this checkout: its summary is of this scope, not partial, and finished (it
+    may have failed). Where it failed: each entry that did not pass passed in a listed rerun,
+    checked where those folders are here; a feature with a merge record is exempt from that."""
+    findings = []
+    evidence = scope.get("evidence") if isinstance(scope.get("evidence"), dict) else {}
+    last, full_named = evidence.get("last_run"), evidence.get("full_pass_run")
+    full = full_named or last
+    reruns = evidence.get("reruns")
+    if reruns is not None and (not isinstance(reruns, list) or
+                               not all(S.REPORT_FOLDER_RE.fullmatch(str(r)) for r in reruns)):
+        _add(findings, scope, "evidence.reruns must be a list of report folders, qa/reports/<folder>")
+        reruns = []
+    reruns = reruns or []
+    if full_named and not S.REPORT_FOLDER_RE.fullmatch(str(full_named)):
+        _add(findings, scope, f"evidence.full_pass_run '{full_named}' must name a report folder, qa/reports/<folder>")
+        return findings
+    if not full:
+        return findings  # check_qa_gate reports the missing last_run
+    full_stamp, full_partial = _report_name(full)
+    if full_partial:
+        which = "evidence.full_pass_run" if full_named else "evidence.last_run"
+        hint = "" if full_named else "; name the full run of the scope in evidence.full_pass_run"
+        _add(findings, scope, f"{which} {full} is a narrowed run (-{S.PARTIAL_MARKER}-), not a full run of "
+                              f"{scope_id}{hint}")
+        return findings
+    for rerun in reruns:
+        stamp, _ = _report_name(rerun)
+        if full_stamp and stamp and stamp <= full_stamp:
+            _add(findings, scope, f"evidence.reruns lists {rerun}, which is not later than the full run {full}")
+    summary = (scope.get("_reports") or {}).get(full)
+    if summary is None:
+        return findings  # not in this checkout: the form is all that can be checked
+    if summary.get("_unreadable"):
+        _add(findings, scope, f"{full}/summary.json cannot be read")
+        return findings
+    problems = []
+    if summary.get("label") != scope_id:
+        problems.append(f"it is a run of '{summary.get('label')}', not of {scope_id}")
+    if summary.get("partial"):
+        problems.append("it is a narrowed run (partial)")
+    if _interrupted(summary):
+        problems.append("it did not finish (not every selected entry has an outcome)")
+    if problems:
+        _add(findings, scope, f"the full run {full} cannot stand for {scope_id}'s pass: " + "; ".join(problems))
+        return findings
+    failed = _refs(summary, passed=False)
+    integration = scope.get("integration") if isinstance(scope.get("integration"), dict) else {}
+    if not failed or (integration.get("merged_commit") and integration.get("merged_at")):
+        return findings
+    if not reruns:
+        _add(findings, scope, f"the full run {full} has {len(failed)} entr{'y' if len(failed) == 1 else 'ies'} "
+                              f"that did not pass ({', '.join(sorted(failed))}); list the later runs that passed "
+                              "them in evidence.reruns")
+        return findings
+    present = [(scope.get("_reports") or {}).get(r) for r in reruns]
+    passed_later = set()
+    for rerun_summary in present:
+        if isinstance(rerun_summary, dict) and not rerun_summary.get("_unreadable"):
+            passed_later |= _refs(rerun_summary, passed=True)
+    uncovered = sorted(failed - passed_later)
+    if uncovered and all(isinstance(s, dict) for s in present):
+        _add(findings, scope, f"the full run {full} has entries that did not pass and no listed rerun passed: "
+                              f"{', '.join(uncovered)}")
+    return findings
+
+
 def check_qa_gate(scope, scope_id, acceptance_criteria):
     """Everything that must be true before QA may be recorded as passed.
 
@@ -262,6 +359,7 @@ def check_qa_gate(scope, scope_id, acceptance_criteria):
     evidence = scope.get("evidence") if isinstance(scope.get("evidence"), dict) else {}
     if evidence.get("last_result") != "pass" or not evidence.get("last_run"):
         _add(findings, scope, f"{scope_id} claims a QA pass without evidence.last_run and evidence.last_result: pass")
+    findings += check_full_run(scope, scope_id)
     if not declared_cases(scope):
         _add(findings, scope, f"{scope_id} claims a QA pass with no test cases")
     findings += check_coverage(scope, acceptance_criteria)
@@ -372,6 +470,13 @@ def check_integration(scope, shared_branch=None):
             _add(findings, scope, "passing feature QA needs integration.qa_revision")
         if not integration.get("branch"):
             _add(findings, scope, "passing feature QA needs its integration.branch")
+    # feature-review comes before feature-verify, so a pass rests on a recorded review. A feature
+    # with a merge record (merged_commit and merged_at) is exempt: its pass and merge are already
+    # history, and F01 to F07 merged before the review step existed.
+    merge_record = integration.get("merged_commit") and integration.get("merged_at")
+    if scope.get("qa_status") == "pass" and not merge_record and not integration.get("reviewed_revision"):
+        _add(findings, scope, "passing feature QA needs integration.reviewed_revision, the commit the lead "
+                              "read at feature-review")
     if integration.get("merged_commit") or integration.get("merged_at"):
         if not all(integration.get(k) for k in ("branch", "pull_request", "qa_revision", "merged_commit", "merged_at")):
             _add(findings, scope, "merge evidence needs branch, pull_request, qa_revision, merged_commit and merged_at")

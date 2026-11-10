@@ -3,6 +3,7 @@ runner cannot disagree about what a status or a test type is called.
 
 The skills document these values for people; this file is what is enforced.
 """
+import math
 import re
 
 FEATURE_STATUSES = ("backlog", "planned", "in-progress", "in-qa", "complete", "released")
@@ -40,6 +41,12 @@ SUITE_BUDGET_MINUTES = {"smoke": 5, "regression": 20}
 # How long one automation entry may run before the runner stops it and records it as timed out.
 # An entry may set its own limit with timeout_minutes; one that needs longer says so in its yaml.
 ENTRY_TIME_LIMIT_MINUTES = 30
+
+
+def valid_time_limit(minutes):
+    """An entry's own timeout_minutes is a finite positive number: .inf or nan would disable the limit."""
+    return (isinstance(minutes, (int, float)) and not isinstance(minutes, bool)
+            and math.isfinite(minutes) and minutes > 0)
 CASE_TYPES = (
     "functional", "api", "tenant-isolation", "permissions", "concurrency", "load",
     "payment-integrity", "accessibility", "responsive", "branding", "security",
@@ -83,6 +90,11 @@ CR_ID_RE = re.compile(r"^CR-\d{3}$")
 RELEASE_VERSION_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 # evidence.last_run: the folder qa/scripts/sdlc run wrote, one level under qa/reports.
 REPORT_FOLDER_RE = re.compile(r"qa/reports/[A-Za-z0-9][A-Za-z0-9._-]*/?")
+# The runner names a folder <YYYYMMDD-HHMMSS>-<scope>-<run id>, and a narrowed run (--entry,
+# --rerun-failed) <YYYYMMDD-HHMMSS>-<scope>-partial-<run id>. Folders from before the run id or the
+# marker existed keep their names.
+PARTIAL_MARKER = "partial"
+REPORT_NAME_RE = re.compile(r"qa/reports/(?P<stamp>\d{8}-\d{6})-(?P<rest>[A-Za-z0-9._-]+?)/?")
 
 # Headings every stage spec.md must carry, in this order. A section that does not apply
 # keeps its heading and says "Not applicable for this stage".

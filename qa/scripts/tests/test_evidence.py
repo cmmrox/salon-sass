@@ -43,7 +43,7 @@ class SourceStateTest(unittest.TestCase):
         self.git("init", "-q", "-b", "feature")
         self.git("config", "user.email", "qa@example.invalid")
         self.git("config", "user.name", "Tooling QA")
-        Path(".gitignore").write_text("qa/reports/\n")
+        Path(".gitignore").write_text("qa/reports/\n.local/\n")  # as the repository ignores them
         Path("check.sh").write_text("exit 0\n")
         self.git("add", ".")
         self.git("commit", "-q", "-m", "fixture")

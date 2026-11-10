@@ -8,8 +8,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 test_dir="$(mktemp -d)"
 runner_pid=""
-# The only process this test starts is its stand-in runner; it is stopped by its own id.
-trap 'rm -rf "$test_dir"; if [ -n "$runner_pid" ] && ps -p "$runner_pid" >/dev/null 2>&1; then kill "$runner_pid"; fi' EXIT
+lock_pid=""
+# The only processes this test starts are stand-in runners and lock holders, stopped by their own ids.
+trap 'rm -rf "$test_dir"; for pid in "$runner_pid" "$lock_pid"; do if [ -n "$pid" ] && ps -p "$pid" >/dev/null 2>&1; then kill "$pid"; fi; done' EXIT
 failures=0
 check() { if [ "$1" = ok ]; then printf 'PASS %s\n' "$2"; else printf 'FAIL %s\n' "$2"; failures=$((failures + 1)); fi; }
 
@@ -17,9 +18,10 @@ repo="$test_dir/repo"
 mkdir -p "$repo/infra/scripts/lib" "$repo/apps/api" "$test_dir/bin"
 cp "$ROOT/infra/scripts/qa-redeploy.sh" "$repo/infra/scripts/"
 cp "$ROOT/infra/scripts/lib/common.sh" "$ROOT/infra/scripts/lib/build-sources.txt" "$repo/infra/scripts/lib/"
+# Each stub records its call, and who holds the QA instance's lock while it runs.
 for stub in local-service.sh local-up.sh; do
-  printf '#!/usr/bin/env bash\nprintf "%%s %%s instance=%%s\\n" "%s" "$*" "$SALON_LOCAL_INSTANCE" >>"%s/calls"\n' \
-    "$stub" "$test_dir" >"$repo/infra/scripts/$stub"
+  printf '#!/usr/bin/env bash\nprintf "%%s %%s instance=%%s\\n" "%s" "$*" "$SALON_LOCAL_INSTANCE" >>"%s/calls"\nreadlink "%s/.local/run/qa-instance.lock" >>"%s/locks" || echo none >>"%s/locks"\n' \
+    "$stub" "$test_dir" "$repo" "$test_dir" "$test_dir" >"$repo/infra/scripts/$stub"
   chmod +x "$repo/infra/scripts/$stub"
 done
 cat >"$test_dir/bin/curl" <<'STUB'
@@ -47,7 +49,7 @@ upper="$(printf '%s' "$head" | tr '[:lower:]' '[:upper:]')"
 
 redeploy() { # <meta body> [VAR=value ...]: runs the copy; prints its exit status, keeps its output
   local meta="$1"; shift
-  rm -f "$test_dir/calls"
+  rm -f "$test_dir/calls" "$test_dir/locks"
   set +e
   env -u SALON_LOCAL_INSTANCE -u SALON_API_PORT -u DOCKER_DOWN PATH="$test_dir/bin:$PATH" JAVA25_HOME="$test_dir/jdk" \
     CALLS="$test_dir/calls" META="$meta" "$@" \
@@ -116,6 +118,40 @@ for missing in "JAVA25_HOME=$test_dir/no-jdk" DOCKER_DOWN=1; do
     check fail "a missing prerequisite (${missing%%=*}) was not refused first (status $status): $(calls) $(cat "$test_dir/out.log")"
   fi
 done
+
+# The QA instance's lock, which sdlc run holds for a whole run: held by this redeploy across the
+# stop, rebuild and start; a live holder refuses it before anything is stopped; a stale one is
+# replaced. The holders are `sleep`s this test starts and stops by their own ids.
+lock="$repo/.local/run/qa-instance.lock"
+started_utc() { LC_ALL=C TZ=UTC ps -p "$1" -o lstart= | sed -e 's/^ *//' -e 's/ *$//'; }
+[ "$(redeploy "{\"commit\":\"$head\"}")" = 0 ] || check fail "a plain redeploy failed: $(cat "$test_dir/out.log")"
+holders="$(sort -u "$test_dir/locks" 2>/dev/null)"
+if [ "$(wc -l <"$test_dir/locks" | tr -d ' ')" = 3 ] && [ "$(printf '%s\n' "$holders" | wc -l | tr -d ' ')" = 1 ] \
+    && [ "$holders" != none ] && [ ! -e "$lock" ] && [ ! -L "$lock" ]; then
+  check ok "the lock is held through stop, stop and start by one holder, and released at the end"
+else
+  check fail "the lock was not held throughout and then released: $(cat "$test_dir/locks" 2>/dev/null); left: $(readlink "$lock" 2>/dev/null)"
+fi
+sleep 60 &
+lock_pid=$!
+mkdir -p "$repo/.local/run"
+ln -s "$lock_pid $(started_utc "$lock_pid")" "$lock"
+status="$(redeploy "{\"commit\":\"$head\"}")"
+if [ "$status" != 0 ] && [ -z "$(calls)" ] && grep -q "in use by process $lock_pid" "$test_dir/out.log" \
+    && [ "$(readlink "$lock")" = "$lock_pid $(started_utc "$lock_pid")" ]; then
+  check ok "a live holder of the lock (a run starting) refuses the redeploy before anything is stopped"
+else
+  check fail "a held lock did not refuse the redeploy first (status $status): $(calls) $(cat "$test_dir/out.log")"
+fi
+ps -p "$lock_pid" >/dev/null 2>&1 && kill "$lock_pid"
+wait "$lock_pid" 2>/dev/null || true
+rm -f "$lock"
+ln -s "$lock_pid Mon Jan  1 00:00:00 2024" "$lock"
+if [ "$(redeploy "{\"commit\":\"$head\"}")" = 0 ] && [ ! -L "$lock" ]; then
+  check ok "a stale lock (its holder is gone) is replaced, and released at the end"
+else
+  check fail "a stale lock stopped the redeploy or was left: $(cat "$test_dir/out.log")"
+fi
 
 # A run of this checkout in progress: summary.json says "running" and names a live runner. The
 # stand-in runner is a `sleep` this test starts and stops by its own process id.

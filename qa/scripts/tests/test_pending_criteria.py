@@ -26,14 +26,14 @@ SPEC = """# F07-S01 Slot search
 
 def passed_feature():
     """A feature that claims its QA pass, so every stage criterion must be covered."""
-    return fx.feature(status="in-qa", qa_status="pass", _has_review=True,
-                      evidence={"last_run": "qa/reports/x", "last_result": "pass"},
-                      cases=[{"id": "TC-F07-001", "title": "Book end to end", "type": "functional",
-                              "priority": "critical", "covers": ["BKG-01"]}],
-                      _cases_md=["TC-F07-001"],
-                      verification={"automation": [{"id": "journey", "tool": "playwright",
-                                                    "file": "qa/web/F07/journey-book.spec.ts",
-                                                    "covers": ["TC-F07-001"]}]})
+    return fx.reviewed(fx.feature(status="in-qa", qa_status="pass", _has_review=True,
+                                  evidence={"last_run": "qa/reports/x", "last_result": "pass"},
+                                  cases=[{"id": "TC-F07-001", "title": "Book end to end", "type": "functional",
+                                          "priority": "critical", "covers": ["BKG-01"]}],
+                                  _cases_md=["TC-F07-001"],
+                                  verification={"automation": [{"id": "journey", "tool": "playwright",
+                                                                "file": "qa/web/F07/journey-book.spec.ts",
+                                                                "covers": ["TC-F07-001"]}]}))
 
 
 def with_cr_criteria(stage, cr_criteria):

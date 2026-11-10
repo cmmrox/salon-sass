@@ -121,8 +121,7 @@ def narrow(entries, names=(), rerun_report=None):
 def time_limit_seconds(entry):
     """How long an entry may run: its own timeout_minutes, or the runner's default."""
     minutes = entry.get("timeout_minutes")
-    valid = isinstance(minutes, (int, float)) and not isinstance(minutes, bool) and minutes > 0
-    return (minutes if valid else S.ENTRY_TIME_LIMIT_MINUTES) * 60
+    return (minutes if S.valid_time_limit(minutes) else S.ENTRY_TIME_LIMIT_MINUTES) * 60
 
 
 def budget_check(suite, elapsed_seconds, partial=False):
@@ -412,6 +411,107 @@ def build_check(entries, environ, root="."):
     return check
 
 
+# --- one at a time on the QA instance ---------------------------------------------------------
+#
+# A run and infra/scripts/qa-redeploy.sh exclude each other: a redeploy stops the API and the web
+# app, which would break a run partway, and a run starting during a redeploy would test a build
+# that is being replaced. Both take one lock, the runner for its whole run (from before its build
+# check) and qa-redeploy.sh across its guard, stop, rebuild and start. It is the mechanism of
+# infra/scripts/lib/common.sh's own lock: a symbolic link, created in one step or not at all,
+# whose target names its holder as "<process id> <start time>" (ps -o lstart in UTC). A lock
+# whose holder is no longer that process (killed, or its id since reused) is stale and is
+# removed, one remover at a time (a "<lock>.clearing" directory), so a killed holder never leaves
+# it stuck. It lives in the product checkout, where qa-redeploy.sh runs.
+
+INSTANCE_LOCK = os.path.join(".local", "run", "qa-instance.lock")
+
+
+class InstanceBusy(Exception):
+    pass
+
+
+def instance_lock_path(environ):
+    """The lock in the product checkout: QA_PRODUCT_ROOT (shell, then qa/.env.local), else this one."""
+    product_root = environ.get("QA_PRODUCT_ROOT") or _env_file("qa/.env.local").get("QA_PRODUCT_ROOT") or "."
+    return os.path.join(product_root, INSTANCE_LOCK)
+
+
+def _started_utc(pid):
+    """When a process started, as common.sh's process_started prints it; '' when there is none."""
+    try:
+        found = subprocess.run(["ps", "-p", str(pid), "-o", "lstart="], capture_output=True, text=True,
+                               env={**os.environ, "LC_ALL": "C", "TZ": "UTC"})
+    except OSError:
+        return ""
+    return found.stdout.strip() if found.returncode == 0 else ""
+
+
+def _holder_alive(holder):
+    pid, _, started = (holder or "").partition(" ")
+    return pid.isdigit() and bool(started) and _started_utc(int(pid)) == started
+
+
+def _holder_described(holder):
+    pid = (holder or "").partition(" ")[0]
+    try:
+        command = subprocess.run(["ps", "-p", pid, "-o", "command="], capture_output=True, text=True).stdout.strip()
+    except OSError:
+        command = ""
+    return f"process {pid}" + (f" ({command[:120]})" if command else "")
+
+
+def _clear_stale(path, holder):
+    """Removes a stale lock, unless another remover is at it or someone has taken it since."""
+    clearing = path + ".clearing"
+    try:
+        if time.time() - os.stat(clearing).st_mtime > 60:  # left by a remover that was killed
+            os.rmdir(clearing)
+    except OSError:
+        pass
+    try:
+        os.mkdir(clearing)
+    except OSError:
+        return
+    try:
+        if os.readlink(path) == holder:
+            os.unlink(path)
+    except OSError:
+        pass
+    finally:
+        os.rmdir(clearing)
+
+
+def take_instance_lock(path):
+    """Takes the QA instance's lock for this process and returns what it holds; InstanceBusy if a
+    live process holds it."""
+    me = f"{os.getpid()} {_started_utc(os.getpid())}"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    for _ in range(10):
+        try:
+            os.symlink(me, path)
+            return me
+        except FileExistsError:
+            try:
+                holder = os.readlink(path)
+            except OSError:
+                continue  # it went between the two calls
+            if _holder_alive(holder):
+                raise InstanceBusy(
+                    f"the QA instance is in use by {_holder_described(holder)}: a QA run, or "
+                    "infra/scripts/qa-redeploy.sh, holds its lock "
+                    f"({os.path.relpath(path)}); run again once it has finished")
+            _clear_stale(path, holder)
+    raise InstanceBusy(f"could not take the QA instance's lock {path}")
+
+
+def release_instance_lock(path, held):
+    try:
+        if os.readlink(path) == held:
+            os.unlink(path)
+    except OSError:
+        pass
+
+
 def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_seconds=30,
         suite=None, selection=None):
     """Returns (exit code, report directory).
@@ -437,6 +537,19 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
     if refusal:
         print(f"refusing: {refusal} (decision 105). Nothing was run.", flush=True)
         return 2, None
+    lock = instance_lock_path(os.environ)
+    try:
+        held = take_instance_lock(lock)
+    except InstanceBusy as busy:
+        print(f"refusing: {busy}. Nothing was run.", flush=True)
+        return 2, None
+    try:
+        return _run_holding_the_lock(entries, plan, label, reports_root, heartbeat_seconds, suite, selection)
+    finally:
+        release_instance_lock(lock, held)
+
+
+def _run_holding_the_lock(entries, plan, label, reports_root, heartbeat_seconds, suite, selection):
     build = build_check(entries, os.environ)
     if build["refusal"]:
         print(f"refusing: {build['refusal']}.", flush=True)
@@ -449,7 +562,10 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
 
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     run_id = uuid.uuid4().hex[:12]
-    report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}-{run_id}")
+    # A narrowed run (--entry, --rerun-failed) says so in its folder's name, so that the name
+    # alone tells it from a full run of the scope: validate reads it where the folder is absent.
+    marker = f"-{S.PARTIAL_MARKER}" if selection else ""
+    report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}{marker}-{run_id}")
     os.makedirs(report_dir, exist_ok=False)
     env = {**os.environ, "QA_REPORT_DIR": os.path.abspath(report_dir), "SALON_LOCAL_INSTANCE": "qa"}
     started = time.monotonic()
