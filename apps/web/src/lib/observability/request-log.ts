@@ -10,6 +10,9 @@ type RequestStart = { request: IncomingMessage; response: ServerResponse; server
 
 const INSTALLED = Symbol.for('salon.web.request-log');
 
+/** The request's budget for the API, `API_TIMEOUT_MS` in `lib/api-core/client.ts` (docs/engineering/web.md). */
+const API_BUDGET_MS = 3000;
+
 /**
  * Watches every request the server receives, through Node's own `http.server.request.start`
  * channel, so that it works the same under the production image's server and the local one, with
@@ -36,7 +39,13 @@ export function installRequestLog(sink?: LogSink): void {
 function onRequest({ request, response, server }: RequestStart, sink: LogSink | undefined): void {
   const started = process.hrtime.bigint();
   const context = contextFromTraceparent(request.headers.traceparent);
-  context.deadline = performance.now() + 3000;
+  context.deadline = performance.now() + API_BUDGET_MS;
+  // The API budget starts again once the request's body has arrived (docs/engineering/web.md, "Structure";
+  // BUG-F04-001): the framework reads the whole body before a route handler runs, and the time a slow connection
+  // takes to send it is not the API's. Work done after it, the proxy's included, still counts.
+  request.once('end', () => {
+    context.deadline = performance.now() + API_BUDGET_MS;
+  });
   try {
     context.clientAddress = clientAddress(request.socket.remoteAddress, request.headers['x-forwarded-for']);
   } catch {

@@ -18,6 +18,17 @@ beforeAll(async () => {
   installRequestLog((line) => lines.push(JSON.parse(line)));
   // A stand-in for the framework's handler: answers with what the request context held.
   server = createServer((request, response) => {
+    if (request.url === '/upload') {
+      // As the framework does before a route handler runs: the whole body is read, then the handler sees what is
+      // left of the request's API budget.
+      const context = currentRequest();
+      request.on('data', () => undefined);
+      request.on('end', () => {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ remaining: (context?.deadline ?? 0) - performance.now() }));
+      });
+      return;
+    }
     setTimeout(() => {
       if (request.url?.startsWith('/salon')) {
         markTenant('alpha');
@@ -58,6 +69,34 @@ async function linesFor(count: number): Promise<Record<string, unknown>[]> {
   }
   return lines;
 }
+
+/** A POST whose body arrives in three parts, `gap` milliseconds apart, as over a slow connection. */
+function slowPost(path: string, gap: number): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const outgoing = httpRequest(`${base}${path}`, { method: 'POST' }, (incoming) => {
+      let body = '';
+      incoming.on('data', (chunk) => (body += chunk));
+      incoming.on('end', () => resolve({ status: incoming.statusCode ?? 0, body }));
+    });
+    outgoing.on('error', reject);
+    outgoing.write('first part ');
+    setTimeout(() => {
+      outgoing.write('second part ');
+      setTimeout(() => outgoing.end('last part'), gap);
+    }, gap);
+  });
+}
+
+describe('the request API budget (BUG-F04-001)', () => {
+  it('starts again once a slowly sent body has arrived', async () => {
+    const answer = await slowPost('/upload', 600);
+    const { remaining } = JSON.parse(answer.body) as { remaining: number };
+
+    // Counted from the headers, 1.2 s of the 3 s would be gone; counted from the body's end, almost none is.
+    expect(remaining).toBeGreaterThan(2_800);
+    expect(remaining).toBeLessThanOrEqual(3_000);
+  });
+});
 
 describe('the request log', () => {
   it('writes one line per request: method, path, status, duration, salon and trace', async () => {
