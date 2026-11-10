@@ -2,14 +2,14 @@
 id: BUG-F07-004
 title: When a change empties the later page being shown, the Bookings page says "No bookings match." with no pager, hiding the day's remaining bookings
 severity: minor
-status: fixed
+status: verified
 found_by: "TC-F07-S03-021; PR #26 review (Codex, use-bookings.ts)"
 breaks: AC-3
 found_on: 2026-11-10
 fixed_in: 67d873a43ba26b161d536f5c8eba56cfe517dee7
 fix_note: "When a read comes back empty for a page past the last while the day still has bookings, the list shows the last page that exists, replacing the address's page in place; this covers an action and a hold running out."
 developer_note: null
-verified_on: null
+verified_on: 2026-11-10
 approved_by: null
 found_in_release: null
 ---
@@ -61,4 +61,16 @@ are empty.
 
 ## Re-verification
 
-<QA, after a fix: what was rerun, the run folder, and the result.>
+2026-11-10, on a5a7d8fe (fix 67d873a4; only apps/web/src/surfaces/workspace/use-bookings.ts and its screen test).
+QA instance rebuilt and restarted at a5a7d8fe (the fix merged; e0c1d4bc adds only QA test repairs): API PID 84142, /api/v1/meta commit a5a7d8fe; web PID 84363, apps/web/.next-qa built 06:00 (+05:30) from the clean tree. The old processes (web 67534, API 4997) were stopped by their exact PIDs.
+
+1. The bug's own steps (qa/reports/20261110-060856-F07-S03-d5c497afa957/BUG-F07-002-003-004-steps.log): 51 holds, page 2 with one hold, **Release hold**. Then
+   "50 bookings on Fri, Jul 29, 2101" with its 50 rows, no empty state, the address corrected in place from
+   `?day=2101-07-29&page=2` to `?day=2101-07-29` (no history entry added), and the same after a reload. With 50 the day fits
+   one page, so no pager is shown, as AC-3 says. The symptom is gone.
+2. `qa/scripts/sdlc run --stage F07-S03`: 21 of 21 cases passed, TC-F07-S03-021 included, with TC-F07-S03-002 to -004
+   (the list, a hold leaving at zero, the tools, the pager, the address through reload and back), which the change to
+   use-bookings.ts touches. Report: qa/reports/20261110-060856-F07-S03-d5c497afa957.
+3. TC-F07-S03-021 is the test that would catch it again: it failed on aeab2c30's product and passes on a5a7d8fe.
+
+Result: verified.

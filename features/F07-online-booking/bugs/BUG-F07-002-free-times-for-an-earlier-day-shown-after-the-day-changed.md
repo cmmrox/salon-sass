@@ -2,14 +2,14 @@
 id: BUG-F07-002
 title: Free times asked for one day are shown after the day (or service) was changed, and choosing one holds that time on the day now in the form
 severity: major
-status: fixed
+status: verified
 found_by: "TC-F07-S03-019; PR #26 review (Codex, use-new-appointment.ts search)"
 breaks: AC-5
 found_on: 2026-11-10
 fixed_in: d65fd1d1718d646609a937f32ed9eae38c504d98
 fix_note: "New appointment remembers the form and the search each free-times read was asked for, and ignores an answer (or refusal) for a form changed since, by any field, opening or closing, or overtaken by a later search."
 developer_note: null
-verified_on: null
+verified_on: 2026-11-10
 approved_by: null
 found_in_release: null
 ---
@@ -70,4 +70,16 @@ Where: `apps/web/src/surfaces/workspace/use-new-appointment.ts`, `search()` (abo
 
 ## Re-verification
 
-<QA, after a fix: what was rerun, the run folder, and the result.>
+2026-11-10, on a5a7d8fe (fix d65fd1d1; only apps/web/src/surfaces/workspace/use-new-appointment.ts and its screen test).
+QA instance rebuilt and restarted at a5a7d8fe (the fix merged; e0c1d4bc adds only QA test repairs): API PID 84142, /api/v1/meta commit a5a7d8fe; web PID 84363, apps/web/.next-qa built 06:00 (+05:30) from the clean tree. The old processes (web 67534, API 4997) were stopped by their exact PIDs.
+
+1. The bug's own steps, with the first day's answer held back until the Day was changed
+   (qa/reports/20261110-060856-F07-S03-d5c497afa957/BUG-F07-002-003-004-steps.log): after the answer for 2101-07-26 landed while the form said Wed, Jul 27, no chip
+   and no "Free times on" sentence 250 ms, 1 s and 3 s later. **Find free times** then showed "Free times on Wed, Jul 27,
+   2101", and the chip chosen held 2101-07-27 09:00, the day in the form. The symptom is gone.
+2. `qa/scripts/sdlc run --stage F07-S03` (both changed hooks drive its screens): 4 of 4 entries, 21 of 21 cases passed,
+   TC-F07-S03-019 included, with TC-F07-S03-005 to -009 and -018, which drive the same sheet. Report: qa/reports/20261110-060856-F07-S03-d5c497afa957.
+3. TC-F07-S03-019 is the test that would catch it again: it failed on aeab2c30's product (37 stale chips) and passes on
+   a5a7d8fe.
+
+Result: verified.
