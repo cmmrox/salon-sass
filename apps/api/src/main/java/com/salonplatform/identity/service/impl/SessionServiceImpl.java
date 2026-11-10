@@ -45,7 +45,7 @@ class SessionServiceImpl implements SessionService {
         if (support.isPresent()) {
             return SessionAccess.supportPrincipal(support.get());
         }
-        return work.run(() -> principal(access.auth()));
+        return work.read(() -> principal(access.auth()));
     }
 
     private static Principal principal(SessionAccess.Auth auth) {
@@ -100,7 +100,7 @@ class SessionServiceImpl implements SessionService {
     @Override
     public Page<SessionView> sessions(int page, int size) {
         Pagination.requireValid(page, size);
-        return work.run(() -> {
+        return work.read(() -> {
             SessionAccess.Auth auth = access.auth();
             PageRequest request = PageRequest.of(page, size);
             org.springframework.data.domain.Page<AccessSession> rows = auth.staff() != null

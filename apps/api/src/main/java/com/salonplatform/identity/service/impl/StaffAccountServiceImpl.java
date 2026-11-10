@@ -61,7 +61,7 @@ class StaffAccountServiceImpl implements StaffAccountService {
     @Override
     public Page<StaffView> list(int page, int size) {
         Pagination.requireValid(page, size);
-        return work.run(() -> {
+        return work.read(() -> {
             authority.requireReadable("staff.list");
             org.springframework.data.domain.Page<StaffAccount> rows =
                     accounts.findAll(PageRequest.of(page, size, OLDEST_FIRST));
