@@ -3,7 +3,8 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
+import { UPLOAD_API_TIMEOUT_MS } from '@/lib/api-core/client';
+import { contextFromTraceparent, currentRequest, runInRequest } from '@/lib/observability/request-context';
 import { createIdentityWeb } from './identity-web';
 import type { SalonAccount, SalonAccountFor } from './salon-account';
 import type { SalonSettings, SalonSettingsFor } from './salon-settings';
@@ -32,6 +33,10 @@ const CHUNK_DELAY = 250;
 
 let server: Server;
 let uploads: { aborted: boolean; memberId: string; size: number }[];
+/** What was left of the request's API budget when each upload's call was made, in milliseconds. */
+let remainingAtUpload: number[];
+/** How many parts of the request's body were read. */
+let partsRead: number;
 
 /** The team module as far as a photo goes: it answers as the API would, refusing a call whose signal has ended. */
 const team: SalonTeamFor = () =>
@@ -40,6 +45,7 @@ const team: SalonTeamFor = () =>
       name === 'uploadPhoto'
         ? async (call: { signal: AbortSignal }, memberId: string, file: Blob) => {
             uploads.push({ aborted: call.signal.aborted, memberId, size: file.size });
+            remainingAtUpload.push((currentRequest()?.deadline ?? 0) - performance.now());
             if (call.signal.aborted) throw call.signal.reason;
             return { data: { photo: 'stored' }, response: new Response(null, { status: 200 }) };
           }
@@ -58,10 +64,16 @@ const handleIdentity = createIdentityWeb(
 
 beforeEach(async () => {
   uploads = [];
+  remainingAtUpload = [];
   vi.stubEnv('SALON_PLATFORM_DOMAIN', 'localhost');
   vi.stubEnv('SALON_WEB_LOCAL_HTTP', 'true');
   vi.stubEnv('SALON_IDENTITY_PROXY_KEY', '12'.repeat(32));
-  server = createServer((_request, response) => {
+  server = createServer((request, response) => {
+    if (!request.headers.authorization) {
+      response.writeHead(401, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ code: 'invalid_session' }));
+      return;
+    }
     response.writeHead(200, { 'Content-Type': 'application/json' });
     response.end(JSON.stringify({ id: 'staff', kind: 'staff', permissions: ['team.manage'] }));
   });
@@ -74,8 +86,11 @@ afterEach(async () => {
   vi.unstubAllEnvs();
 });
 
-/** A team photo whose multipart body arrives in three parts, {@link CHUNK_DELAY} apart. */
-async function slowPhotoUpload(): Promise<NextRequest> {
+/**
+ * A team photo whose multipart body arrives in three parts, {@link CHUNK_DELAY} apart, sent with these cookies; each
+ * part read is counted in {@link partsRead}.
+ */
+async function slowPhotoUpload(cookie = 'salon_staff_access=private-access'): Promise<NextRequest> {
   const form = new FormData();
   form.append('memberId', '0b5c7a4e-58a1-4f4e-9b0e-5d1f7f2a9c01');
   form.append('file', new Blob([new Uint8Array(30_000).fill(7)], { type: 'image/jpeg' }), 'photo.jpg');
@@ -84,23 +99,29 @@ async function slowPhotoUpload(): Promise<NextRequest> {
   const bytes = new Uint8Array(await encoded.arrayBuffer());
   const third = Math.ceil(bytes.byteLength / 3);
   let sent = 0;
-  const body = new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      await new Promise((r) => setTimeout(r, CHUNK_DELAY));
-      if (sent >= bytes.byteLength) {
-        controller.close();
-        return;
-      }
-      controller.enqueue(bytes.slice(sent, sent + third));
-      sent += third;
+  partsRead = 0;
+  // No part is asked for until something reads the body.
+  const body = new ReadableStream<Uint8Array>(
+    {
+      async pull(controller) {
+        partsRead += 1;
+        await new Promise((r) => setTimeout(r, CHUNK_DELAY));
+        if (sent >= bytes.byteLength) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(bytes.slice(sent, sent + third));
+        sent += third;
+      },
     },
-  });
+    { highWaterMark: 0 },
+  );
   return new NextRequest('http://alpha.localhost:3100/identity-web/staff/team-photo', {
     method: 'POST',
     headers: {
       Host: 'alpha.localhost:3100',
       Origin: 'http://alpha.localhost:3100',
-      Cookie: 'salon_staff_access=private-access',
+      ...(cookie ? { Cookie: cookie } : {}),
       'Content-Type': contentType,
     },
     body,
@@ -121,5 +142,25 @@ describe('an upload over a slow connection', () => {
 
     expect(uploads).toEqual([{ aborted: false, memberId: '0b5c7a4e-58a1-4f4e-9b0e-5d1f7f2a9c01', size: 30_000 }]);
     expect(response.status).toBe(200);
+    // The upload's own limit, started after the form was read, not what was left of the request's budget.
+    expect(remainingAtUpload[0]).toBeGreaterThan(UPLOAD_API_TIMEOUT_MS - 1000);
+    expect(partsRead).toBeGreaterThan(0);
+  });
+
+  it('from a caller with no credential is answered by the session check without its form being read', async () => {
+    const request = await slowPhotoUpload('');
+    const context = {
+      ...contextFromTraceparent(undefined),
+      clientAddress: '127.0.0.2',
+      deadline: performance.now() + 3000,
+    };
+
+    const response = await runInRequest(context, () => handleIdentity(request, 'staff', 'team-photo'));
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ code: 'invalid_session' });
+    expect(partsRead).toBe(0);
+    expect(request.bodyUsed).toBe(false);
+    expect(uploads).toEqual([]);
   });
 });

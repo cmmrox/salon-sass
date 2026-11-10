@@ -412,9 +412,11 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
     // A brand image, a service photo and a team photo are the multipart actions; a refused form is answered after the
-    // session check, as before.
+    // session check, as before. A caller with no credential at all is not read for: the session check answers it.
     const uploadField = UPLOAD_FIELDS.get(action);
-    const upload = request.method !== 'GET' && uploadField ? await uploadForm(request, uploadField) : null;
+    const credentialed = Boolean(access || refresh);
+    const upload =
+      request.method !== 'GET' && uploadField && credentialed ? await uploadForm(request, uploadField) : null;
     const read =
       request.method === 'GET' || uploadField
         ? { ok: true as const, value: {} }
@@ -422,7 +424,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     // An upload has its own stated limit, which starts once its form has been read, however long a slow connection
     // took to send it (docs/engineering/web.md, "Structure"; BUG-F04-001). Every other action keeps the request's
     // budget, which the request log starts again once the body has arrived.
-    if (uploadField) restartRequestBudget(UPLOAD_API_TIMEOUT_MS);
+    if (upload) restartRequestBudget(UPLOAD_API_TIMEOUT_MS);
     const signal = requestSignal();
     if (!read.ok) return problem('bad_request', 400);
     const body: Record<string, unknown> = read.value;
