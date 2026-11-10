@@ -447,7 +447,8 @@ final class ModuleRules {
     /**
      * The interfaces a module declares in its root package for one other module to implement, so that dependencies
      * point one way (decision 087's pattern): {@code staff} and {@code catalogue} ask about bookings, and {@code booking}
-     * answers (decisions 087, 093, 095, 100, 102; F07-S01). Named relative to the base package, each with the one
+     * answers (decisions 087, 093, 095, 100, 102; F07-S01); {@code catalogue} asks {@code staff} who a category move
+     * would stop performing a booked service (BUG-F06-002). Named relative to the base package, each with the one
      * module that may implement it; any other interface of another module is still refused.
      */
     private static final java.util.Map<String, String> DECLARED_FOR_ANOTHER_MODULE = java.util.Map.of(
@@ -455,7 +456,8 @@ final class ModuleRules {
             "staff.UpcomingMemberBookings", "booking",
             "staff.MemberBookingsAffected", "booking",
             "catalogue.UpcomingServiceBookings", "booking",
-            "catalogue.ServiceBookingCounts", "booking");
+            "catalogue.ServiceBookingCounts", "booking",
+            "catalogue.ServiceMoveBookings", "staff");
 
     private String localHooks() {
         return base + "." + SHARED + ".local..";

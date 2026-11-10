@@ -2,14 +2,14 @@
 id: BUG-F07-006
 title: "When the answer to holding a time is lost, the retry uses a new key, meets its own hold and says the time was just taken, and that time stays blocked until the hold runs out"
 severity: major
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: "exploratory: the foundation review of 2026-11-10, by reading the code; not yet reproduced on the running product"
 breaks: "F07-S01 AC-1 (repeating the request with the same key returns the same booking); F07-S03 AC-6; BKG-04"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: e80c1a9d8cc405fa9f258f06f9b2da7ffade0e58
+fix_note: "New appointment ends a hold attempt, and its Idempotency-Key, only on an answer from the API; on service_unavailable or browser_unsupported (a dropped connection, the BFF's time limit) the same time chosen again sends the same key and receives the hold already placed. A definite refusal, another time or a changed form still gets a new key."
+developer_note: "Reproduced by BookingsScreen.test.tsx ('when the connection drops' / 'when the BFF gives up on the API'): the second attempt sent a new key. After a lost answer the screen still says the service is unavailable and does not search again; the time stays offered."
 verified_on: null
 approved_by: null
 found_in_release: null

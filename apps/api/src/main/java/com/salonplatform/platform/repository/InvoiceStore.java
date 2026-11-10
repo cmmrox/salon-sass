@@ -130,7 +130,10 @@ public class InvoiceStore {
     }
 
     /**
-     * Records a requested charge attempt for an invoice and occasion, unless that occasion has one.
+     * Records a requested charge attempt for an invoice and occasion, unless that occasion has one or an earlier
+     * attempt for the invoice is still unsettled: one charge is in flight for an invoice at a time, so a reminder
+     * retries only after the attempt before it has failed (BUG-F03-010, NFR-11). The caller holds the invoice's
+     * subscription locked, so two billing passes cannot both find no attempt in flight.
      *
      * @return whether this call recorded it
      */
@@ -139,10 +142,12 @@ public class InvoiceStore {
                         .sql("""
                         INSERT INTO charge_attempt (id, invoice_id, occasion, attempt_key, status, requested_at, settled_at,
                             created_at, updated_at)
-                        VALUES (?, ?, ?, ?, 'requested', ?, NULL, ?, ?)
+                        SELECT ?, ?, ?, ?, 'requested', ?, NULL, ?, ?
+                         WHERE NOT EXISTS (SELECT 1 FROM charge_attempt
+                                            WHERE invoice_id = ? AND status = 'requested')
                         ON CONFLICT (invoice_id, occasion) DO NOTHING
                         """)
-                        .params(id, invoiceId, occasion, attemptKey, time(at), time(at), time(at))
+                        .params(id, invoiceId, occasion, attemptKey, time(at), time(at), time(at), invoiceId)
                         .update()
                 > 0;
     }

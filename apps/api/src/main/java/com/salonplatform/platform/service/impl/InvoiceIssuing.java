@@ -94,7 +94,8 @@ class InvoiceIssuing {
 
     /**
      * Records a charge attempt for an invoice and occasion, once, with the outbox message that makes
-     * the provider call afterwards. Nothing when that occasion already has an attempt.
+     * the provider call afterwards. Nothing when that occasion already has an attempt, or while an earlier
+     * attempt for the invoice is unsettled (BUG-F03-010): a reminder retries only after a failure.
      */
     public boolean requestCharge(Salon salon, Invoice invoice, String occasion, Instant now, BillingChanges changes) {
         UUID id = UUID.randomUUID();
@@ -123,7 +124,7 @@ class InvoiceIssuing {
 
     /**
      * Sends the reminders whose boundary has come for every unpaid invoice (once per invoice and
-     * kind), with a retry of the charge on each reminder day for a card subscription.
+     * kind), with a retry of the charge on each reminder day for a card subscription whose last attempt failed.
      */
     public void remind(Subscription subscription, Instant now, BillingChanges changes) {
         Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();

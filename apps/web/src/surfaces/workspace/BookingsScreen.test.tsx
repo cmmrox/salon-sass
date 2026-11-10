@@ -472,6 +472,44 @@ describe('New appointment (F07-S03 AC-4 to AC-6)', () => {
     );
   });
 
+  it.each([
+    ['the connection drops', () => Promise.reject(new TypeError('Failed to fetch'))],
+    ['the BFF gives up on the API', problem('service_unavailable', 503)],
+  ] as const)(
+    'when %s, holding the same time again sends the same key and gets the hold placed (BUG-F07-006)',
+    async (_case, lost) => {
+      answers['booking-place'] = () =>
+        sent('booking-place').length === 1 ? lost() : Response.json(HELD, { status: 201 });
+      const sheet = await openDesk();
+      await fillCustomer(sheet);
+      fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+      fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[1]!);
+      await within(sheet).findByTestId('new-appointment-refusal');
+      // An answer that never came is not a refusal: the times are not searched again and the time is still offered.
+      expect(sent('booking-availability')).toHaveLength(1);
+
+      fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[1]!);
+      await within(sheet).findByTestId('new-appointment-hold');
+      const [first, second] = sent('booking-place');
+      expect(second!.body?.idempotencyKey).toBe(first!.body?.idempotencyKey);
+      expect(second!.body).toMatchObject({ time: '10:30' });
+    },
+  );
+
+  it('a time refused outright gets a new key when it is chosen again', async () => {
+    answers['booking-place'] = () =>
+      sent('booking-place').length === 1 ? problem('rate_limited', 429)() : Response.json(HELD, { status: 201 });
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[1]!);
+    await within(sheet).findByTestId('new-appointment-refusal');
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[1]!);
+    await within(sheet).findByTestId('new-appointment-hold');
+    const [first, second] = sent('booking-place');
+    expect(second!.body?.idempotencyKey).not.toBe(first!.body?.idempotencyKey);
+  });
+
   it('confirming after the hold ran out says it ran out', async () => {
     answers['booking-confirm'] = problem('hold_expired');
     const sheet = await openDesk();

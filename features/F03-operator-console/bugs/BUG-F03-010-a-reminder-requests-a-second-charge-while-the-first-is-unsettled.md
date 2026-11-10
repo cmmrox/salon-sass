@@ -2,14 +2,14 @@
 id: BUG-F03-010
 title: "Each billing reminder records another full-amount charge attempt even when an earlier attempt for the same invoice is still waiting, so a salon can be charged more than once for one invoice"
 severity: major
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: "exploratory: the foundation review of 2026-11-10, by reading the code; not yet reproduced on the running product"
 breaks: "PLT-05 (subscription billing); NFR-11 (every payment event is idempotent)"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 926cbca810d43b8e0b8d904f1263c5f8c5fbb171
+fix_note: "A charge attempt is recorded only when no earlier attempt for the invoice is still requested (one statement, under the billing pass's subscription lock), so a reminder day retries only after the attempt before it failed; the first reminder day after a failure retries under the earliest occasion not yet used, as a late pass catches up. Reminder emails are unchanged."
+developer_note: "Reproduced by SubscriptionBillingIntegrationTest.aReminderRequestsNoChargeWhileAnEarlierAttemptForTheInvoiceIsUnsettled: with the issue attempt still requested, the due-date pass recorded a second full-amount attempt. The existing retry test assumed each reminder retried without the earlier attempt settling; it now fails each attempt before the next reminder day, as the provider would, and keeps its four occasions."
 verified_on: null
 approved_by: null
 found_in_release: null

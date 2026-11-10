@@ -2,14 +2,14 @@
 id: BUG-F06-002
 title: "Moving a service to another category silently stops a professional performing a service they are booked for, or makes everyone who performs the new category eligible for it"
 severity: major
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: "exploratory: the foundation review of 2026-11-10, by reading the code; not yet reproduced on the running product"
 breaks: "F06-S01 AC-8 (a save may not stop a person performing a service with an upcoming booking for them); STF-01"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 62b0279a3409a8645a411843894cd7e1fa058ed1
+fix_note: "A service save that moves it to another category asks staff, through catalogue.ServiceMoveBookings (implemented by staff, named in the architecture rule), who would stop performing it while booked for it, before its transaction and again under UpcomingServiceBookings.GUARD_LOCK, and refuses 409 in_use with one errors item per person (field categoryId, detail the name). The Services sheet shows services.notices.inUseMove, kept open: '{members} has upcoming bookings for this service and does not perform {category}. Add {category} to their services on the Team page first.' (several: 'have ... do not perform'), names joined with ', '. Telling the user that a move makes more people eligible is out of scope and not built."
+developer_note: "Reproduced by ServiceCategoryMoveIntegrationTest (real bookings): moving the service while a whole-category performer had a confirmed booking was saved 200. A person who holds the service singly, or performs the target category whole, is not counted. ServicesScreen.test.tsx covers the sheet's refusal for one and for two people."
 verified_on: null
 approved_by: null
 found_in_release: null

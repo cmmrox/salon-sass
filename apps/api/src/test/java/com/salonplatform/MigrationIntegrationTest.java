@@ -55,7 +55,7 @@ class MigrationIntegrationTest {
         // migrations of the first features are there under the names Flyway gives them.
         assertThat(shipped)
                 .startsWith(tuple("1", "baseline"), tuple("2", "create tenant"))
-                .contains(tuple("33", "add hold length and assignment"));
+                .contains(tuple("33", "add hold length and assignment"), tuple("34", "clear deleted salon profile"));
 
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
 

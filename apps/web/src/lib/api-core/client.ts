@@ -70,6 +70,23 @@ function remainingBudget(): number {
   return (currentRequest()?.deadline ?? performance.now() + API_TIMEOUT_MS) - performance.now();
 }
 
+/**
+ * How long an upload's own call to the API may take (BUG-F04-001): the file, up to the 10 MB upload limit, goes on to
+ * the API, which may wait up to two seconds for a decode permit and then decodes it.
+ */
+export const UPLOAD_API_TIMEOUT_MS = 10_000;
+
+/**
+ * Starts the request's shared API budget again, from now, for `length` milliseconds (docs/engineering/web.md,
+ * "Structure"): an upload's handler calls it with {@link UPLOAD_API_TIMEOUT_MS} once it has read the form, so that
+ * the time a slow connection took to send the file is not taken from the API's budget (BUG-F04-001). Signals made by
+ * {@link requestSignal} before it keep their old deadline. Does nothing outside a request.
+ */
+export function restartRequestBudget(length: number): void {
+  const context = currentRequest();
+  if (context) context.deadline = performance.now() + length;
+}
+
 /** One original request budget, shared across proxy, metadata and account API calls. */
 export function requestSignal(): AbortSignal {
   const remaining = remainingBudget();
