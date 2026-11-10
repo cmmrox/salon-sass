@@ -64,13 +64,20 @@ qa/
   `QA_REPORT_DIR/playwright/<invocation>/`.
 - The product must already be running (`infra/scripts/local-up.sh`). The automation checks this
   first and stops with a line starting `ENVIRONMENT:` when it is not, so that a stopped product is
-  never reported as a failing one. It also refuses the run unless the API is a current build of
-  this checkout's `HEAD`: the commit its `/api/v1/meta` reports is an ancestor of `HEAD`, and `HEAD`
-  has not changed the build's sources (`infra/scripts/lib/build-sources.txt`) since. A commit that
-  changes only tests, bug files or records therefore needs no rebuild; one that changes the product
-  does: rebuild the QA instance with `infra/scripts/qa-redeploy.sh`, or set
-  `QA_ALLOW_BUILD_MISMATCH=1` to test another build on purpose and say so in the evidence. The web
-  build's commit is not checked; `qa-redeploy.sh` rebuilds both.
+  never reported as a failing one.
+- **The build under test is checked once per run, for every tool.** Before its first entry,
+  `qa/scripts/sdlc run` asks the QA instance's API (`/api/v1/meta`) which commit it was built from,
+  records it in `summary.json` (`api_commit`, `api_current`, `build`), and refuses the run with a
+  line starting `ENVIRONMENT:` unless the API is a current build of this checkout's `HEAD`: the
+  reported commit is an ancestor of `HEAD`, and `HEAD` has not changed the build's sources
+  (`infra/scripts/lib/build-sources.txt`) since. A commit that changes only tests, bug files or
+  records therefore needs no rebuild; one that changes the product does: rebuild the QA instance
+  with `infra/scripts/qa-redeploy.sh`, or set `QA_ALLOW_BUILD_MISMATCH=1` to test another build on
+  purpose and say so in the evidence. The check applies when an entry of the run needs the
+  running product: every Playwright, k6 and Maestro entry, and a shell check that calls
+  `require_product_up`; a run of only other shell checks (a reader of the CI workflow, a scan of
+  the build) does not ask the API. Playwright's global setup makes the same check again, for a test
+  file run directly. The web build's commit is not checked; `qa-redeploy.sh` rebuilds both.
 - Start a test's title with its case id:
 
   ```ts
@@ -144,7 +151,9 @@ hang" needs requests in flight at the moment the dependency goes quiet: a reques
 is handed a connection the pool has already tested. If the control a check needs does not exist, that is a
 testability bug for the developer; QA does not write under `infra/`. A check exits non-zero on
 failure, prints what it found, and leaves the environment as it found it (a stopped service is
-started again, even when the check fails).
+started again, even when the check fails). A check of the running product calls
+`require_product_up` (`qa/shared/checks.sh`) before its first case: that call is also how
+`sdlc run` knows the check needs the build check described above.
 
 ## k6: concurrency
 

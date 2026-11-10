@@ -36,10 +36,15 @@ together with the feature's specs. Documents, skills, status and review changes 
 pass. A change to one of these paths is verified for its affected scope: the fixed bug and what
 depends on it, not the whole feature again, unless the change is broad.
 
-Playwright's global setup refuses a run unless the API is a current build of `HEAD`: the commit
-`/api/v1/meta` reports is an ancestor of `HEAD`, and `HEAD` has not changed the build's sources
-(`infra/scripts/lib/build-sources.txt`) since, so a commit of tests or records alone needs no
-rebuild (`infra/scripts/qa-redeploy.sh` rebuilds the QA instance at `HEAD`). The tooling cannot see the web
+`qa/scripts/sdlc run` refuses a run, before its first entry and for every tool, unless the API is
+a current build of `HEAD`: the commit `/api/v1/meta` reports is an ancestor of `HEAD`, and `HEAD`
+has not changed the build's sources (`infra/scripts/lib/build-sources.txt`) since, so a commit of
+tests or records alone needs no rebuild (`infra/scripts/qa-redeploy.sh` rebuilds the QA instance
+at `HEAD`). `summary.json` records the build tested: `api_commit`, `api_current` and `build`. A run
+whose entries do not need the running product (shell checks that do not call
+`require_product_up`) does not ask the API, and records `build.needed: false`. With
+`QA_ALLOW_BUILD_MISMATCH=1` the run goes ahead and records `api_current: false`. Playwright's
+global setup makes the same check for a test file run directly. The tooling cannot see the web
 build's commit or the state of the database: before relying on a run, check that the web app was
 built from the tested commit and that the fixtures are the ones the run assumed.
 

@@ -9,9 +9,11 @@ import datetime
 import hashlib
 import json
 import os
+import re
 import signal
 import subprocess
 import urllib.parse
+import urllib.request
 import time
 import threading
 import uuid
@@ -302,6 +304,102 @@ def default_instance_refusal(environ):
     return None
 
 
+# --- the build under test ---------------------------------------------------------------------
+#
+# Before the first entry the runner asks the QA instance's API which commit it was built from and
+# refuses the run unless that build is current for HEAD, by the rule qa/shared/build-identity.mjs
+# (Playwright's global setup) and infra/scripts/qa-redeploy.sh apply: the reported commit is an
+# ancestor of HEAD and HEAD has not changed the build's sources since.
+
+BUILD_SOURCES_FILE = "infra/scripts/lib/build-sources.txt"
+ALLOW_MISMATCH = "QA_ALLOW_BUILD_MISMATCH"
+QA_API_PORT = 8190  # the QA instance's API (qa/shared/env.ts, infra/scripts/lib/common.sh)
+# Tools that always talk to the running product. A shell check says it does by calling
+# require_product_up from qa/shared/checks.sh; one that does not (a reader of the CI workflow, a
+# scan of the build, a check that starts the product itself) runs without the API.
+PRODUCT_TOOLS = ("playwright", "k6", "maestro")
+_REQUIRES_PRODUCT = re.compile(r"^[^#\n]*\brequire_product_up\b", re.M)
+
+
+def needs_product(entry):
+    """Whether an automation entry tests the running product, from what it declares."""
+    if entry.get("tool") in PRODUCT_TOOLS:
+        return True
+    if entry.get("tool") == "script":
+        try:
+            with open(entry.get("file") or "", encoding="utf-8") as handle:
+                return bool(_REQUIRES_PRODUCT.search(handle.read()))
+        except OSError:
+            return False
+    return False
+
+
+def build_sources(root="."):
+    with open(os.path.join(root, BUILD_SOURCES_FILE), encoding="utf-8") as handle:
+        return [line.strip() for line in handle if line.strip() and not line.strip().startswith("#")]
+
+
+def qa_api_url(environ):
+    """The QA instance's API, as qa/shared/env.ts finds it: shell, then qa/.env.local, then the default."""
+    local = _env_file("qa/.env.local")
+    setting = lambda name: environ.get(name) or local.get(name)  # noqa: E731
+    return (setting("QA_API_URL") or f"http://localhost:{setting('SALON_API_PORT') or QA_API_PORT}").rstrip("/")
+
+
+def _api_commit(api_url, timeout=10):
+    # The QA instance is on this machine: never through a proxy the environment names.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(f"{api_url}/api/v1/meta", timeout=timeout) as response:
+            commit = json.load(response).get("commit")
+        return commit if isinstance(commit, str) else None, None
+    except (OSError, ValueError, AttributeError) as error:
+        return None, str(error)
+
+
+def _git_ok(*args):
+    try:
+        return subprocess.run(["git", *args], capture_output=True).returncode == 0
+    except OSError:
+        return False
+
+
+def stale_build(commit, root="."):
+    """Why a build of this commit is not current for HEAD, or None when it is."""
+    commit = (commit or "").strip().lower()
+    if len(commit) < 7 or not re.fullmatch(r"[0-9a-f]+", commit):
+        return "did not say which commit it was built from"
+    if not _git_ok("-C", root, "cat-file", "-e", f"{commit}^{{commit}}"):
+        return f"was built from commit {commit}, which is not a commit of this repository"
+    if not _git_ok("-C", root, "merge-base", "--is-ancestor", commit, "HEAD"):
+        return f"was built from commit {commit}, which is not an ancestor of this checkout's HEAD"
+    if not _git_ok("-C", root, "diff", "--quiet", commit, "HEAD", "--", *build_sources(root)):
+        return f"was built from commit {commit}, and HEAD has changed the build's sources ({BUILD_SOURCES_FILE}) since"
+    return None
+
+
+def build_check(entries, environ, root="."):
+    """summary.json's 'build': whether the run needs the API, which commit it reports, and whether
+    that build is current. 'refusal' is set when the run must not start."""
+    needing = [f"{e.get('scope')}:{e.get('id')}" for e in entries if needs_product(e)]
+    if not needing:
+        return {"needed": False, "api_commit": None, "api_current": None, "refusal": None}
+    api_url = qa_api_url(environ)
+    commit, error = _api_commit(api_url)
+    reason = stale_build(commit, root) if commit else (
+        f"did not answer /api/v1/meta ({error})" if error else "did not say which commit it was built from")
+    allowed = environ.get(ALLOW_MISMATCH) == "1"
+    check = {"needed": True, "entries_needing_it": len(needing), "api_url": api_url, "api_commit": commit,
+             "api_current": reason is None, "reason": reason, "mismatch_allowed": allowed and reason is not None,
+             "refusal": None}
+    if reason and not allowed:
+        check["refusal"] = (f"ENVIRONMENT: nothing was run: the API at {api_url} {reason}, so the run would not "
+                            f"test this checkout's HEAD {_revision() or '(unknown)'}. Rebuild the QA instance with "
+                            f"infra/scripts/qa-redeploy.sh and run again, or set {ALLOW_MISMATCH}=1 to test that "
+                            "build on purpose and say so in the evidence")
+    return check
+
+
 def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_seconds=30,
         suite=None, selection=None):
     """Returns (exit code, report directory).
@@ -327,6 +425,15 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
     if refusal:
         print(f"refusing: {refusal} (decision 105). Nothing was run.", flush=True)
         return 2, None
+    build = build_check(entries, os.environ)
+    if build["refusal"]:
+        print(f"refusing: {build['refusal']}.", flush=True)
+        return 2, None
+    if build["needed"]:
+        state = "current" if build["api_current"] else f"NOT current ({build['reason']}; {ALLOW_MISMATCH}=1)"
+        print(f"build: the API reports commit {build['api_commit'] or 'none'}, {state}", flush=True)
+    else:
+        print("build: no entry of this run needs the running product; the API was not asked", flush=True)
 
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     run_id = uuid.uuid4().hex[:12]
@@ -342,8 +449,12 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
               "summary.json lists them, and this run is not evidence for source_revision alone", flush=True)
     summary["runner"] = {"pid": os.getpid(), "process_start": _process_start(os.getpid()),
                          "started_at": summary["started_at"]}
-    # qa/shared/global-setup.ts refuses a build of another commit unless this is set.
-    summary["build_mismatch_allowed"] = os.environ.get("QA_ALLOW_BUILD_MISMATCH") == "1"
+    # The build tested: the API's commit and whether it was current for source_revision. The run
+    # refuses one that is not, unless QA_ALLOW_BUILD_MISMATCH=1 (qa/shared/global-setup.ts too).
+    summary["build"] = {key: value for key, value in build.items() if key != "refusal"}
+    summary["api_commit"] = build["api_commit"]
+    summary["api_current"] = build["api_current"]
+    summary["build_mismatch_allowed"] = os.environ.get(ALLOW_MISMATCH) == "1"
     summary["partial"] = bool(selection)
     if selection:
         summary["selection"] = selection
