@@ -78,7 +78,9 @@ class TitleParsingTest(unittest.TestCase):
     def test_ids_and_criteria_are_read_from_titles_and_script_headers(self):
         self.write("qa/web/F07/slots.spec.ts", "\n".join([
             "test('TC-F07-S01-001 AC-1, AC-2: a free slot is listed', async () => {});",
-            'test.describe("TC-F07-S01-002 AC-3: holds", () => {});',
+            'test.describe("holds", () => {',
+            '  test("TC-F07-S01-002 AC-3: a hold hides the slot", async () => {});',
+            '});',
             "test('a helper without an id', async () => {});",
             "test('TC-F07-S02-001 AC-1: another stage', async () => {});",
             "test('TC-F07-S01-003 AC-4: answers HTTP-500 as unavailable', async () => {});",
@@ -130,9 +132,30 @@ class TitleParsingTest(unittest.TestCase):
                    "  - {id: web, tool: playwright, file: qa/web/F07/slots.spec.ts}\n"
                    "  - {id: check, tool: script, file: qa/checks/F07/check.sh}\n")
         stage = model._scope(stage_dir, "stage.yaml")
+        # TC-014 is the title of a describe block: only TC-015, the test inside it, is a case.
         self.assertEqual([(c["id"], c["covers"]) for c in stage["_title_cases"]], [
-            ("TC-F07-S01-002", ["AC-1"]), ("TC-F07-S01-014", ["AC-2"]), ("TC-F07-S01-015", ["AC-3"]),
+            ("TC-F07-S01-002", ["AC-1"]), ("TC-F07-S01-015", ["AC-3"]),
             ("TC-F07-S01-017", ["AC-4"])])
+
+    def test_a_describe_title_declares_no_case_and_covers_no_criterion(self):
+        self.write("qa/web/F07/slots.spec.ts", "\n".join([
+            "test.describe('TC-F07-S01-001 AC-1: free slots', () => {",
+            "  test('lists them', async () => {});",
+            "  test('hides a held one', async () => {});",
+            "});",
+        ]))
+        stage_dir = "features/F07-x/stages/S01-x"
+        self.write(stage_dir + "/stage.yaml", "id: F07-S01\nverification:\n  automation:\n"
+                   "  - {id: web, tool: playwright, file: qa/web/F07/slots.spec.ts}\n")
+        stage = model._scope(stage_dir, "stage.yaml")
+        self.assertEqual(stage["_title_cases"], [])
+        self.assertEqual(stage["verification"]["automation"][0]["_covers"], [])
+        # So validate reports the criterion uncovered and the entry as proving nothing.
+        closed = fx.stage(cases=[], _cases_md=None, _title_cases=stage["_title_cases"])
+        closed["verification"]["automation"] = stage["verification"]["automation"]
+        found = validate.validate(fx.bundle(stages=[closed]))
+        self.assertTrue(any("AC-1 is not covered" in f for f in found), found)
+        self.assertTrue(any("covers no case" in f for f in found), found)
 
     def test_yaml_cases_keep_their_own_rules(self):
         stage_dir = "features/F07-x/stages/S01-x"

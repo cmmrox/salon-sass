@@ -160,8 +160,9 @@ def _automation(scope):
 
 
 CASE_TITLE_RE = re.compile(r"""(TC-F\d{2}(?:-S\d{2}[a-z]?)?-\d{3})\b([^'"`\n]*)""")
-# The Playwright calls that declare a test that runs. test.skip, test.fixme, test.only and
-# describe.skip/fixme declare nothing that counts; neither does a comment.
+# The Playwright calls that open a test or a block that runs; only a test's title declares a case.
+# test.skip, test.fixme, test.only and describe.skip/fixme declare nothing that counts; neither
+# does a comment.
 _RUNNING_CALL_RE = re.compile(r"(?<![\w$.])test(?:\.describe(?:\.(?:serial|parallel))?)?\s*\(")
 _SKIPPED_CALL_RE = re.compile(r"(?<![\w$.])test(?:\.describe)?\.(?:skip|fixme)\s*\(")
 _REGEX_AFTER = set("(,=:[!&|?{};+-*%<>~^") | {""}
@@ -257,18 +258,21 @@ def _first_string(text, skeleton, strings, open_paren):
 
 
 def playwright_titles(text):
-    """The titles of the tests and describe blocks in a Playwright file that actually run.
+    """The titles of the tests in a Playwright file that actually run.
 
-    A comment, a commented-out test, test.skip(...), test.fixme(...), a test inside a skipped
-    describe, and a test or describe whose body calls test.skip() or test.fixme() all count for
-    nothing: none of them is a test that proves a case."""
+    Only a test(...) title declares a case. A describe block is read for what it holds (a test
+    inside a skipped describe, or one that calls test.skip(), does not run), but its own title
+    declares nothing: a criterion is covered by a test titled for it, never by the block around
+    untitled tests. A comment, a commented-out test, test.skip(...), test.fixme(...), and a test
+    whose body calls test.skip() or test.fixme() count for nothing either."""
     skeleton, strings = _ts_skeleton(text)
-    calls = []
+    calls = []  # (open paren, close paren, title, is a describe)
     for match in _RUNNING_CALL_RE.finditer(skeleton):
         paren = match.end() - 1
         title = _first_string(text, skeleton, strings, paren)
         if title is not None:
-            calls.append((paren, _closing(skeleton, paren), title))
+            describe = skeleton.startswith("test.describe", match.start())
+            calls.append((paren, _closing(skeleton, paren), title, describe))
     excluded = []
     for match in _SKIPPED_CALL_RE.finditer(skeleton):
         paren = match.end() - 1
@@ -276,11 +280,11 @@ def playwright_titles(text):
             excluded.append((paren, _closing(skeleton, paren)))  # a skipped test or block
         else:
             # A skip from inside a body skips the innermost test or block around it.
-            around = [(start, end) for start, end, _ in calls if start < paren < end]
+            around = [(start, end) for start, end, _title, _describe in calls if start < paren < end]
             if around:
                 excluded.append(max(around))
-    return [title for start, _end, title in calls
-            if not any(lo <= start <= hi for lo, hi in excluded)]
+    return [title for start, _end, title, describe in calls
+            if not describe and not any(lo <= start <= hi for lo, hi in excluded)]
 
 
 def _case_titles(entry, text):
