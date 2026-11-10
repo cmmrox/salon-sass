@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState, type RefObject } from 'react';
-import { IdentityFailure, identityRequest, type Kind } from '@/features/identity';
+import { IdentityFailure, type Kind } from '@/features/identity';
+import { read, workspaceSession } from '@/lib/api-core/request';
 import {
   blockAsksImpact,
   blockIsEdited,
@@ -79,7 +80,7 @@ export function useTimeOff({ kind, opening, send, failed, clearSaid, notify, onL
     const started = opening.current;
     show({ state: 'loading' });
     try {
-      const answer = await identityRequest<PeriodImpact>(kind, action);
+      const answer = await read<PeriodImpact>(workspaceSession(kind), action);
       if (asked.current === question && opening.current === started)
         show({ state: 'ready', bookings: answer.affected });
     } catch (error) {

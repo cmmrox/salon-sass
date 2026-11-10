@@ -1,15 +1,8 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import {
-  IdentityFailure,
-  identityRequest,
-  leaveEndedSession,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-  type Kind,
-} from '@/features/identity';
+import { IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
+import { change as changeOnce, read, workspaceSession } from '@/lib/api-core/request';
 import {
   changeIsEdited,
   changeSaveOf,
@@ -122,8 +115,8 @@ export function useSchedule(
     setLoading(true);
     try {
       const [schedule, salon] = await Promise.all([
-        identityRequest<MemberSchedule>(kind, `team-schedule?memberId=${encodeURIComponent(person.id)}`),
-        identityRequest<SalonOpeningWeek>(kind, 'team-opening-hours'),
+        read<MemberSchedule>(workspaceSession(kind), `team-schedule?memberId=${encodeURIComponent(person.id)}`),
+        read<SalonOpeningWeek>(workspaceSession(kind), 'team-opening-hours'),
       ]);
       if (opening.current !== started) return;
       const saved = workWeekFormOf(schedule.weekly);
@@ -147,11 +140,7 @@ export function useSchedule(
 
   /** A change made under the session's lock. */
   async function send<T>(action: string, body: unknown): Promise<T> {
-    if (!supportsLocks()) throw new IdentityFailure('browser_unsupported');
-    return withIdentityLock(kind, async () => {
-      await principalInsideLock(kind);
-      return identityRequest<T>(kind, action, body);
-    });
+    return changeOnce<T>(workspaceSession(kind), action, body);
   }
 
   function clearSaid() {

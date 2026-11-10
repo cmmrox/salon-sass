@@ -1,6 +1,7 @@
 import { fireEvent, isInaccessible, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
+import { expireAccessBefore } from '@test/renewal';
 import { chooseOption } from '@test/select';
 import { CATEGORIES, member, NIMALI, SERVICES, week, workday } from './team-fixtures';
 import { TeamScreen } from './TeamScreen';
@@ -745,5 +746,17 @@ describe('read-only and refused (F06-S03 AC-10, AC-13)', () => {
     fireEvent.click(await screen.findByTestId('team-card-schedule'));
 
     expect(await screen.findByTestId('schedule-retry')).toBeTruthy();
+  });
+});
+
+describe('an idle session (BUG-F06-001)', () => {
+  it('renews an access credential that lapsed and says the bookings leave would affect, not the sign-in form', async () => {
+    answers['team-leave-affected'] = () => Response.json({ affected: [booking('Kasun')] });
+    render();
+    await openTab('leave');
+    const renewals = expireAccessBefore(answers, 'team-leave-affected');
+    await leaveFilled();
+    expect(await screen.findByTestId('period-affected')).toBeInTheDocument();
+    expect(renewals()).toBe(1);
   });
 });

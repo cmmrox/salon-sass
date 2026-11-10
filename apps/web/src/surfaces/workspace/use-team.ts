@@ -2,15 +2,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { CategoryList, ServiceList } from '@/features/catalogue';
-import {
-  IdentityFailure,
-  identityRequest,
-  leaveEndedSession,
-  principalInsideLock,
-  supportsLocks,
-  withIdentityLock,
-  type Kind,
-} from '@/features/identity';
+import { IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
+import { change as changeOnce, read, workspaceSession } from '@/lib/api-core/request';
 import {
   memberProblemsOf,
   memberProblemsOfFields,
@@ -93,11 +86,11 @@ export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToas
     setLoading(true);
     try {
       const [team, nextCategories, nextServices, nextAccounts] = await Promise.all([
-        identityRequest<TeamMemberList>(kind, 'team-members'),
-        identityRequest<CategoryList>(kind, 'catalogue-categories'),
-        identityRequest<ServiceList>(kind, 'catalogue-services'),
+        read<TeamMemberList>(workspaceSession(kind), 'team-members'),
+        read<CategoryList>(workspaceSession(kind), 'catalogue-categories'),
+        read<ServiceList>(workspaceSession(kind), 'catalogue-services'),
         canManage
-          ? identityRequest<TeamSignInAccountList>(kind, 'team-sign-in-accounts').then((answer) => answer.items)
+          ? read<TeamSignInAccountList>(workspaceSession(kind), 'team-sign-in-accounts').then((answer) => answer.items)
           : Promise.resolve([]),
       ]);
       setMembers(team.items);
@@ -140,11 +133,7 @@ export function useTeam(kind: Kind, canManage: boolean, notify: (toast: TeamToas
 
   /** A change made under the session's lock. */
   async function change<T>(action: string, body: unknown): Promise<T> {
-    if (!supportsLocks()) throw new IdentityFailure('browser_unsupported');
-    return withIdentityLock(kind, async () => {
-      await principalInsideLock(kind);
-      return identityRequest<T>(kind, action, body);
-    });
+    return changeOnce<T>(workspaceSession(kind), action, body);
   }
 
   /** What a refusal says, from what the API named: the services and the number come from its `errors` items. */
