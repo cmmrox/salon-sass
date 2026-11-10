@@ -2,11 +2,12 @@
  * Refuses to start a run against a product that is not there, or not the build of the commit
  * under test. A test can only fail meaningfully if it could have passed, so a stopped service is
  * reported as what it is, an environment fault, before any test runs; and a pass is evidence for
- * the checkout's HEAD only if the API under test was built from it (its /api/v1/meta commit).
+ * the checkout's HEAD only if the API under test is a current build of it: its /api/v1/meta
+ * commit holds every change HEAD has to the build's sources (build-identity.mjs).
  */
 import { execFileSync } from 'node:child_process';
 
-import { buildMismatch, mismatchAllowed, ALLOW_MISMATCH } from './build-identity.mjs';
+import { ALLOW_MISMATCH, buildMismatch, mismatchAllowed, staleBuild } from './build-identity.mjs';
 import { apiUrl, REPO_ROOT, webUrl } from './env';
 
 async function status(url: string): Promise<number | string> {
@@ -54,7 +55,10 @@ export default async function globalSetup(): Promise<void> {
         'Start it with infra/scripts/local-up.sh and run again.',
     );
   }
-  const mismatch = buildMismatch({ running: await runningCommit(), head: checkoutHead(), apiUrl });
+  // `sdlc run` checks this once before its first entry; this is the same check for a test file run
+  // directly with Playwright.
+  const reason = staleBuild({ running: await runningCommit(), root: REPO_ROOT });
+  const mismatch = reason ? buildMismatch({ reason, head: checkoutHead(), apiUrl }) : null;
   if (mismatch && mismatchAllowed(process.env)) {
     console.warn(`BUILD MISMATCH ALLOWED (${ALLOW_MISMATCH}=1): ${mismatch}`);
   } else if (mismatch) {

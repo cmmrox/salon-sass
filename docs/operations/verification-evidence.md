@@ -36,8 +36,10 @@ together with the feature's specs. Documents, skills, status and review changes 
 pass. A change to one of these paths is verified for its affected scope: the fixed bug and what
 depends on it, not the whole feature again, unless the change is broad.
 
-Playwright's global setup refuses a run unless the API was built from `HEAD`
-(`infra/scripts/qa-redeploy.sh` rebuilds the QA instance there). The tooling cannot see the web
+Playwright's global setup refuses a run unless the API is a current build of `HEAD`: the commit
+`/api/v1/meta` reports is an ancestor of `HEAD`, and `HEAD` has not changed the build's sources
+(`infra/scripts/lib/build-sources.txt`) since, so a commit of tests or records alone needs no
+rebuild (`infra/scripts/qa-redeploy.sh` rebuilds the QA instance at `HEAD`). The tooling cannot see the web
 build's commit or the state of the database: before relying on a run, check that the web app was
 built from the tested commit and that the fixtures are the ones the run assumed.
 

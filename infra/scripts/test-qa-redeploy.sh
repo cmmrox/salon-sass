@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # qa-redeploy.sh restarts only the QA instance, in order, refuses a build that would not be HEAD,
-# and exits non-zero unless the API then reports HEAD. Starts nothing: the script runs from a copy
+# and exits non-zero unless the API then reports a current build of HEAD (a commit since which
+# HEAD has not changed the build's sources). Starts nothing: the script runs from a copy
 # in a temporary repository whose local-service.sh and local-up.sh are stubs that record their
 # calls, and curl is a stub that answers /api/v1/meta with $META.
 set -euo pipefail
@@ -13,7 +14,7 @@ check() { if [ "$1" = ok ]; then printf 'PASS %s\n' "$2"; else printf 'FAIL %s\n
 repo="$test_dir/repo"
 mkdir -p "$repo/infra/scripts/lib" "$repo/apps/api" "$test_dir/bin"
 cp "$ROOT/infra/scripts/qa-redeploy.sh" "$repo/infra/scripts/"
-cp "$ROOT/infra/scripts/lib/common.sh" "$repo/infra/scripts/lib/"
+cp "$ROOT/infra/scripts/lib/common.sh" "$ROOT/infra/scripts/lib/build-sources.txt" "$repo/infra/scripts/lib/"
 for stub in local-service.sh local-up.sh; do
   printf '#!/usr/bin/env bash\nprintf "%%s %%s instance=%%s\\n" "%s" "$*" "$SALON_LOCAL_INSTANCE" >>"%s/calls"\n' \
     "$stub" "$test_dir" >"$repo/infra/scripts/$stub"
@@ -61,7 +62,7 @@ full_meta="{\"service\":\"salon-api\",\"commit\":\"$head\",\"time\":\"2026-11-10
 for answer in '{"commit":"0123456789abcdef0123456789abcdef01234567"}' "{\"commit\":\"${head:0:6}\"}" \
               '{"commit":"unknown"}' '{"service":"salon-api"}' ''; do
   status="$(redeploy "$answer")"
-  if [ "$status" != 0 ] && grep -q "not HEAD $head" "$test_dir/out.log"; then
+  if [ "$status" != 0 ] && grep -q "not a current build of HEAD $head" "$test_dir/out.log"; then
     check ok "an API answering '${answer:-nothing}' fails and names HEAD"
   else
     check fail "an API answering '${answer:-nothing}' was accepted (status $status): $(cat "$test_dir/out.log")"
@@ -91,5 +92,28 @@ git -C "$repo" checkout -q -- apps/api/source.txt
 printf 'notes\n' >"$repo/notes.md"
 [ "$(redeploy "{\"commit\":\"$head\"}")" = 0 ] && check ok "a change outside the build's sources does not stop it" \
   || check fail "a change outside the build's sources was refused: $(cat "$test_dir/out.log")"
+
+# The rule sdlc run applies too: a commit that changes no build source leaves the build current.
+commit_all() { # <message>: commits everything in the copy; prints the new HEAD
+  git -C "$repo" -c user.email=t@example.invalid -c user.name=t add -A
+  git -C "$repo" -c user.email=t@example.invalid -c user.name=t commit -q -m "$1"
+  git -C "$repo" rev-parse HEAD
+}
+mkdir -p "$repo/qa/api"
+printf 'repaired\n' >"$repo/qa/api/x.spec.ts"
+qa_only="$(commit_all 'test: repair a test')"
+[ "$(redeploy "{\"commit\":\"$head\"}")" = 0 ] \
+  && check ok "the build of an earlier commit is current after a commit that changes only tests and notes" \
+  || check fail "a QA-only commit made the earlier build stale: $(cat "$test_dir/out.log")"
+printf 'fixed\n' >>"$repo/apps/api/source.txt"
+fixed="$(commit_all 'fix: the API')"
+status="$(redeploy "{\"commit\":\"$qa_only\"}")"
+if [ "$status" != 0 ] && grep -q "not a current build of HEAD $fixed" "$test_dir/out.log"; then
+  check ok "a build from before a change to the build's sources is not current"
+else
+  check fail "a build older than a source change was accepted (status $status): $(cat "$test_dir/out.log")"
+fi
+[ "$(redeploy "{\"commit\":\"$fixed\"}")" = 0 ] && check ok "the API rebuilt at the new HEAD is current" \
+  || check fail "the API at the new HEAD was refused: $(cat "$test_dir/out.log")"
 
 [ "$failures" -eq 0 ] || { printf '%s check(s) failed\n' "$failures" >&2; exit 1; }

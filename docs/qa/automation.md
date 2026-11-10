@@ -64,8 +64,11 @@ qa/
   `QA_REPORT_DIR/playwright/<invocation>/`.
 - The product must already be running (`infra/scripts/local-up.sh`). The automation checks this
   first and stops with a line starting `ENVIRONMENT:` when it is not, so that a stopped product is
-  never reported as a failing one. It also refuses the run unless the API's `/api/v1/meta` commit is
-  this checkout's `HEAD`: rebuild the QA instance with `infra/scripts/qa-redeploy.sh`, or set
+  never reported as a failing one. It also refuses the run unless the API is a current build of
+  this checkout's `HEAD`: the commit its `/api/v1/meta` reports is an ancestor of `HEAD`, and `HEAD`
+  has not changed the build's sources (`infra/scripts/lib/build-sources.txt`) since. A commit that
+  changes only tests, bug files or records therefore needs no rebuild; one that changes the product
+  does: rebuild the QA instance with `infra/scripts/qa-redeploy.sh`, or set
   `QA_ALLOW_BUILD_MISMATCH=1` to test another build on purpose and say so in the evidence. The web
   build's commit is not checked; `qa-redeploy.sh` rebuilds both.
 - Start a test's title with its case id:
