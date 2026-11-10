@@ -125,6 +125,21 @@ describe('routeRequest', () => {
     },
   );
 
+  // Web M7: the page is rendered with this request's policy and nonce, never with ones the browser sent.
+  it('hands the page this request’s policy and nonce, replacing any the browser sent', async () => {
+    const resolve = resolving({ kind: 'salon', salon: alpha });
+    const security = { policy: "script-src 'self' 'nonce-ours' 'strict-dynamic'", nonce: 'ours' };
+    const response = await routeRequest(
+      request('/workspace/sign-in', { 'x-nonce': 'theirs', 'content-security-policy': 'script-src *' }),
+      resolve,
+      undefined,
+      undefined,
+      security,
+    );
+    expect(response.headers.get('x-middleware-request-x-nonce')).toBe('ours');
+    expect(response.headers.get('x-middleware-request-content-security-policy')).toBe(security.policy);
+  });
+
   it.each([
     ['/', '/workspace'],
     ['/sign-in', '/workspace/sign-in'],

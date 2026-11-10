@@ -143,9 +143,18 @@ export async function routeRequest(
   resolve: (hostHeader: string | null) => Promise<Site> = resolveSite,
   decide: DecideEntry = decideEntry,
   decideConsole: DecideConsoleEntry = decideConsoleEntry,
+  security?: { policy: string; nonce: string },
 ): Promise<NextResponse> {
   const headers = new Headers(request.headers);
   headers.delete(SALON_HEADER);
+  // The page's policy and nonce, handed on so that Next.js puts the nonce on the scripts it renders (web M7). Whatever
+  // the browser sent under these names is replaced.
+  headers.delete('content-security-policy');
+  headers.delete('x-nonce');
+  if (security) {
+    headers.set('content-security-policy', security.policy);
+    headers.set('x-nonce', security.nonce);
+  }
 
   const path = request.nextUrl.pathname;
   // The not-found target ends here, before anything that could rewrite it again or ask the API. A server
